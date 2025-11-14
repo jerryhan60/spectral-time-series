@@ -435,6 +435,39 @@ for metrics_file in metrics_files:
     except Exception as e:
         print(f"Error reading {metrics_file}: {e}")
 
+# Define the desired order based on forecast_datasets.xlsx
+desired_order = [
+    'M1_Monthly',
+    'M3_Monthly',
+    'M3_Other',
+    'M4_Monthly',
+    'M4_Weekly',
+    'M4_Daily',
+    'M4_Hourly',
+    'Tourism_Quarterly',
+    'Tourism_Monthly',
+    'CIF_2016',
+    'Aus._Elec._Demand',
+    'Bitcoin',
+    'Pedestrian_Counts',
+    'Vehicle_Trips',
+    'KDD_Cup_2018',
+    'Australia_Weather',
+    'NN5_Daily',
+    'NN5_Weekly',
+    'Carparts',
+    'FRED-MD',
+    'Traffic_Hourly',
+    'Traffic_Weekly',
+    'Rideshare',
+    'Hospital',
+    'COVID_Deaths',
+    'Temperature_Rain',
+    'Sunspot',
+    'Saugeen_River_Flow',
+    'US_Births'
+]
+
 # Read and update summary CSV
 summary_df = pd.read_csv("$CSV_FILE")
 for idx, row in summary_df.iterrows():
@@ -448,6 +481,10 @@ for idx, row in summary_df.iterrows():
                     summary_df.loc[idx, key] = ''
                 else:
                     summary_df.loc[idx, key] = value
+
+# Sort dataframe by desired order
+summary_df['sort_order'] = summary_df['dataset'].map({name: i for i, name in enumerate(desired_order)})
+summary_df = summary_df.sort_values('sort_order').drop('sort_order', axis=1)
 
 # Save updated CSV
 summary_df.to_csv("$CSV_FILE", index=False)

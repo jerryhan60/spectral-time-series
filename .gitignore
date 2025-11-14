@@ -46,8 +46,10 @@ slurm-*.out
 # Data directories (too large to track)
 uni2ts/data/
 uni2ts/outputs/
-Time-Series-Library/dataset/
 eval_*_results_*/
+
+# External libraries (not our code)
+Time-Series-Library/
 
 # Temporary files
 *.tmp
