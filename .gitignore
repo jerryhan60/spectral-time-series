@@ -1,0 +1,68 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Cache
+.cache/
+*.cache
+
+# Logs
+logs/
+*.log
+*.out
+*.err
+
+# Large data files
+*.ckpt
+*.pth
+*.pt
+*.h5
+*.hdf5
+
+# Core dumps
+core.*
+
+# SLURM outputs (keep scripts, ignore output files)
+slurm-*.out
+
+# Data directories (too large to track)
+uni2ts/data/
+uni2ts/outputs/
+Time-Series-Library/dataset/
+eval_*_results_*/
+
+# Temporary files
+*.tmp
+*.bak
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Claude Code
+.claude/
+
+# PDF papers (often large)
+*.pdf
+
+# Archive
+archive/
