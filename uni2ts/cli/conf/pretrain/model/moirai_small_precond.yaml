@@ -1,0 +1,10 @@
+# Moirai Small model with preconditioning enabled
+# Based on moirai_small.yaml with preconditioning configuration
+
+defaults:
+  - moirai_small
+
+# Override preconditioning settings to enable it
+enable_preconditioning: true
+precondition_type: chebyshev  # chebyshev or legendre
+precondition_degree: 5  # recommended: 2-10, paper suggests <= 10 for stability

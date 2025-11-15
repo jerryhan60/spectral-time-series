@@ -1,0 +1,5 @@
+_target_: uni2ts.eval_util.data.get_gluonts_train_dataset
+dataset_name: ???
+prediction_length: null
+mode: S
+use_lotsa_cache: true  # Use cached datasets from lotsa_v1 folder (no internet required)

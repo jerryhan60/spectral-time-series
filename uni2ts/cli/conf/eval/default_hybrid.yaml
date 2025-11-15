@@ -1,0 +1,25 @@
+# Default configuration for hybrid evaluation
+# Combines base model + preconditioned model predictions
+
+defaults:
+  - _self_
+  - data: monash_cached
+  - model@base_model: moirai_1.1_R_small  # Base pretrained model
+  - model@precond_model: moirai_precond_ckpt  # Preconditioned model (no reverse)
+
+# Override precond_model to use no_reverse variant
+precond_model:
+  _target_: uni2ts.model.moirai.forecast_precond.create_precond_forecast_from_checkpoint
+  checkpoint_path: ???
+  num_samples: 100
+  patch_size: ???
+  context_length: ???
+  enable_preconditioning: true
+  precondition_type: chebyshev
+  precondition_degree: 5
+  reverse_output: false  # CRITICAL: Don't reverse, we'll do it manually
+
+run_name: ???
+device: cuda
+batch_size: 32
+min_batch_size: 1

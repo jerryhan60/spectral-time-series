@@ -1,0 +1,7 @@
+_target_: uni2ts.data.builder.lotsa_v1.GluonTSDatasetBuilder
+datasets:
+  - cif_2016_6
+  - cif_2016_12
+  - bitcoin_with_missing
+  - car_parts_with_missing
+  - australian_electricity_demand

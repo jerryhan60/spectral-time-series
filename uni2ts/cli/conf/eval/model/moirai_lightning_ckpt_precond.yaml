@@ -1,0 +1,11 @@
+_target_: uni2ts.model.moirai.MoiraiForecast.load_from_checkpoint
+checkpoint_path: ???
+num_samples: 100
+patch_size: ???
+context_length: ???
+
+# Preconditioning parameters
+# Set these if the model was trained with preconditioning enabled
+reverse_preconditioning: true  # Whether to reverse preconditioning on predictions
+precondition_type: chebyshev  # Type used during training
+precondition_degree: 5  # Degree used during training

@@ -1,0 +1,11 @@
+_target_: uni2ts.model.moirai.forecast_precond.create_precond_forecast_from_checkpoint
+checkpoint_path: ???
+num_samples: 100
+patch_size: ???
+context_length: ???
+
+# Preconditioning parameters
+# IMPORTANT: These MUST match the training configuration!
+enable_preconditioning: true  # Set to true if model was trained with preconditioning
+precondition_type: chebyshev  # Must match training: "chebyshev" or "legendre"
+precondition_degree: 5  # Must match training: typically 5
