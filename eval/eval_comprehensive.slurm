@@ -9,7 +9,7 @@
 #SBATCH --mem=64G
 #SBATCH --gres=gpu:1
 #SBATCH --partition=pli
-#SBATCH --account=eladgroup
+#SBATCH --account=hazan_intern
 #SBATCH --mail-type=END
 #SBATCH --mail-user=jh1161@princeton.edu
 
@@ -106,7 +106,7 @@ echo ""
 
 # Load dataset configuration from Excel file
 echo "Loading dataset configuration from forecast_datasets.xlsx..."
-DATASETS_JSON=$(/scratch/gpfs/EHAZAN/jh1161/read_datasets_config.py)
+DATASETS_JSON=$(/scratch/gpfs/EHAZAN/jh1161/eval/read_datasets_config.py)
 
 if [ $? -ne 0 ]; then
     echo "ERROR: Failed to read dataset configuration from Excel file"
@@ -117,20 +117,21 @@ fi
 DATASET_DISPLAY_NAMES=($(echo "$DATASETS_JSON" | python -c "import sys, json; data=json.load(sys.stdin); print(' '.join([d['display_name'].replace(' ', '_') for d in data]))"))
 DATASET_NAMES=($(echo "$DATASETS_JSON" | python -c "import sys, json; data=json.load(sys.stdin); print(' '.join([d['dataset_name'] for d in data]))"))
 PREDICTION_LENGTHS=($(echo "$DATASETS_JSON" | python -c "import sys, json; data=json.load(sys.stdin); print(' '.join([str(d['prediction_length']) for d in data]))"))
+FREQUENCIES=($(echo "$DATASETS_JSON" | python -c "import sys, json; data=json.load(sys.stdin); print(' '.join([d.get('frequency', 'UNKNOWN') for d in data]))"))
 
 echo "Loaded ${#DATASET_NAMES[@]} datasets from configuration file"
 
 # Output directory for results
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-RESULTS_DIR="eval_results_${MODEL_TYPE}_${MODEL_NAME}_${TIMESTAMP}"
+RESULTS_DIR="/scratch/gpfs/EHAZAN/jh1161/eval/outputs/eval_results_${MODEL_TYPE}_${MODEL_NAME}_${TIMESTAMP}"
 mkdir -p "$RESULTS_DIR"
 
 echo "Results will be saved to: $RESULTS_DIR"
 echo ""
 
-# Initialize CSV file
+# Initialize CSV file with standard format
 CSV_FILE="$RESULTS_DIR/evaluation_metrics.csv"
-echo "dataset,MSE_mean,MSE_median,MAE_median,MASE_median,MAPE_median,sMAPE_median,MSIS,RMSE_mean,NRMSE_mean,ND_median,mean_weighted_sum_quantile_loss,status" > "$CSV_FILE"
+echo "dataset,MSE[mean],MSE[0.5],MAE[0.5],MASE[0.5],MAPE[0.5],sMAPE[0.5],MSIS,RMSE[mean],NRMSE[mean],ND[0.5],mean_weighted_sum_quantile_loss,status" > "$CSV_FILE"
 
 # Track success/failure
 declare -a SUCCESSFUL_DATASETS
@@ -179,10 +180,43 @@ for i in "${!DATASET_NAMES[@]}"; do
     dataset_name="${DATASET_NAMES[$i]}"
     display_name="${DATASET_DISPLAY_NAMES[$i]}"
     prediction_length="${PREDICTION_LENGTHS[$i]}"
+    frequency="${FREQUENCIES[$i]}"
     CURRENT=$((CURRENT + 1))
 
+    # Determine patch size based on frequency (per Moirai paper Appendix B.1, page 17)
+    # This follows the frequency-to-patch-size mapping from the paper:
+    # - Yearly, Quarterly: 8
+    # - Monthly: 8, 16, 32 (we use 32)
+    # - Weekly, Daily: 16, 32 (we use 32)
+    # - Hourly: 32, 64 (we use 32)
+    # - Minute-level: 32, 64, 128 (we use 64)
+    # - Second-level: 64, 128 (we use 64)
+    #
+    # For Monash benchmark evaluation (Section 4.1), the paper uses:
+    # - Quarterly: 8
+    # - All others: 32
+    case "$frequency" in
+        Y|Q)
+            # Yearly or Quarterly
+            DATASET_PATCH_SIZE=8
+            ;;
+        M|W|D|H)
+            # Monthly, Weekly, Daily, Hourly
+            DATASET_PATCH_SIZE=32
+            ;;
+        *T|*S)
+            # Minute-level (30T, 5T, etc.) or Second-level
+            # Use larger patch size for high-frequency data
+            DATASET_PATCH_SIZE=64
+            ;;
+        *)
+            # Default fallback
+            DATASET_PATCH_SIZE=${PATCH_SIZE:-32}
+            ;;
+    esac
+
     echo ""
-    echo "[$CURRENT/$TOTAL_DATASETS] Evaluating: $display_name (dataset: $dataset_name, pred_len: $prediction_length)"
+    echo "[$CURRENT/$TOTAL_DATASETS] Evaluating: $display_name (dataset: $dataset_name, freq: $frequency, pred_len: $prediction_length, patch: $DATASET_PATCH_SIZE)"
     echo "$(date)"
 
     # Create temporary output file for this dataset
@@ -193,7 +227,7 @@ for i in "${!DATASET_NAMES[@]}"; do
         python -m cli.eval \
           run_name=eval_${MODEL_TYPE}_${MODEL_NAME}_${dataset_name} \
           model=$MODEL_CONFIG \
-          model.patch_size=$PATCH_SIZE \
+          model.patch_size=$DATASET_PATCH_SIZE \
           model.context_length=$CONTEXT_LENGTH \
           batch_size=$BATCH_SIZE \
           data=monash_cached \
@@ -205,7 +239,7 @@ for i in "${!DATASET_NAMES[@]}"; do
           run_name=eval_${MODEL_TYPE}_${MODEL_NAME}_${dataset_name} \
           model=moirai_lightning_ckpt \
           model.checkpoint_path=$MODEL_PATH \
-          model.patch_size=$PATCH_SIZE \
+          model.patch_size=$DATASET_PATCH_SIZE \
           model.context_length=$CONTEXT_LENGTH \
           batch_size=$BATCH_SIZE \
           data=monash_cached \

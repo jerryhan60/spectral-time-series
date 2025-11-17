@@ -1,0 +1,36 @@
+[2025-11-16 23:56:57,008][datasets][INFO] - PyTorch version 2.4.1 available.
+[2025-11-16 23:56:57,009][datasets][INFO] - JAX version 0.6.1 available.
+Preconditioning parameters:
+  Type: chebyshev
+  Degree: 5
+Applying preconditioning to ground truth labels only...
+Preconditioning statistics:
+  Total items: 107
+  Items with NaN in original data: 0 (will use masked arrays)
+  Items skipped (new NaN after preconditioning): 0
+  Valid items for evaluation: 107
+Generating predictions (in preconditioned space)...
+Generating predictions for 107 valid samples (out of 107 total)...
+Collecting predictions and preconditioned ground truth...
+Generated 107 forecasts for 107 valid samples
+Computing metrics in preconditioned space...
+
+================================================================================
+EVALUATION METRICS (IN PRECONDITIONED SPACE)
+================================================================================
+         MSE[mean]  MAE[0.5]  MAPE[0.5]  sMAPE[0.5]  MASE[0.5]  RMSE[mean]  NRMSE[mean]  ND[0.5]  MSIS  mean_weighted_sum_quantile_loss
+None 473203377.899  1970.835      1.363       1.030      0.726   21753.238       11.720    1.062 5.787                            0.803
+================================================================================
+
+Metrics saved to: /scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/eval_precond_space/monash_cached/fred_md/S/prediction_length=12/eval_precond_last_fred_md/metrics_precond_space.csv
+
+
+Preconditioning ground truth:   0%|          | 0/107 [00:00<?, ?it/s]
+Preconditioning ground truth: 100%|██████████| 107/107 [00:00<00:00, 28924.37it/s]
+
+Processing forecasts:   0%|          | 0/107 [00:00<?, ?it/s]
+Processing forecasts:   1%|          | 1/107 [00:00<00:41,  2.58it/s]
+Processing forecasts: 100%|██████████| 107/107 [00:00<00:00, 237.32it/s]
+
+0it [00:00, ?it/s]
+107it [00:00, 1536.11it/s]

@@ -6,9 +6,119 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a research repository for **Universal Sequence Preconditioning** applied to time series forecasting, built on top of the **Uni2TS** framework (Salesforce's universal time series forecasting library). The research implements polynomial preconditioning (Chebyshev and Legendre) to improve time series model training by transforming the input space.
 
-**Key Research Paper**: Marsden, A., & Hazan, E. (2025). Universal Sequence Preconditioning. arXiv:2502.06545.
+**Key Research Papers**:
+1. Marsden, A., & Hazan, E. (2025). Universal Sequence Preconditioning. arXiv:2502.06545.
+2. Woo, G., et al. (2024). Unified Training of Universal Time Series Forecasting Transformers. ICML 2024.
 
 **Base Framework**: Uni2TS - PyTorch/Lightning-based library for pre-training, fine-tuning, and evaluation of Universal Time Series Transformers (Moirai models).
+
+## Research Papers Summary
+
+### Paper 1: Universal Sequence Preconditioning (Marsden & Hazan, 2025)
+
+**Core Contribution**: Introduces a universal preconditioning method for sequential prediction that convolves input sequences with coefficients from orthogonal polynomials (Chebyshev or Legendre).
+
+**Key Concepts**:
+- **Preconditioning Formula**: `ỹₜ = yₜ - Σᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ` where coefficients `cᵢ` come from n-th degree monic Chebyshev/Legendre polynomial
+- **Intuition**: For linear dynamical systems (LDS), preconditioning applies a polynomial to the hidden transition matrix, potentially shrinking the spectral domain and making the system "easier to learn"
+- **Universal Property**: Coefficients are fixed (not learned) and work across different systems without knowing the specific system parameters
+
+**Theoretical Results**:
+- First dimension-independent sublinear regret bounds for marginally stable, asymmetric linear dynamical systems
+- Two main algorithms: (1) USP + Regression achieving O(T^(-2/13)) regret, (2) USP + Spectral Filtering achieving O(T^(-3/13)) regret
+- Works for systems with eigenvalues having imaginary parts bounded by O(1/log T)
+- Recommended polynomial degree: 2-10 (coefficients grow exponentially as 2^(0.3n), limiting practical degree)
+
+**Empirical Validation**:
+- Tested on synthetic LDS, nonlinear dynamical systems, deep RNNs, and real ETTh1 dataset
+- Consistent improvements across regression, spectral filtering, and neural network predictors
+- Chebyshev and Legendre polynomials yield nearly identical performance
+- Best performance typically at degrees 5-10 before coefficient growth degrades results
+
+### Paper 2: Unified Training of Universal Time Series Forecasting Transformers (Woo et al., 2024)
+
+**Core Contribution**: Introduces MOIRAI (Masked EncOder-based UnIveRsAl TIme Series Forecasting Transformer), a foundation model for universal time series forecasting trained on the large-scale LOTSA dataset.
+
+**Key Architectural Innovations**:
+1. **Multi Patch Size Projection**: Different patch sizes (8, 16, 32, 64, 128) for different frequencies
+   - Larger patches for high-frequency data (efficient processing)
+   - Smaller patches for low-frequency data (preserve temporal detail)
+
+2. **Any-variate Attention**: Handles arbitrary number of variates by "flattening" multivariate series
+   - Uses Rotary Position Embeddings (RoPE) for time encoding
+   - Learned binary attention biases for variate disambiguation
+   - Ensures permutation equivariance w.r.t. variate ordering
+
+3. **Mixture Distribution Output**: Flexible probabilistic forecasting
+   - Components: Student's t, Negative Binomial, Log-Normal, Low-variance Normal
+   - Adapts to different data characteristics (symmetric, count, skewed, deterministic)
+
+**LOTSA Dataset**: 27+ billion observations across 9 domains, 105 datasets
+- Domains: Energy, Transport, Climate, CloudOps, Web, Sales, Nature, Economics/Finance, Healthcare
+- Frequencies: Yearly to second-level (8 frequency categories)
+- 59% energy domain, 72% hourly frequency, 25% minute-level
+
+**Training Methodology**:
+- Optimize mixture distribution log-likelihood
+- Random context/prediction length sampling during training
+- Sequence packing for efficiency (reduces padding from 61% to 0.38%)
+- Three model sizes: Small (14M params), Base (91M), Large (311M)
+
+**Empirical Results**:
+- Strong zero-shot performance competitive with full-shot baselines
+- Outperforms all baselines on Monash benchmark (in-distribution)
+- Competitive on LSF benchmark and probabilistic forecasting tasks (out-of-distribution)
+
+## Research Experiment Design
+
+### Primary Research Question
+**Can Universal Sequence Preconditioning improve the Moirai-Small model's forecasting performance?**
+
+### Experimental Approach
+
+This repository implements a controlled comparison experiment:
+
+**1. Baseline Training** (no preconditioning):
+- Pre-train Moirai-Small from scratch on LOTSA dataset
+- Standard architecture without any input transformation
+- Script: `pretraining/pretrain_moirai.slurm`
+
+**2. Preconditioned Training** (with polynomial preconditioning):
+- Pre-train Moirai-Small with Chebyshev/Legendre preconditioning
+- Test multiple polynomial degrees (typically 2, 3, 5, 7, 10)
+- Script: `pretraining/pretrain_moirai_precond.slurm`
+- Variants: Test both Chebyshev and Legendre polynomials
+
+**3. Comprehensive Evaluation**:
+- Evaluate both baseline and preconditioned models on Monash benchmark datasets
+- Use standard evaluation (with reversal) for fair comparison in original space
+- Scripts: `eval/eval_comprehensive.slurm`
+- Metrics: MAE, MSE, CRPS, MSIS across 29+ datasets
+
+### Key Experimental Variables
+
+**Independent Variables**:
+- Preconditioning type: None (baseline), Chebyshev, Legendre
+- Polynomial degree: 2, 3, 5, 7, 10
+
+**Dependent Variables**:
+- Forecasting accuracy: MAE, MSE, CRPS, MSIS
+- Cross-domain generalization: Performance across different dataset domains
+- Different prediction horizons: 96, 192, 336, 720 timesteps
+
+**Controlled Variables**:
+- Model architecture: Moirai-Small (384 dim, 6 layers, 14M params)
+- Training data: LOTSA (27B observations)
+- Context length: 1000-2000 timesteps
+- Patch sizes: Adaptive (8, 16, 32, 64, 128 based on frequency)
+
+### Expected Outcomes
+
+Based on theoretical results from the Universal Sequence Preconditioning paper:
+- Preconditioning should reduce prediction error by transforming the learning space
+- Optimal polynomial degree likely in range 5-10 (balancing shrinkage vs coefficient growth)
+- Improvements should be consistent across diverse datasets if time series exhibit LDS-like properties
+- May see diminishing returns or degradation at very high degrees (>10) due to exponential coefficient growth
 
 ## Environment Setup
 
@@ -93,7 +203,36 @@ salloc --nodes=1 --ntasks=1 --mem=128G --time=03:01:00 --gres=gpu:1 --partition=
 
 ## Common Commands
 
-### Training
+### Core Experimental Scripts
+
+**Submit baseline pre-training** (no preconditioning):
+```bash
+cd /scratch/gpfs/EHAZAN/jh1161
+sbatch pretraining/pretrain_moirai.slurm
+```
+
+**Submit preconditioned pre-training** (Chebyshev or Legendre):
+```bash
+cd /scratch/gpfs/EHAZAN/jh1161
+# Default: Chebyshev degree 5
+sbatch pretraining/pretrain_moirai_precond.slurm
+
+# Custom degree/type
+sbatch --export=PRECOND_TYPE=chebyshev,PRECOND_DEGREE=7 pretraining/pretrain_moirai_precond.slurm
+sbatch --export=PRECOND_TYPE=legendre,PRECOND_DEGREE=5 pretraining/pretrain_moirai_precond.slurm
+```
+
+**Submit comprehensive evaluation on Monash datasets**:
+```bash
+cd /scratch/gpfs/EHAZAN/jh1161
+# Evaluate baseline model
+sbatch --export=MODEL_PATH=/path/to/baseline_checkpoint.ckpt eval/eval_comprehensive.slurm
+
+# Evaluate preconditioned model
+sbatch --export=MODEL_PATH=/path/to/precond_checkpoint.ckpt,PRECOND_TYPE=chebyshev,PRECOND_DEGREE=5 eval/eval_precond_comprehensive.slurm
+```
+
+### Training (Interactive/Direct)
 
 **Baseline pre-training** (no preconditioning):
 ```bash

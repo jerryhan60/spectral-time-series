@@ -1,0 +1,28 @@
+[2025-11-16 23:57:58,144][datasets][INFO] - PyTorch version 2.4.1 available.
+[2025-11-16 23:57:58,145][datasets][INFO] - JAX version 0.6.1 available.
+Preconditioning parameters:
+  Type: chebyshev
+  Degree: 5
+Applying preconditioning to ground truth labels only...
+Preconditioning statistics:
+  Total items: 1
+  Items with NaN in original data: 1 (will use masked arrays)
+  Items skipped (new NaN after preconditioning): 1
+  Valid items for evaluation: 0
+
+
+Preconditioning ground truth:   0%|          | 0/1 [00:00<?, ?it/s]
+Preconditioning ground truth: 100%|██████████| 1/1 [00:00<00:00, 1084.92it/s]
+Error executing job with overrides: ['run_name=eval_precond_last_sunspot_with_missing', 'model=moirai_precond_ckpt_no_reverse', 'model.checkpoint_path=/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai_small_precond/lotsa_v1_unweighted/precond_default_20251102_102511/checkpoints/last.ckpt', 'model.patch_size=32', 'model.context_length=1000', 'model.precondition_type=chebyshev', 'model.precondition_degree=5', 'batch_size=32', 'data=monash_cached', 'data.dataset_name=sunspot_with_missing', 'data.prediction_length=30']
+Traceback (most recent call last):
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/cli/eval_precond_space.py", line 316, in main
+    res = evaluate_in_preconditioned_space(
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/cli/eval_precond_space.py", line 209, in evaluate_in_preconditioned_space
+    preconditioned_test_data, valid_indices = precondition_ground_truth(
+                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/cli/eval_precond_space.py", line 147, in precondition_ground_truth
+    raise ValueError(
+ValueError: All 1 items were skipped during preconditioning. Preconditioning introduced NaN in all samples (numerical instability). Dataset cannot be evaluated in preconditioned space.
+
+Set the environment variable HYDRA_FULL_ERROR=1 for a complete stack trace.

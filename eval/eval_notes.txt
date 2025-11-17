@@ -1,0 +1,13 @@
+ For Monash In-Distribution Evaluation (Page 6, Section 4.1)
+
+  The paper states:
+
+  "In this evaluation, we consider a standard setting with a context length of 1000, and a patch size of 32 for all frequencies, except 
+  for quarterly data with a patch size of 8."
+
+  Summary for Monash Evaluation:
+
+  | Frequency                                                            | Patch Size |
+  |----------------------------------------------------------------------|------------|
+  | Quarterly                                                            | 8          |
+  | All other frequencies (Yearly, Monthly, Weekly, Daily, Hourly, etc.) | 32         |

@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=moirai_precond_eval
-#SBATCH --output=logs/eval_precond_comprehensive_%j.out
-#SBATCH --error=logs/eval_precond_comprehensive_%j.err
+#SBATCH --job-name=baseline_precond_space
+#SBATCH --output=logs/eval_baseline_precond_space_%j.out
+#SBATCH --error=logs/eval_baseline_precond_space_%j.err
 #SBATCH --time=48:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -13,31 +13,30 @@
 #SBATCH --mail-type=END
 #SBATCH --mail-user=jh1161@princeton.edu
 
-# Comprehensive evaluation script for PRECONDITIONED models
-# Evaluates in the TRANSFORMED SPACE (without reversing preconditioning)
+# Comprehensive evaluation script to compare BASELINE vs PRECONDITIONED models
 #
-# Dataset configuration is loaded from eval_confs/forecast_datasets.xlsx
-# This file specifies dataset names, prediction lengths, and evaluation order
+# This script evaluates a BASELINE model by:
+# 1. Generating predictions from baseline model (in original space)
+# 2. Applying preconditioning to both predictions AND ground truth
+# 3. Computing metrics in the preconditioned/transformed space
 #
-# Features:
-# - Automatically loads datasets and prediction lengths from Excel file
-# - Maintains dataset order as specified in the Excel file
-# - Handles partial failures: extracts MAE metric even if other metrics fail
-# - Saves results to CSV with comprehensive metrics
+# This enables fair comparison with preconditioned models that directly
+# output predictions in the transformed space.
 #
 # Usage:
-#   sbatch --export=MODEL_PATH=/path/to/checkpoint.ckpt eval_precond_comprehensive.slurm
+#   sbatch --export=MODEL_PATH=/path/to/baseline.ckpt,PRECOND_TYPE=chebyshev,PRECOND_DEGREE=5 eval_baseline_in_precond_space.slurm
 #
-# Optional parameters:
-#   PRECOND_TYPE=chebyshev (default) or legendre
-#   PRECOND_DEGREE=5 (default)
-#   PATCH_SIZE=32 (default)
-#   CONTEXT_LENGTH=1000 (default)
-#   BATCH_SIZE=32 (default)
+# Parameters:
+#   MODEL_PATH: Path to baseline model checkpoint (REQUIRED)
+#   PRECOND_TYPE: chebyshev or legendre (default: chebyshev)
+#   PRECOND_DEGREE: Polynomial degree (default: 5)
+#   PATCH_SIZE: Override default patch size (default: frequency-based)
+#   CONTEXT_LENGTH: Context window (default: 1000)
+#   BATCH_SIZE: Batch size (default: 32)
 
 # Print job information
 echo "=========================================="
-echo "Comprehensive Preconditioned Model Evaluation"
+echo "Baseline Model in Preconditioned Space Evaluation"
 echo "=========================================="
 echo "Job ID: $SLURM_JOB_ID"
 echo "Node: $SLURM_NODELIST"
@@ -52,7 +51,7 @@ cd /scratch/gpfs/EHAZAN/jh1161/uni2ts
 echo "Activating virtual environment..."
 source venv/bin/activate
 
-# Force HuggingFace to use offline mode (skip online checks)
+# Force HuggingFace to use offline mode
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 echo "HuggingFace offline mode enabled"
@@ -64,7 +63,6 @@ nvidia-smi
 echo ""
 
 # Configuration
-PATCH_SIZE=${PATCH_SIZE:-32}
 CONTEXT_LENGTH=${CONTEXT_LENGTH:-1000}
 BATCH_SIZE=${BATCH_SIZE:-32}
 PRECOND_TYPE=${PRECOND_TYPE:-chebyshev}
@@ -73,7 +71,7 @@ PRECOND_DEGREE=${PRECOND_DEGREE:-5}
 # Check if model path is provided
 if [ -z "$MODEL_PATH" ]; then
     echo "ERROR: MODEL_PATH environment variable is required"
-    echo "Usage: sbatch --export=MODEL_PATH=/path/to/checkpoint.ckpt eval_precond_comprehensive.slurm"
+    echo "Usage: sbatch --export=MODEL_PATH=/path/to/baseline.ckpt eval_baseline_in_precond_space.slurm"
     exit 1
 fi
 
@@ -89,12 +87,11 @@ echo "Configuration:"
 echo "=========================================="
 echo "Model Path: $MODEL_PATH"
 echo "Model Name: $MODEL_NAME"
-echo "Patch Size: $PATCH_SIZE"
 echo "Context Length: $CONTEXT_LENGTH"
 echo "Batch Size: $BATCH_SIZE"
 echo "Preconditioning Type: $PRECOND_TYPE"
 echo "Preconditioning Degree: $PRECOND_DEGREE"
-echo "Evaluation Mode: TRANSFORMED SPACE (no reversal)"
+echo "Evaluation Mode: BASELINE predictions -> PRECONDITIONED space"
 echo "=========================================="
 echo ""
 
@@ -107,7 +104,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Parse JSON into arrays (maintaining order from Excel file)
+# Parse JSON into arrays
 DATASET_DISPLAY_NAMES=($(echo "$DATASETS_JSON" | python -c "import sys, json; data=json.load(sys.stdin); print(' '.join([d['display_name'].replace(' ', '_') for d in data]))"))
 DATASET_NAMES=($(echo "$DATASETS_JSON" | python -c "import sys, json; data=json.load(sys.stdin); print(' '.join([d['dataset_name'] for d in data]))"))
 PREDICTION_LENGTHS=($(echo "$DATASETS_JSON" | python -c "import sys, json; data=json.load(sys.stdin); print(' '.join([str(d['prediction_length']) for d in data]))"))
@@ -117,14 +114,14 @@ echo "Loaded ${#DATASET_NAMES[@]} datasets from configuration file"
 
 # Output directory for results
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-RESULTS_DIR="/scratch/gpfs/EHAZAN/jh1161/eval/outputs/eval_precond_results_${MODEL_NAME}_${TIMESTAMP}"
+RESULTS_DIR="/scratch/gpfs/EHAZAN/jh1161/eval/outputs/eval_baseline_precond_space_${MODEL_NAME}_${PRECOND_TYPE}_d${PRECOND_DEGREE}_${TIMESTAMP}"
 mkdir -p "$RESULTS_DIR"
 
 echo "Results will be saved to: $RESULTS_DIR"
 echo ""
 
 # Initialize CSV file with standard format
-CSV_FILE="$RESULTS_DIR/evaluation_metrics_precond_space.csv"
+CSV_FILE="$RESULTS_DIR/evaluation_metrics_baseline_in_precond_space.csv"
 echo "dataset,MSE[mean],MSE[0.5],MAE[0.5],MASE[0.5],MAPE[0.5],sMAPE[0.5],MSIS,RMSE[mean],NRMSE[mean],ND[0.5],mean_weighted_sum_quantile_loss,status" > "$CSV_FILE"
 
 # Track success/failure
@@ -136,27 +133,19 @@ extract_metrics() {
     local dataset_name=$1
     local output_file=$2
 
-    # Look for the metrics line (starts with "None" and contains numbers)
-    local metrics_line=$(grep -E "^None\s+[0-9]" "$output_file" | tail -1)
+    # Look for metrics in the new standard format
+    local mse_mean=$(grep "MSE\[mean\]:" "$output_file" | grep -oE "[0-9]+\.?[0-9]*" | head -1)
+    local mse_median=$(grep "MSE\[0\.5\]:" "$output_file" | grep -oE "[0-9]+\.?[0-9]*" | head -1)
+    local mae_median=$(grep "MAE\[0\.5\]:" "$output_file" | grep -oE "[0-9]+\.?[0-9]*" | head -1)
+    local rmse_mean=$(grep "RMSE\[mean\]:" "$output_file" | grep -oE "[0-9]+\.?[0-9]*" | head -1)
 
-    if [ -n "$metrics_line" ]; then
-        # Parse the metrics
-        read -r none mse_mean mse_median mae_median mase_median mape_median smape_median msis rmse_mean nrmse_mean nd_median mean_wql <<< "$metrics_line"
-        echo "$dataset_name,$mse_mean,$mse_median,$mae_median,$mase_median,$mape_median,$smape_median,$msis,$rmse_mean,$nrmse_mean,$nd_median,$mean_wql,success" >> "$CSV_FILE"
+    if [ -n "$mae_median" ]; then
+        # At least MAE found - write with standard format (other metrics are NaN for baseline)
+        echo "$dataset_name,$mse_mean,$mse_median,$mae_median,,,,,,$rmse_mean,,,,success" >> "$CSV_FILE"
         return 0
     else
-        # Check if we can at least extract MAE from the output
-        local mae_value=$(grep -i "mae" "$output_file" | grep -oE "[0-9]+\.[0-9]+" | head -1)
-
-        if [ -n "$mae_value" ]; then
-            # Found MAE, save it with other metrics as empty
-            echo "$dataset_name,,,$mae_value,,,,,,,,partial_success" >> "$CSV_FILE"
-            echo "  Note: Only MAE metric extracted for $dataset_name"
-            return 0
-        else
-            echo "$dataset_name,,,,,,,,,,,failed" >> "$CSV_FILE"
-            return 1
-        fi
+        echo "$dataset_name,,,,,,,,,,,,,failed" >> "$CSV_FILE"
+        return 1
     fi
 }
 
@@ -167,7 +156,7 @@ echo "=========================================="
 TOTAL_DATASETS=${#DATASET_NAMES[@]}
 CURRENT=0
 
-# Iterate through datasets in the order from Excel file
+# Iterate through datasets
 for i in "${!DATASET_NAMES[@]}"; do
     dataset_name="${DATASET_NAMES[$i]}"
     display_name="${DATASET_DISPLAY_NAMES[$i]}"
@@ -175,54 +164,45 @@ for i in "${!DATASET_NAMES[@]}"; do
     frequency="${FREQUENCIES[$i]}"
     CURRENT=$((CURRENT + 1))
 
-    # Determine patch size based on frequency (per Moirai paper Appendix B.1, page 17)
-    # This follows the frequency-to-patch-size mapping from the paper:
-    # - Yearly, Quarterly: 8
-    # - Monthly: 8, 16, 32 (we use 32)
-    # - Weekly, Daily: 16, 32 (we use 32)
-    # - Hourly: 32, 64 (we use 32)
-    # - Minute-level: 32, 64, 128 (we use 64)
-    # - Second-level: 64, 128 (we use 64)
-    #
-    # For Monash benchmark evaluation (Section 4.1), the paper uses:
-    # - Quarterly: 8
-    # - All others: 32
+    # Determine patch size based on frequency (per Moirai paper Appendix B.1)
     case "$frequency" in
         Y|Q)
-            # Yearly or Quarterly
             DATASET_PATCH_SIZE=8
             ;;
         M|W|D|H)
-            # Monthly, Weekly, Daily, Hourly
             DATASET_PATCH_SIZE=32
             ;;
         *T|*S)
-            # Minute-level (30T, 5T, etc.) or Second-level
-            # Use larger patch size for high-frequency data
             DATASET_PATCH_SIZE=64
             ;;
         *)
-            # Default fallback
             DATASET_PATCH_SIZE=${PATCH_SIZE:-32}
             ;;
     esac
 
     echo ""
-    echo "[$CURRENT/$TOTAL_DATASETS] Evaluating: $display_name (dataset: $dataset_name, freq: $frequency, pred_len: $prediction_length, patch: $DATASET_PATCH_SIZE)"
-    echo "$(date)"
+    echo "[$CURRENT/$TOTAL_DATASETS] Evaluating: $display_name"
+    echo "  Dataset: $dataset_name"
+    echo "  Frequency: $frequency"
+    echo "  Prediction Length: $prediction_length"
+    echo "  Patch Size: $DATASET_PATCH_SIZE"
+    echo "  Preconditioning: $PRECOND_TYPE degree $PRECOND_DEGREE"
+    echo "  $(date)"
 
-    # Create temporary output file for this dataset
+    # Create output file for this dataset
     TEMP_OUTPUT="$RESULTS_DIR/${display_name}_output.txt"
 
-    # Run evaluation in preconditioned space with prediction length
-    python -m cli.eval_precond_space \
-      run_name=eval_precond_${MODEL_NAME}_${dataset_name} \
-      model=moirai_precond_ckpt_no_reverse \
+    # Run evaluation
+    # NOTE: precond_type and precond_degree are top-level config params (not in base struct)
+    # They need the + prefix to be added to the config
+    python -m cli.eval_baseline_in_precond_space \
+      run_name=eval_baseline_precond_${dataset_name} \
+      model=moirai_lightning_ckpt \
       model.checkpoint_path=$MODEL_PATH \
       model.patch_size=$DATASET_PATCH_SIZE \
       model.context_length=$CONTEXT_LENGTH \
-      model.precondition_type=$PRECOND_TYPE \
-      model.precondition_degree=$PRECOND_DEGREE \
+      +precond_type=$PRECOND_TYPE \
+      +precond_degree=$PRECOND_DEGREE \
       batch_size=$BATCH_SIZE \
       data=monash_cached \
       data.dataset_name=$dataset_name \
@@ -231,23 +211,24 @@ for i in "${!DATASET_NAMES[@]}"; do
     EXIT_CODE=$?
 
     if [ $EXIT_CODE -eq 0 ]; then
-        echo "✓ $display_name completed successfully"
+        echo "  ✓ $display_name completed successfully"
         SUCCESSFUL_DATASETS+=("$display_name")
         extract_metrics "$display_name" "$TEMP_OUTPUT"
     else
-        echo "✗ $display_name failed (exit code: $EXIT_CODE)"
+        echo "  ✗ $display_name failed (exit code: $EXIT_CODE)"
         FAILED_DATASETS+=("$display_name")
-        # Try to extract MAE even on failure
         extract_metrics "$display_name" "$TEMP_OUTPUT"
-        # Keep the error output for debugging
-        echo "Error output saved to: $TEMP_OUTPUT"
+        echo "  Error output saved to: $TEMP_OUTPUT"
     fi
 
-    # Print progress
-    echo "Progress: $CURRENT/$TOTAL_DATASETS datasets completed"
+    echo "  Progress: $CURRENT/$TOTAL_DATASETS datasets completed"
 done
 
-
+echo ""
+echo "=========================================="
+echo "Evaluation Completed"
+echo "=========================================="
+echo "End time: $(date)"
 echo ""
 echo "Summary:"
 echo "  Total datasets: $TOTAL_DATASETS"
@@ -275,8 +256,9 @@ echo "Results saved to:"
 echo "  CSV metrics: $CSV_FILE"
 echo "  Full outputs: $RESULTS_DIR/"
 echo ""
-echo "NOTE: These metrics are computed in the PRECONDITIONED/TRANSFORMED space,"
-echo "not in the original data space."
+echo "NOTE: These metrics compare BASELINE model predictions vs ground truth,"
+echo "both transformed into the preconditioned space for fair comparison with"
+echo "preconditioned models."
 echo ""
 
 exit 0

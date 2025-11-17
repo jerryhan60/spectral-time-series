@@ -1,0 +1,69 @@
+[2025-11-16 23:57:02,839][datasets][INFO] - PyTorch version 2.4.1 available.
+[2025-11-16 23:57:02,841][datasets][INFO] - JAX version 0.6.1 available.
+Preconditioning parameters:
+  Type: chebyshev
+  Degree: 5
+Applying preconditioning to ground truth labels only...
+Preconditioning statistics:
+  Total items: 862
+  Items with NaN in original data: 0 (will use masked arrays)
+  Items skipped (new NaN after preconditioning): 0
+  Valid items for evaluation: 862
+Generating predictions (in preconditioned space)...
+Generating predictions for 862 valid samples (out of 862 total)...
+Collecting predictions and preconditioned ground truth...
+Generated 862 forecasts for 862 valid samples
+Computing metrics in preconditioned space...
+
+================================================================================
+EVALUATION METRICS (IN PRECONDITIONED SPACE)
+================================================================================
+      MSE[mean]  MAE[0.5]  MAPE[0.5]  sMAPE[0.5]  MASE[0.5]  RMSE[mean]  NRMSE[mean]  ND[0.5]  MSIS  mean_weighted_sum_quantile_loss
+None      0.002     0.020      1.451       0.604      0.806       0.046        1.143    0.497 8.803                            0.409
+================================================================================
+
+Metrics saved to: /scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/eval_precond_space/monash_cached/traffic_hourly/S/prediction_length=168/eval_precond_last_traffic_hourly/metrics_precond_space.csv
+
+
+Preconditioning ground truth:   0%|          | 0/862 [00:00<?, ?it/s]
+Preconditioning ground truth:  81%|████████  | 700/862 [00:00<00:00, 6997.02it/s]
+Preconditioning ground truth: 100%|██████████| 862/862 [00:00<00:00, 7052.10it/s]
+
+Processing forecasts:   0%|          | 0/862 [00:00<?, ?it/s]
+Processing forecasts:   0%|          | 1/862 [00:00<04:01,  3.57it/s]
+Processing forecasts:  15%|█▍        | 129/862 [00:00<00:01, 426.96it/s]
+Processing forecasts:  30%|██▉       | 257/862 [00:00<00:00, 693.04it/s]
+Processing forecasts:  45%|████▍     | 385/862 [00:00<00:00, 867.15it/s]
+Processing forecasts:  60%|█████▉    | 513/862 [00:00<00:00, 983.48it/s]
+Processing forecasts:  74%|███████▍  | 641/862 [00:00<00:00, 1060.51it/s]
+Processing forecasts:  89%|████████▉ | 769/862 [00:00<00:00, 1113.04it/s]
+Processing forecasts: 100%|██████████| 862/862 [00:00<00:00, 901.65it/s] 
+
+0it [00:00, ?it/s]
+32it [00:00, 302.50it/s]
+64it [00:00, 303.96it/s]
+96it [00:00, 303.41it/s]
+128it [00:00, 303.11it/s]
+160it [00:00, 302.98it/s]
+192it [00:00, 303.42it/s]
+224it [00:00, 302.79it/s]
+256it [00:00, 303.01it/s]
+288it [00:00, 302.73it/s]
+320it [00:01, 303.15it/s]
+352it [00:01, 303.31it/s]
+384it [00:01, 302.75it/s]
+416it [00:01, 302.60it/s]
+448it [00:01, 302.23it/s]
+480it [00:01, 302.39it/s]
+512it [00:01, 302.35it/s]
+544it [00:01, 302.31it/s]
+576it [00:01, 302.26it/s]
+608it [00:02, 302.44it/s]
+640it [00:02, 300.38it/s]
+672it [00:02, 301.17it/s]
+704it [00:02, 300.84it/s]
+736it [00:02, 301.89it/s]
+768it [00:02, 301.80it/s]
+800it [00:02, 301.61it/s]
+832it [00:02, 302.35it/s]
+862it [00:02, 302.37it/s]

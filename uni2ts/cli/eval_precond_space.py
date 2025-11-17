@@ -60,6 +60,7 @@ def precondition_ground_truth(
 
     Returns:
         preconditioned_test_data: TestData with preconditioned targets
+        valid_indices: List of indices that passed preconditioning (for tracking which samples to predict)
     """
     preconditioner = PolynomialPrecondition(
         polynomial_type=precondition_type,
@@ -72,6 +73,7 @@ def precondition_ground_truth(
     # Apply preconditioning to each item
     preconditioned_input = []
     preconditioned_label = []
+    valid_indices = []  # Track which indices are valid
 
     # Track statistics for debugging
     total_items = 0
@@ -79,7 +81,7 @@ def precondition_ground_truth(
     nan_in_original = 0
     nan_after_precond = 0
 
-    for item in tqdm(test_data, desc="Preconditioning ground truth"):
+    for idx, item in enumerate(tqdm(test_data, desc="Preconditioning ground truth")):
         total_items += 1
 
         # Handle both tuple format (input, label) and object format
@@ -128,9 +130,10 @@ def precondition_ground_truth(
         new_label = dict(label_dict)
         new_label["target"] = preconditioned_label_target
 
-        # Store as tuple (input, label)
+        # Store as tuple (input, label) and record the valid index
         preconditioned_input.append(new_input)
         preconditioned_label.append(new_label)
+        valid_indices.append(idx)
 
     # Print statistics
     print(f"Preconditioning statistics:")
@@ -171,7 +174,7 @@ def precondition_ground_truth(
         def __len__(self):
             return len(self.inputs)
 
-    return PreconditionedTestData(preconditioned_input, preconditioned_label)
+    return PreconditionedTestData(preconditioned_input, preconditioned_label), valid_indices
 
 
 def evaluate_in_preconditioned_space(
@@ -203,7 +206,7 @@ def evaluate_in_preconditioned_space(
         DataFrame with metrics
     """
     print("Applying preconditioning to ground truth labels only...")
-    preconditioned_test_data = precondition_ground_truth(
+    preconditioned_test_data, valid_indices = precondition_ground_truth(
         test_data,
         precondition_type=precondition_type,
         precondition_degree=precondition_degree,
@@ -211,11 +214,15 @@ def evaluate_in_preconditioned_space(
 
     print("Generating predictions (in preconditioned space)...")
     # Convert to list to avoid iterator exhaustion issues
-    # Also convert original test_data to list for inputs
     test_data_list = list(test_data)
-    preconditioned_test_list = list(preconditioned_test_data)
 
-    # Get predictions using ORIGINAL inputs (not preconditioned)
+    # Only process samples that passed preconditioning (valid_indices)
+    # This ensures predictions align with preconditioned ground truth
+    valid_test_data = [test_data_list[i] for i in valid_indices]
+
+    print(f"Generating predictions for {len(valid_test_data)} valid samples (out of {len(test_data_list)} total)...")
+
+    # Get predictions using ORIGINAL inputs (not preconditioned) for VALID samples only
     # The model will apply preconditioning internally and output in preconditioned space
     # Create a proper generator that handles both tuple and object formats
     def get_inputs(test_data_list):
@@ -228,19 +235,19 @@ def evaluate_in_preconditioned_space(
                 raise ValueError(f"Unknown test data format: {type(item)}")
 
     forecast_it = predictor.predict(
-        get_inputs(test_data_list),
+        get_inputs(valid_test_data),  # Only predict for valid samples
         num_samples=100,
     )
 
     # Collect forecasts
     print("Collecting predictions and preconditioned ground truth...")
-    forecast_list = list(tqdm(forecast_it, total=len(test_data_list), desc="Processing forecasts"))
+    forecast_list = list(tqdm(forecast_it, total=len(valid_test_data), desc="Processing forecasts"))
 
     # Check if we actually got any data
     if len(forecast_list) == 0:
         raise ValueError("No forecasts were generated. Check if the test data is empty or if there's an issue with the predictor.")
 
-    print(f"Generated {len(forecast_list)} forecasts")
+    print(f"Generated {len(forecast_list)} forecasts for {len(valid_test_data)} valid samples")
 
     # Compute metrics using the standard evaluate_forecasts function
     print("Computing metrics in preconditioned space...")
