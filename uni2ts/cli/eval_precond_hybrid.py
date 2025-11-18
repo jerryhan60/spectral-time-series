@@ -10,7 +10,8 @@ The hybrid forecast is computed by:
 1. Generate base model predictions y_base in original space
 2. Generate preconditioned model predictions ỹ_precond in preconditioned space
 3. Reverse the preconditioning using base model outputs as context:
-   y_hybrid[t] = ỹ_precond[t] + Σ(i=1 to n) c_i · y_context[t-i]
+   Since forward preconditioning uses: ỹ_t = y_t + Σ c_i · y[t-i]
+   Reverse uses: y_hybrid[t] = ỹ_precond[t] - Σ(i=1 to n) c_i · y_context[t-i]
    where y_context comes from the base model's predictions
 
 This allows the preconditioned model to predict "residuals" or "deltas"
@@ -60,8 +61,11 @@ def reverse_precondition_with_base_context(
     """
     Reverse preconditioning using base model predictions as context.
 
-    This implements the hybrid reversal:
-        y_hybrid[t] = ỹ_precond[t] + Σ(i=1 to n) c_i · y_base[t-i]
+    Since forward preconditioning uses ADDITION:
+        ỹ_t = y_t + Σ c_i · y[t-i]
+
+    This implements the hybrid reversal using SUBTRACTION:
+        y_hybrid[t] = ỹ_precond[t] - Σ(i=1 to n) c_i · y_base[t-i]
 
     Args:
         precond_predictions: Predictions from preconditioned model (in precond space)
@@ -99,7 +103,11 @@ def _reverse_1d(precond_seq: np.ndarray, base_seq: np.ndarray, coeffs: np.ndarra
     """
     Reverse preconditioning for a single 1D sequence using base context.
 
-    Implements: y_t = ỹ_t + Σ(i=1 to n) c_i · y_base[t-i]
+    Since forward preconditioning uses ADDITION:
+        ỹ_t = y_t + Σ(i=1 to n) c_i · y[t-i]
+
+    Reverse uses SUBTRACTION:
+        y_t = ỹ_t - Σ(i=1 to n) c_i · y_base[t-i]
 
     For the first few timesteps where we don't have enough history from base model,
     we use the preconditioned prediction directly (no reversal).
@@ -116,7 +124,7 @@ def _reverse_1d(precond_seq: np.ndarray, base_seq: np.ndarray, coeffs: np.ndarra
             # For all t in [n, len(precond_seq)), extract base_seq[t-(i+1)]
             weighted_sum += coeffs[i] * base_seq[n-i-1:len(base_seq)-i-1]
 
-        result[n:] = precond_seq[n:] + weighted_sum
+        result[n:] = precond_seq[n:] - weighted_sum  # SUBTRACTION (reverse of addition)
 
     # For t < n, keep preconditioned values (we don't have enough base history)
     # This is analogous to how forward preconditioning keeps original values for t < n

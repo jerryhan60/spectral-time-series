@@ -1,0 +1,113 @@
+================================================================================
+Baseline Model Evaluation in Preconditioned Space
+================================================================================
+
+Preconditioning Configuration:
+  Type: chebyshev
+  Degree: 5
+
+Loading test data: pedestrian_counts
+  Prediction length: 24
+[2025-11-17 13:15:51,925][datasets][INFO] - PyTorch version 2.4.1 available.
+[2025-11-17 13:15:51,926][datasets][INFO] - JAX version 0.6.1 available.
+  Target dim: 1
+  Feat dynamic real dim: 0
+  Past feat dynamic real dim: 0
+
+Loading baseline model: uni2ts.model.moirai.MoiraiForecast.load_from_checkpoint
+  Patch size: 32
+  Context length: 1000
+  Checkpoint: /scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai_small/lotsa_v1_unweighted/pretrain_run_20251020_205126/checkpoints/last.ckpt
+
+Generating forecasts from baseline model...
+Generated 66 forecasts
+
+Applying preconditioning to both predictions and ground truth...
+Preconditioned 66 forecasts and ground truth
+
+Computing metrics in preconditioned space...
+================================================================================
+
+================================================================================
+EVALUATION METRICS (BASELINE IN PRECONDITIONED SPACE)
+================================================================================
+      MSE[mean]  MAE[0.5]  MAPE[0.5]  sMAPE[0.5]  MASE[0.5]  RMSE[mean]  NRMSE[mean]  ND[0.5]  MSIS  mean_weighted_sum_quantile_loss
+None  50595.306    66.740      1.123       0.531      0.391     224.934        1.369    0.406 3.366                            0.328
+================================================================================
+
+Results saved to: /scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/eval_baseline_in_precond_space/monash_cached/pedestrian_counts/S/prediction_length=24/eval_baseline_precond_pedestrian_counts/metrics_baseline_in_precond_space.csv
+
+
+
+Preconditioning:   0%|          | 0/66 [00:00<?, ?it/s]
+Preconditioning:   2%|▏         | 1/66 [00:08<08:58,  8.28s/it]
+Preconditioning:   3%|▎         | 2/66 [00:17<09:33,  8.97s/it]
+Preconditioning:   5%|▍         | 3/66 [00:26<09:28,  9.02s/it]
+Preconditioning:   6%|▌         | 4/66 [00:35<09:15,  8.95s/it]
+Preconditioning:   8%|▊         | 5/66 [00:44<09:11,  9.04s/it]
+Preconditioning:   9%|▉         | 6/66 [00:54<09:09,  9.17s/it]
+Preconditioning:  11%|█         | 7/66 [01:01<08:32,  8.68s/it]
+Preconditioning:  12%|█▏        | 8/66 [01:11<08:35,  8.88s/it]
+Preconditioning:  14%|█▎        | 9/66 [01:20<08:36,  9.07s/it]
+Preconditioning:  15%|█▌        | 10/66 [01:30<08:34,  9.19s/it]
+Preconditioning:  17%|█▋        | 11/66 [01:39<08:28,  9.25s/it]
+Preconditioning:  18%|█▊        | 12/66 [01:48<08:17,  9.21s/it]
+Preconditioning:  20%|█▉        | 13/66 [01:55<07:29,  8.48s/it]
+Preconditioning:  21%|██        | 14/66 [02:04<07:28,  8.62s/it]
+Preconditioning:  23%|██▎       | 15/66 [02:13<07:19,  8.62s/it]
+Preconditioning:  24%|██▍       | 16/66 [02:17<06:07,  7.35s/it]
+Preconditioning:  26%|██▌       | 17/66 [02:26<06:21,  7.78s/it]
+Preconditioning:  27%|██▋       | 18/66 [02:35<06:36,  8.26s/it]
+Preconditioning:  29%|██▉       | 19/66 [02:41<05:50,  7.45s/it]
+Preconditioning:  30%|███       | 20/66 [02:46<05:15,  6.87s/it]
+Preconditioning:  32%|███▏      | 21/66 [02:52<04:52,  6.50s/it]
+Preconditioning:  33%|███▎      | 22/66 [02:56<04:18,  5.87s/it]
+Preconditioning:  35%|███▍      | 23/66 [03:02<04:07,  5.76s/it]
+Preconditioning:  36%|███▋      | 24/66 [03:07<03:59,  5.69s/it]
+Preconditioning:  38%|███▊      | 25/66 [03:13<03:48,  5.58s/it]
+Preconditioning:  39%|███▉      | 26/66 [03:18<03:43,  5.60s/it]
+Preconditioning:  41%|████      | 27/66 [03:24<03:37,  5.58s/it]
+Preconditioning:  42%|████▏     | 28/66 [03:29<03:31,  5.57s/it]
+Preconditioning:  44%|████▍     | 29/66 [03:35<03:22,  5.47s/it]
+Preconditioning:  45%|████▌     | 30/66 [03:40<03:15,  5.43s/it]
+Preconditioning:  47%|████▋     | 31/66 [03:45<03:11,  5.47s/it]
+Preconditioning:  48%|████▊     | 32/66 [03:48<02:36,  4.59s/it]
+Preconditioning:  50%|█████     | 33/66 [03:53<02:31,  4.59s/it]
+Preconditioning:  52%|█████▏    | 34/66 [03:58<02:30,  4.71s/it]
+Preconditioning:  53%|█████▎    | 35/66 [04:01<02:13,  4.32s/it]
+Preconditioning:  55%|█████▍    | 36/66 [04:05<02:08,  4.30s/it]
+Preconditioning:  56%|█████▌    | 37/66 [04:10<02:05,  4.34s/it]
+Preconditioning:  58%|█████▊    | 38/66 [04:11<01:38,  3.53s/it]
+Preconditioning:  59%|█████▉    | 39/66 [04:16<01:42,  3.81s/it]
+Preconditioning:  61%|██████    | 40/66 [04:20<01:44,  4.00s/it]
+Preconditioning:  62%|██████▏   | 41/66 [04:22<01:21,  3.25s/it]
+Preconditioning:  64%|██████▎   | 42/66 [04:26<01:24,  3.53s/it]
+Preconditioning:  65%|██████▌   | 43/66 [04:30<01:26,  3.76s/it]
+Preconditioning:  67%|██████▋   | 44/66 [04:35<01:26,  3.92s/it]
+Preconditioning:  68%|██████▊   | 45/66 [04:37<01:10,  3.36s/it]
+Preconditioning:  70%|██████▉   | 46/66 [04:39<01:00,  3.02s/it]
+Preconditioning:  71%|███████   | 47/66 [04:41<00:52,  2.79s/it]
+Preconditioning:  73%|███████▎  | 48/66 [04:43<00:46,  2.58s/it]
+Preconditioning:  74%|███████▍  | 49/66 [04:45<00:40,  2.40s/it]
+Preconditioning:  76%|███████▌  | 50/66 [04:47<00:37,  2.37s/it]
+Preconditioning:  77%|███████▋  | 51/66 [04:49<00:33,  2.26s/it]
+Preconditioning:  79%|███████▉  | 52/66 [04:52<00:31,  2.27s/it]
+Preconditioning:  80%|████████  | 53/66 [04:56<00:35,  2.75s/it]
+Preconditioning:  82%|████████▏ | 54/66 [04:57<00:28,  2.38s/it]
+Preconditioning:  83%|████████▎ | 55/66 [04:58<00:19,  1.81s/it]
+Preconditioning:  85%|████████▍ | 56/66 [04:59<00:16,  1.68s/it]
+Preconditioning:  86%|████████▋ | 57/66 [05:00<00:13,  1.55s/it]
+Preconditioning:  88%|████████▊ | 58/66 [05:01<00:11,  1.47s/it]
+Preconditioning:  89%|████████▉ | 59/66 [05:02<00:09,  1.32s/it]
+Preconditioning:  91%|█████████ | 60/66 [05:03<00:05,  1.01it/s]
+Preconditioning:  92%|█████████▏| 61/66 [05:03<00:04,  1.13it/s]
+Preconditioning:  94%|█████████▍| 62/66 [05:04<00:03,  1.32it/s]
+Preconditioning:  95%|█████████▌| 63/66 [05:04<00:01,  1.73it/s]
+Preconditioning:  97%|█████████▋| 64/66 [05:04<00:00,  2.16it/s]
+Preconditioning:  98%|█████████▊| 65/66 [05:04<00:00,  2.81it/s]
+Preconditioning: 100%|██████████| 66/66 [05:04<00:00,  4.62s/it]
+
+0it [00:00, ?it/s]
+32it [00:00, 74.41it/s]
+64it [00:00, 122.78it/s]
+66it [00:00, 114.46it/s]

@@ -849,8 +849,24 @@ def new_main():
     #     patch_size=32,
     #     context_length=1000,
     #     batch_size=32,
-    #     output_dir="tmp",
-    #     dataset_filter=["sunspot_with_missing"]  # Start with just one dataset
+    #     output_dir="eval-runs/standard_model_1.0",
+    # )
+    # df = eval_standard(
+    #     model_path = None,
+    #     model_version="1.1",  # Use 1.1 since 1.0 needs to be cached
+    #     patch_size=32,
+    #     context_length=1000,
+    #     batch_size=32,
+    #     output_dir="eval-runs/standard_model_1.1",
+    # )
+    # df = eval_standard(
+    #     # model_path = None,
+    #     model_path= our_pretrained_model_path,
+    #     # model_version="1.1",  # Use 1.1 since 1.0 needs to be cached
+    #     patch_size=32,
+    #     context_length=1000,
+    #     batch_size=32,
+    #     output_dir="eval-runs/pretrained_model_in_standard_space",
     # )
     # print("\nResults:")
     # print(df)
@@ -883,13 +899,8 @@ def new_main():
 
     df = eval_baseline_in_precond_space(
         model_path=our_pretrained_model_path,
-        # precond_type=args.precond_type,
-        # precond_degree=args.precond_degree,
-        # patch_size=args.patch_size,
-        # context_length=args.context_length,
-        # batch_size=args.batch_size,
-        output_dir="tmp_2",
-        dataset_filter=["australian_electricity_demand"]  # Start with just one dataset
+        output_dir="eval-runs/baseline_in_precond_space",
+        dataset_filter=["weather"]
     )
 
 def main():

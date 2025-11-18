@@ -1,0 +1,192 @@
+================================================================================
+Baseline Model Evaluation in Preconditioned Space
+================================================================================
+
+Preconditioning Configuration:
+  Type: chebyshev
+  Degree: 5
+
+Loading test data: monash_m3_monthly
+  Prediction length: 18
+[2025-11-17 13:11:08,705][datasets][INFO] - PyTorch version 2.4.1 available.
+[2025-11-17 13:11:08,706][datasets][INFO] - JAX version 0.6.1 available.
+  Target dim: 1
+  Feat dynamic real dim: 0
+  Past feat dynamic real dim: 0
+
+Loading baseline model: uni2ts.model.moirai.MoiraiForecast.load_from_checkpoint
+  Patch size: 32
+  Context length: 1000
+  Checkpoint: /scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai_small/lotsa_v1_unweighted/pretrain_run_20251020_205126/checkpoints/last.ckpt
+
+Generating forecasts from baseline model...
+Generated 1428 forecasts
+
+Applying preconditioning to both predictions and ground truth...
+Preconditioned 1428 forecasts and ground truth
+
+Computing metrics in preconditioned space...
+================================================================================
+
+================================================================================
+EVALUATION METRICS (BASELINE IN PRECONDITIONED SPACE)
+================================================================================
+       MSE[mean]  MAE[0.5]  MAPE[0.5]  sMAPE[0.5]  MASE[0.5]  RMSE[mean]  NRMSE[mean]  ND[0.5]  MSIS  mean_weighted_sum_quantile_loss
+None 3273415.291   710.224      0.195       0.156      0.977    1809.258        0.349    0.137 8.333                            0.109
+================================================================================
+
+Results saved to: /scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/eval_baseline_in_precond_space/monash_cached/monash_m3_monthly/S/prediction_length=18/eval_baseline_precond_monash_m3_monthly/metrics_baseline_in_precond_space.csv
+
+
+
+Preconditioning:   0%|          | 0/1428 [00:00<?, ?it/s]
+Preconditioning:   1%|          | 17/1428 [00:00<00:08, 162.47it/s]
+Preconditioning:   2%|▏         | 34/1428 [00:00<00:08, 158.54it/s]
+Preconditioning:   4%|▎         | 50/1428 [00:00<00:08, 159.13it/s]
+Preconditioning:   5%|▍         | 67/1428 [00:00<00:08, 159.55it/s]
+Preconditioning:   6%|▌         | 84/1428 [00:00<00:08, 160.07it/s]
+Preconditioning:   7%|▋         | 101/1428 [00:00<00:08, 160.36it/s]
+Preconditioning:   8%|▊         | 118/1428 [00:00<00:08, 160.54it/s]
+Preconditioning:   9%|▉         | 135/1428 [00:00<00:08, 160.49it/s]
+Preconditioning:  11%|█         | 152/1428 [00:00<00:07, 160.43it/s]
+Preconditioning:  12%|█▏        | 169/1428 [00:01<00:07, 160.34it/s]
+Preconditioning:  13%|█▎        | 186/1428 [00:01<00:07, 160.25it/s]
+Preconditioning:  14%|█▍        | 203/1428 [00:01<00:07, 160.16it/s]
+Preconditioning:  15%|█▌        | 220/1428 [00:01<00:07, 160.01it/s]
+Preconditioning:  17%|█▋        | 237/1428 [00:01<00:07, 159.96it/s]
+Preconditioning:  18%|█▊        | 253/1428 [00:01<00:07, 158.32it/s]
+Preconditioning:  19%|█▉        | 269/1428 [00:01<00:07, 158.57it/s]
+Preconditioning:  20%|█▉        | 285/1428 [00:01<00:08, 141.65it/s]
+Preconditioning:  21%|██        | 300/1428 [00:01<00:09, 120.52it/s]
+Preconditioning:  22%|██▏       | 313/1428 [00:02<00:10, 109.81it/s]
+Preconditioning:  23%|██▎       | 325/1428 [00:02<00:10, 103.12it/s]
+Preconditioning:  24%|██▎       | 336/1428 [00:02<00:11, 98.78it/s] 
+Preconditioning:  24%|██▍       | 347/1428 [00:02<00:11, 95.57it/s]
+Preconditioning:  25%|██▌       | 357/1428 [00:02<00:11, 93.41it/s]
+Preconditioning:  26%|██▌       | 367/1428 [00:02<00:11, 91.78it/s]
+Preconditioning:  26%|██▋       | 377/1428 [00:02<00:11, 90.57it/s]
+Preconditioning:  27%|██▋       | 387/1428 [00:02<00:11, 89.73it/s]
+Preconditioning:  28%|██▊       | 396/1428 [00:03<00:11, 89.17it/s]
+Preconditioning:  28%|██▊       | 405/1428 [00:03<00:11, 88.68it/s]
+Preconditioning:  29%|██▉       | 414/1428 [00:03<00:11, 87.95it/s]
+Preconditioning:  30%|██▉       | 423/1428 [00:03<00:11, 87.76it/s]
+Preconditioning:  30%|███       | 432/1428 [00:03<00:11, 87.62it/s]
+Preconditioning:  31%|███       | 441/1428 [00:03<00:11, 87.55it/s]
+Preconditioning:  32%|███▏      | 450/1428 [00:03<00:11, 87.39it/s]
+Preconditioning:  32%|███▏      | 459/1428 [00:03<00:11, 87.30it/s]
+Preconditioning:  33%|███▎      | 468/1428 [00:03<00:11, 87.26it/s]
+Preconditioning:  33%|███▎      | 477/1428 [00:04<00:11, 86.15it/s]
+Preconditioning:  34%|███▍      | 486/1428 [00:04<00:11, 82.94it/s]
+Preconditioning:  35%|███▍      | 495/1428 [00:04<00:11, 80.62it/s]
+Preconditioning:  35%|███▌      | 504/1428 [00:04<00:11, 79.97it/s]
+Preconditioning:  36%|███▌      | 513/1428 [00:04<00:11, 78.87it/s]
+Preconditioning:  36%|███▋      | 521/1428 [00:04<00:11, 78.34it/s]
+Preconditioning:  37%|███▋      | 529/1428 [00:04<00:11, 77.98it/s]
+Preconditioning:  38%|███▊      | 537/1428 [00:04<00:11, 76.66it/s]
+Preconditioning:  38%|███▊      | 545/1428 [00:04<00:11, 77.02it/s]
+Preconditioning:  39%|███▊      | 553/1428 [00:05<00:11, 77.30it/s]
+Preconditioning:  39%|███▉      | 561/1428 [00:05<00:11, 77.86it/s]
+Preconditioning:  40%|███▉      | 569/1428 [00:05<00:11, 77.86it/s]
+Preconditioning:  40%|████      | 578/1428 [00:05<00:10, 78.62it/s]
+Preconditioning:  41%|████      | 586/1428 [00:05<00:10, 77.99it/s]
+Preconditioning:  42%|████▏     | 594/1428 [00:05<00:10, 77.44it/s]
+Preconditioning:  42%|████▏     | 602/1428 [00:05<00:10, 76.87it/s]
+Preconditioning:  43%|████▎     | 611/1428 [00:05<00:10, 77.79it/s]
+Preconditioning:  43%|████▎     | 619/1428 [00:05<00:10, 77.13it/s]
+Preconditioning:  44%|████▍     | 627/1428 [00:05<00:10, 76.73it/s]
+Preconditioning:  44%|████▍     | 635/1428 [00:06<00:10, 77.55it/s]
+Preconditioning:  45%|████▌     | 644/1428 [00:06<00:09, 78.94it/s]
+Preconditioning:  46%|████▌     | 653/1428 [00:06<00:09, 79.37it/s]
+Preconditioning:  46%|████▋     | 661/1428 [00:06<00:09, 78.64it/s]
+Preconditioning:  47%|████▋     | 669/1428 [00:06<00:09, 77.75it/s]
+Preconditioning:  47%|████▋     | 677/1428 [00:06<00:09, 77.06it/s]
+Preconditioning:  48%|████▊     | 685/1428 [00:06<00:09, 76.72it/s]
+Preconditioning:  49%|████▊     | 693/1428 [00:06<00:09, 76.53it/s]
+Preconditioning:  49%|████▉     | 701/1428 [00:06<00:09, 76.53it/s]
+Preconditioning:  50%|████▉     | 709/1428 [00:07<00:09, 76.96it/s]
+Preconditioning:  50%|█████     | 717/1428 [00:07<00:09, 77.40it/s]
+Preconditioning:  51%|█████     | 725/1428 [00:07<00:09, 76.93it/s]
+Preconditioning:  51%|█████▏    | 733/1428 [00:07<00:09, 76.53it/s]
+Preconditioning:  52%|█████▏    | 741/1428 [00:07<00:08, 76.88it/s]
+Preconditioning:  52%|█████▏    | 749/1428 [00:07<00:08, 77.15it/s]
+Preconditioning:  53%|█████▎    | 757/1428 [00:07<00:08, 77.53it/s]
+Preconditioning:  54%|█████▎    | 766/1428 [00:07<00:08, 78.17it/s]
+Preconditioning:  54%|█████▍    | 774/1428 [00:07<00:08, 77.74it/s]
+Preconditioning:  55%|█████▍    | 782/1428 [00:07<00:08, 77.82it/s]
+Preconditioning:  55%|█████▌    | 791/1428 [00:08<00:08, 78.90it/s]
+Preconditioning:  56%|█████▌    | 800/1428 [00:08<00:07, 79.55it/s]
+Preconditioning:  57%|█████▋    | 808/1428 [00:08<00:07, 79.62it/s]
+Preconditioning:  57%|█████▋    | 818/1428 [00:08<00:07, 83.61it/s]
+Preconditioning:  58%|█████▊    | 827/1428 [00:08<00:07, 83.61it/s]
+Preconditioning:  59%|█████▊    | 836/1428 [00:08<00:07, 82.85it/s]
+Preconditioning:  59%|█████▉    | 845/1428 [00:08<00:07, 82.34it/s]
+Preconditioning:  60%|█████▉    | 854/1428 [00:08<00:06, 82.27it/s]
+Preconditioning:  60%|██████    | 863/1428 [00:08<00:06, 81.92it/s]
+Preconditioning:  61%|██████    | 872/1428 [00:09<00:06, 81.49it/s]
+Preconditioning:  62%|██████▏   | 881/1428 [00:09<00:06, 82.87it/s]
+Preconditioning:  62%|██████▏   | 890/1428 [00:09<00:06, 84.46it/s]
+Preconditioning:  63%|██████▎   | 899/1428 [00:09<00:06, 84.09it/s]
+Preconditioning:  64%|██████▎   | 908/1428 [00:09<00:06, 84.07it/s]
+Preconditioning:  64%|██████▍   | 917/1428 [00:09<00:06, 83.61it/s]
+Preconditioning:  65%|██████▍   | 926/1428 [00:09<00:05, 83.85it/s]
+Preconditioning:  65%|██████▌   | 935/1428 [00:09<00:05, 82.96it/s]
+Preconditioning:  66%|██████▌   | 944/1428 [00:09<00:05, 82.39it/s]
+Preconditioning:  67%|██████▋   | 953/1428 [00:10<00:05, 82.00it/s]
+Preconditioning:  67%|██████▋   | 962/1428 [00:10<00:05, 81.16it/s]
+Preconditioning:  68%|██████▊   | 971/1428 [00:10<00:05, 81.11it/s]
+Preconditioning:  69%|██████▊   | 980/1428 [00:10<00:05, 81.18it/s]
+Preconditioning:  69%|██████▉   | 989/1428 [00:10<00:05, 81.23it/s]
+Preconditioning:  70%|██████▉   | 998/1428 [00:10<00:05, 81.28it/s]
+Preconditioning:  71%|███████   | 1007/1428 [00:10<00:05, 81.27it/s]
+Preconditioning:  71%|███████   | 1016/1428 [00:10<00:05, 81.27it/s]
+Preconditioning:  72%|███████▏  | 1025/1428 [00:10<00:04, 81.29it/s]
+Preconditioning:  72%|███████▏  | 1034/1428 [00:11<00:04, 81.26it/s]
+Preconditioning:  73%|███████▎  | 1043/1428 [00:11<00:04, 82.26it/s]
+Preconditioning:  74%|███████▎  | 1052/1428 [00:11<00:04, 81.72it/s]
+Preconditioning:  74%|███████▍  | 1061/1428 [00:11<00:04, 80.87it/s]
+Preconditioning:  75%|███████▍  | 1070/1428 [00:11<00:04, 81.86it/s]
+Preconditioning:  76%|███████▌  | 1080/1428 [00:11<00:04, 84.96it/s]
+Preconditioning:  76%|███████▋  | 1089/1428 [00:11<00:04, 81.96it/s]
+Preconditioning:  77%|███████▋  | 1098/1428 [00:11<00:04, 81.32it/s]
+Preconditioning:  78%|███████▊  | 1108/1428 [00:11<00:03, 85.95it/s]
+Preconditioning:  78%|███████▊  | 1117/1428 [00:12<00:03, 87.00it/s]
+Preconditioning:  79%|███████▉  | 1126/1428 [00:12<00:03, 84.31it/s]
+Preconditioning:  79%|███████▉  | 1135/1428 [00:12<00:03, 83.38it/s]
+Preconditioning:  80%|████████  | 1144/1428 [00:12<00:03, 82.94it/s]
+Preconditioning:  81%|████████  | 1153/1428 [00:12<00:03, 82.46it/s]
+Preconditioning:  81%|████████▏ | 1162/1428 [00:12<00:03, 82.24it/s]
+Preconditioning:  82%|████████▏ | 1171/1428 [00:12<00:03, 81.94it/s]
+Preconditioning:  83%|████████▎ | 1180/1428 [00:12<00:03, 81.66it/s]
+Preconditioning:  83%|████████▎ | 1189/1428 [00:12<00:02, 82.13it/s]
+Preconditioning:  84%|████████▍ | 1198/1428 [00:13<00:02, 81.12it/s]
+Preconditioning:  85%|████████▍ | 1207/1428 [00:13<00:02, 81.55it/s]
+Preconditioning:  85%|████████▌ | 1216/1428 [00:13<00:02, 81.46it/s]
+Preconditioning:  86%|████████▌ | 1225/1428 [00:13<00:02, 81.44it/s]
+Preconditioning:  86%|████████▋ | 1234/1428 [00:13<00:02, 82.37it/s]
+Preconditioning:  87%|████████▋ | 1245/1428 [00:13<00:02, 88.81it/s]
+Preconditioning:  88%|████████▊ | 1258/1428 [00:13<00:01, 100.20it/s]
+Preconditioning:  89%|████████▉ | 1269/1428 [00:13<00:01, 102.87it/s]
+Preconditioning:  90%|████████▉ | 1280/1428 [00:13<00:01, 94.85it/s] 
+Preconditioning:  90%|█████████ | 1290/1428 [00:14<00:01, 90.30it/s]
+Preconditioning:  91%|█████████ | 1300/1428 [00:14<00:01, 87.23it/s]
+Preconditioning:  92%|█████████▏| 1309/1428 [00:14<00:01, 85.27it/s]
+Preconditioning:  92%|█████████▏| 1318/1428 [00:14<00:01, 83.91it/s]
+Preconditioning:  93%|█████████▎| 1327/1428 [00:14<00:01, 82.92it/s]
+Preconditioning:  94%|█████████▎| 1336/1428 [00:14<00:01, 82.25it/s]
+Preconditioning:  94%|█████████▍| 1345/1428 [00:14<00:01, 81.89it/s]
+Preconditioning:  95%|█████████▌| 1359/1428 [00:14<00:00, 97.69it/s]
+Preconditioning:  96%|█████████▌| 1371/1428 [00:14<00:00, 102.79it/s]
+Preconditioning:  97%|█████████▋| 1382/1428 [00:15<00:00, 98.82it/s] 
+Preconditioning:  98%|█████████▊| 1394/1428 [00:15<00:00, 102.79it/s]
+Preconditioning:  99%|█████████▊| 1408/1428 [00:15<00:00, 112.02it/s]
+Preconditioning: 100%|█████████▉| 1424/1428 [00:15<00:00, 123.70it/s]
+Preconditioning: 100%|██████████| 1428/1428 [00:15<00:00, 92.91it/s] 
+
+0it [00:00, ?it/s]
+224it [00:00, 1978.36it/s]
+448it [00:00, 1985.10it/s]
+672it [00:00, 1983.54it/s]
+896it [00:00, 1985.66it/s]
+1120it [00:00, 1990.98it/s]
+1344it [00:00, 1994.02it/s]
+1428it [00:00, 1988.00it/s]

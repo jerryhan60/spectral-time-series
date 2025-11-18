@@ -94,8 +94,8 @@ This matches how `eval.py` loads models (line 37-40).
 
 **Root Causes**:
 
-1. **NaN Propagation**: Preconditioning formula `ỹₜ = yₜ - Σᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ` requires n previous timesteps
-   - If any previous timestep has NaN, the result becomes NaN
+1. **NaN Propagation**: Preconditioning formula `ỹₜ = yₜ + Σᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ` requires n previous timesteps (CORRECTED 2025-11-17: uses addition)
+   - If any previous timestep has NaN, the result becomes NaN (NaN + x = NaN)
    - Degree 5 preconditioning needs 5 previous values, so NaN spreads easily
    - Datasets with extensive NaN have all/most samples filtered out
 

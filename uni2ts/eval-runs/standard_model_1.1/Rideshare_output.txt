@@ -1,0 +1,76 @@
+[2025-11-17 01:08:20,128][datasets][INFO] - PyTorch version 2.4.1 available.
+[2025-11-17 01:08:20,130][datasets][INFO] - JAX version 0.6.1 available.
+[2025-11-17 01:08:22,297][huggingface_hub.utils._http][WARNING] - '(MaxRetryError('HTTPSConnectionPool(host=\'huggingface.co\', port=443): Max retries exceeded with url: /Salesforce/moirai-1.1-R-small/resolve/main/config.json (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x14f0b230a3f0>: Failed to resolve \'huggingface.co\' ([Errno -2] Name or service not known)"))'), '(Request ID: dd38b571-f445-47dc-bbc3-b0b112427d5b)')' thrown while requesting HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/config.json
+[2025-11-17 01:08:22,297][huggingface_hub.utils._http][WARNING] - Retrying in 1s [Retry 1/5].
+[2025-11-17 01:08:23,298][huggingface_hub.utils._http][WARNING] - '(MaxRetryError('HTTPSConnectionPool(host=\'huggingface.co\', port=443): Max retries exceeded with url: /Salesforce/moirai-1.1-R-small/resolve/main/config.json (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x14f0b1fed100>: Failed to resolve \'huggingface.co\' ([Errno -2] Name or service not known)"))'), '(Request ID: b5754faa-38c8-4776-9596-998edbd54bf2)')' thrown while requesting HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/config.json
+[2025-11-17 01:08:23,298][huggingface_hub.utils._http][WARNING] - Retrying in 2s [Retry 2/5].
+[2025-11-17 01:08:25,299][huggingface_hub.utils._http][WARNING] - '(MaxRetryError('HTTPSConnectionPool(host=\'huggingface.co\', port=443): Max retries exceeded with url: /Salesforce/moirai-1.1-R-small/resolve/main/config.json (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x14f0c0587ce0>: Failed to resolve \'huggingface.co\' ([Errno -2] Name or service not known)"))'), '(Request ID: 4031c4d0-a0ca-4de0-8345-b14d96641493)')' thrown while requesting HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/config.json
+[2025-11-17 01:08:25,300][huggingface_hub.utils._http][WARNING] - Retrying in 4s [Retry 3/5].
+[2025-11-17 01:08:29,301][huggingface_hub.utils._http][WARNING] - '(MaxRetryError('HTTPSConnectionPool(host=\'huggingface.co\', port=443): Max retries exceeded with url: /Salesforce/moirai-1.1-R-small/resolve/main/config.json (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x14f0b1fed040>: Failed to resolve \'huggingface.co\' ([Errno -2] Name or service not known)"))'), '(Request ID: 3aa552bb-e6d0-48ac-ba0f-6e2c2d49db17)')' thrown while requesting HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/config.json
+[2025-11-17 01:08:29,301][huggingface_hub.utils._http][WARNING] - Retrying in 8s [Retry 4/5].
+[2025-11-17 01:08:37,302][huggingface_hub.utils._http][WARNING] - '(MaxRetryError('HTTPSConnectionPool(host=\'huggingface.co\', port=443): Max retries exceeded with url: /Salesforce/moirai-1.1-R-small/resolve/main/config.json (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x14f0b1fed1f0>: Failed to resolve \'huggingface.co\' ([Errno -2] Name or service not known)"))'), '(Request ID: 7fe2ff07-2e18-45bb-924e-16496a7e556c)')' thrown while requesting HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/config.json
+[2025-11-17 01:08:37,302][huggingface_hub.utils._http][WARNING] - Retrying in 8s [Retry 5/5].
+[2025-11-17 01:08:45,303][huggingface_hub.utils._http][WARNING] - '(MaxRetryError('HTTPSConnectionPool(host=\'huggingface.co\', port=443): Max retries exceeded with url: /Salesforce/moirai-1.1-R-small/resolve/main/config.json (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x14f0b1fed6a0>: Failed to resolve \'huggingface.co\' ([Errno -2] Name or service not known)"))'), '(Request ID: d250348a-a57c-4298-8312-cfb14ebbc779)')' thrown while requesting HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/config.json
+[2025-11-17 01:08:45,381][huggingface_hub.utils._http][WARNING] - '(MaxRetryError('HTTPSConnectionPool(host=\'huggingface.co\', port=443): Max retries exceeded with url: /Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x14f0b2080800>: Failed to resolve \'huggingface.co\' ([Errno -2] Name or service not known)"))'), '(Request ID: a75d49d9-3a76-4920-abe4-b9e6da3198fb)')' thrown while requesting HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors
+[2025-11-17 01:08:45,382][huggingface_hub.utils._http][WARNING] - Retrying in 1s [Retry 1/5].
+[2025-11-17 01:08:46,382][huggingface_hub.utils._http][WARNING] - '(MaxRetryError('HTTPSConnectionPool(host=\'huggingface.co\', port=443): Max retries exceeded with url: /Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x14f0b2080b90>: Failed to resolve \'huggingface.co\' ([Errno -2] Name or service not known)"))'), '(Request ID: 81e6594d-3968-4fca-ba66-dadb3df4d6ec)')' thrown while requesting HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors
+[2025-11-17 01:08:46,382][huggingface_hub.utils._http][WARNING] - Retrying in 2s [Retry 2/5].
+[2025-11-17 01:08:48,383][huggingface_hub.utils._http][WARNING] - '(MaxRetryError('HTTPSConnectionPool(host=\'huggingface.co\', port=443): Max retries exceeded with url: /Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x14f0b2080fb0>: Failed to resolve \'huggingface.co\' ([Errno -2] Name or service not known)"))'), '(Request ID: fc5426f4-9da1-43b3-8275-81bfe5dead35)')' thrown while requesting HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors
+[2025-11-17 01:08:48,383][huggingface_hub.utils._http][WARNING] - Retrying in 4s [Retry 3/5].
+[2025-11-17 01:08:52,384][huggingface_hub.utils._http][WARNING] - '(MaxRetryError('HTTPSConnectionPool(host=\'huggingface.co\', port=443): Max retries exceeded with url: /Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x14f0b2081310>: Failed to resolve \'huggingface.co\' ([Errno -2] Name or service not known)"))'), '(Request ID: f4ff1954-ab54-4134-b032-e8338685f690)')' thrown while requesting HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors
+[2025-11-17 01:08:52,384][huggingface_hub.utils._http][WARNING] - Retrying in 8s [Retry 4/5].
+[2025-11-17 01:09:00,385][huggingface_hub.utils._http][WARNING] - '(MaxRetryError('HTTPSConnectionPool(host=\'huggingface.co\', port=443): Max retries exceeded with url: /Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x14f0b2081670>: Failed to resolve \'huggingface.co\' ([Errno -2] Name or service not known)"))'), '(Request ID: 473de071-a45f-4311-b107-2ad940b4a5bd)')' thrown while requesting HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors
+[2025-11-17 01:09:00,386][huggingface_hub.utils._http][WARNING] - Retrying in 8s [Retry 5/5].
+[2025-11-17 01:09:08,387][huggingface_hub.utils._http][WARNING] - '(MaxRetryError('HTTPSConnectionPool(host=\'huggingface.co\', port=443): Max retries exceeded with url: /Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x14f0b2081940>: Failed to resolve \'huggingface.co\' ([Errno -2] Name or service not known)"))'), '(Request ID: 07ac7220-54ae-45c4-9e43-fb9feea0f533)')' thrown while requesting HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors
+      MSE[mean]  MSE[0.5]  MAE[0.5]  MASE[0.5]  MAPE[0.5]  sMAPE[0.5]   MSIS  RMSE[mean]  NRMSE[mean]  ND[0.5]  mean_weighted_sum_quantile_loss
+None    374.172     4.615     0.977      0.923      0.434       0.316 23.673      19.344        2.867    0.145                            0.132
+
+'(MaxRetryError('HTTPSConnectionPool(host=\'huggingface.co\', port=443): Max retries exceeded with url: /Salesforce/moirai-1.1-R-small/resolve/main/config.json (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x14f0b230a3f0>: Failed to resolve \'huggingface.co\' ([Errno -2] Name or service not known)"))'), '(Request ID: dd38b571-f445-47dc-bbc3-b0b112427d5b)')' thrown while requesting HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/config.json
+Retrying in 1s [Retry 1/5].
+'(MaxRetryError('HTTPSConnectionPool(host=\'huggingface.co\', port=443): Max retries exceeded with url: /Salesforce/moirai-1.1-R-small/resolve/main/config.json (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x14f0b1fed100>: Failed to resolve \'huggingface.co\' ([Errno -2] Name or service not known)"))'), '(Request ID: b5754faa-38c8-4776-9596-998edbd54bf2)')' thrown while requesting HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/config.json
+Retrying in 2s [Retry 2/5].
+'(MaxRetryError('HTTPSConnectionPool(host=\'huggingface.co\', port=443): Max retries exceeded with url: /Salesforce/moirai-1.1-R-small/resolve/main/config.json (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x14f0c0587ce0>: Failed to resolve \'huggingface.co\' ([Errno -2] Name or service not known)"))'), '(Request ID: 4031c4d0-a0ca-4de0-8345-b14d96641493)')' thrown while requesting HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/config.json
+Retrying in 4s [Retry 3/5].
+'(MaxRetryError('HTTPSConnectionPool(host=\'huggingface.co\', port=443): Max retries exceeded with url: /Salesforce/moirai-1.1-R-small/resolve/main/config.json (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x14f0b1fed040>: Failed to resolve \'huggingface.co\' ([Errno -2] Name or service not known)"))'), '(Request ID: 3aa552bb-e6d0-48ac-ba0f-6e2c2d49db17)')' thrown while requesting HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/config.json
+Retrying in 8s [Retry 4/5].
+'(MaxRetryError('HTTPSConnectionPool(host=\'huggingface.co\', port=443): Max retries exceeded with url: /Salesforce/moirai-1.1-R-small/resolve/main/config.json (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x14f0b1fed1f0>: Failed to resolve \'huggingface.co\' ([Errno -2] Name or service not known)"))'), '(Request ID: 7fe2ff07-2e18-45bb-924e-16496a7e556c)')' thrown while requesting HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/config.json
+Retrying in 8s [Retry 5/5].
+'(MaxRetryError('HTTPSConnectionPool(host=\'huggingface.co\', port=443): Max retries exceeded with url: /Salesforce/moirai-1.1-R-small/resolve/main/config.json (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x14f0b1fed6a0>: Failed to resolve \'huggingface.co\' ([Errno -2] Name or service not known)"))'), '(Request ID: d250348a-a57c-4298-8312-cfb14ebbc779)')' thrown while requesting HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/config.json
+'(MaxRetryError('HTTPSConnectionPool(host=\'huggingface.co\', port=443): Max retries exceeded with url: /Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x14f0b2080800>: Failed to resolve \'huggingface.co\' ([Errno -2] Name or service not known)"))'), '(Request ID: a75d49d9-3a76-4920-abe4-b9e6da3198fb)')' thrown while requesting HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors
+Retrying in 1s [Retry 1/5].
+'(MaxRetryError('HTTPSConnectionPool(host=\'huggingface.co\', port=443): Max retries exceeded with url: /Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x14f0b2080b90>: Failed to resolve \'huggingface.co\' ([Errno -2] Name or service not known)"))'), '(Request ID: 81e6594d-3968-4fca-ba66-dadb3df4d6ec)')' thrown while requesting HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors
+Retrying in 2s [Retry 2/5].
+'(MaxRetryError('HTTPSConnectionPool(host=\'huggingface.co\', port=443): Max retries exceeded with url: /Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x14f0b2080fb0>: Failed to resolve \'huggingface.co\' ([Errno -2] Name or service not known)"))'), '(Request ID: fc5426f4-9da1-43b3-8275-81bfe5dead35)')' thrown while requesting HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors
+Retrying in 4s [Retry 3/5].
+'(MaxRetryError('HTTPSConnectionPool(host=\'huggingface.co\', port=443): Max retries exceeded with url: /Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x14f0b2081310>: Failed to resolve \'huggingface.co\' ([Errno -2] Name or service not known)"))'), '(Request ID: f4ff1954-ab54-4134-b032-e8338685f690)')' thrown while requesting HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors
+Retrying in 8s [Retry 4/5].
+'(MaxRetryError('HTTPSConnectionPool(host=\'huggingface.co\', port=443): Max retries exceeded with url: /Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x14f0b2081670>: Failed to resolve \'huggingface.co\' ([Errno -2] Name or service not known)"))'), '(Request ID: 473de071-a45f-4311-b107-2ad940b4a5bd)')' thrown while requesting HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors
+Retrying in 8s [Retry 5/5].
+'(MaxRetryError('HTTPSConnectionPool(host=\'huggingface.co\', port=443): Max retries exceeded with url: /Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x14f0b2081940>: Failed to resolve \'huggingface.co\' ([Errno -2] Name or service not known)"))'), '(Request ID: 07ac7220-54ae-45c4-9e43-fb9feea0f533)')' thrown while requesting HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors
+
+0it [00:00, ?it/s]
+32it [00:00, 108.31it/s]
+128it [00:00, 359.49it/s]
+224it [00:00, 510.97it/s]
+320it [00:00, 607.33it/s]
+416it [00:00, 670.19it/s]
+512it [00:00, 711.10it/s]
+608it [00:01, 739.80it/s]
+704it [00:01, 759.52it/s]
+800it [00:01, 769.03it/s]
+896it [00:01, 779.16it/s]
+992it [00:01, 786.33it/s]
+1088it [00:01, 790.43it/s]
+1184it [00:01, 794.31it/s]
+1280it [00:01, 797.35it/s]
+1376it [00:01, 799.33it/s]
+1472it [00:02, 801.96it/s]
+1568it [00:02, 800.74it/s]
+1664it [00:02, 801.79it/s]
+1760it [00:02, 802.61it/s]
+1856it [00:02, 803.58it/s]
+1952it [00:02, 803.82it/s]
+2048it [00:02, 804.37it/s]
+2144it [00:02, 804.01it/s]
+2240it [00:03, 803.32it/s]
+2304it [00:03, 736.59it/s]

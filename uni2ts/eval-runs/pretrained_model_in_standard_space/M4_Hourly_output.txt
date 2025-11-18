@@ -1,0 +1,13 @@
+[2025-11-17 01:17:01,071][datasets][INFO] - PyTorch version 2.4.1 available.
+[2025-11-17 01:17:01,072][datasets][INFO] - JAX version 0.6.1 available.
+       MSE[mean]    MSE[0.5]  MAE[0.5]  MASE[0.5]  MAPE[0.5]  sMAPE[0.5]   MSIS  RMSE[mean]  NRMSE[mean]  ND[0.5]  mean_weighted_sum_quantile_loss
+None 4823940.971 4507542.463   358.280      1.531      0.156       0.120 17.082    2196.347        0.292    0.048                            0.037
+
+
+0it [00:00, ?it/s]
+32it [00:00, 111.28it/s]
+128it [00:00, 369.33it/s]
+224it [00:00, 519.60it/s]
+320it [00:00, 611.50it/s]
+414it [00:00, 664.88it/s]
+414it [00:00, 538.60it/s]

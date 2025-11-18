@@ -24,9 +24,9 @@ Dataset cannot be evaluated in preconditioned space.
 - Since all samples get new NaN, all samples are filtered out, resulting in zero valid samples
 
 **Why This Happens**:
-- Preconditioning formula: `ỹₜ = yₜ - Σᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ`
+- Preconditioning formula: `ỹₜ = yₜ + Σᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ` (CORRECTED 2025-11-17: uses addition)
 - If yₜ₋ᵢ contains NaN, and we multiply by coefficient cᵢ, the result is NaN
-- This NaN propagates forward in the sequence
+- This NaN propagates forward in the sequence (NaN + x = NaN, NaN - x = NaN)
 - For degree 5, we need 5 previous timesteps, so if any of them have NaN, the result is NaN
 
 **Examples**:

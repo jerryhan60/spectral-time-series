@@ -1,0 +1,51 @@
+================================================================================
+Baseline Model Evaluation in Preconditioned Space
+================================================================================
+
+Preconditioning Configuration:
+  Type: chebyshev
+  Degree: 5
+
+Loading test data: cif_2016_12
+  Prediction length: 12
+[2025-11-17 01:58:05,966][datasets][INFO] - PyTorch version 2.4.1 available.
+[2025-11-17 01:58:05,967][datasets][INFO] - JAX version 0.6.1 available.
+  Target dim: 1
+  Feat dynamic real dim: 0
+  Past feat dynamic real dim: 0
+
+Loading baseline model: uni2ts.model.moirai.MoiraiForecast.load_from_checkpoint
+  Patch size: 32
+  Context length: 1000
+  Checkpoint: /scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai_small/lotsa_v1_unweighted/pretrain_run_20251020_205126/checkpoints/last.ckpt
+
+Generating forecasts from baseline model...
+Generated 57 forecasts
+
+Applying preconditioning to both predictions and ground truth...
+Preconditioned 57 forecasts and ground truth
+
+Computing metrics in preconditioned space...
+================================================================================
+
+================================================================================
+EVALUATION METRICS (BASELINE IN PRECONDITIONED SPACE)
+================================================================================
+           MSE[mean]  MAE[0.5]  MAPE[0.5]  sMAPE[0.5]  MASE[0.5]  RMSE[mean]  NRMSE[mean]  ND[0.5]  MSIS  mean_weighted_sum_quantile_loss
+None 78125785482.202 42986.640      0.123       0.102      1.040  279509.902        2.186    0.336 7.495                            0.256
+================================================================================
+
+Results saved to: /scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/eval_baseline_in_precond_space/monash_cached/cif_2016_12/S/prediction_length=12/eval_baseline_precond_cif_2016_12/metrics_baseline_in_precond_space.csv
+
+
+
+Preconditioning:   0%|          | 0/57 [00:00<?, ?it/s]
+Preconditioning:  16%|█▌        | 9/57 [00:00<00:00, 86.45it/s]
+Preconditioning:  32%|███▏      | 18/57 [00:00<00:00, 86.93it/s]
+Preconditioning:  47%|████▋     | 27/57 [00:00<00:00, 87.14it/s]
+Preconditioning:  63%|██████▎   | 36/57 [00:00<00:00, 87.20it/s]
+Preconditioning:  79%|███████▉  | 45/57 [00:00<00:00, 87.32it/s]
+Preconditioning: 100%|██████████| 57/57 [00:00<00:00, 93.13it/s]
+
+0it [00:00, ?it/s]
+57it [00:00, 1882.10it/s]

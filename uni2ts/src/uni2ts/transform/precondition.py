@@ -33,11 +33,13 @@ class PolynomialPrecondition(Transformation):
     The transformation applies a polynomial convolution to improve the
     condition number of hidden transition matrices in time series dynamics.
 
-    Mathematical formulation:
-        ỹₜ = yₜ - ∑ᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ  for t > n
+    Mathematical formulation (as per Algorithm 1):
+        ỹₜ = yₜ + ∑ᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ  for t > n
         ỹₜ = yₜ                     for t ≤ n
 
-    where cᵢ are the polynomial coefficients and n is the degree.
+    where cᵢ are the monic polynomial coefficients in power basis and n is the degree.
+
+    For differencing (n=2, c₁=-1): ỹₜ = yₜ + (-1)·yₜ₋₁ = yₜ - yₜ₋₁
 
     Args:
         polynomial_type: "chebyshev" or "legendre"
@@ -92,36 +94,84 @@ class PolynomialPrecondition(Transformation):
 
     def _chebyshev_coefficients(self, n: int) -> np.ndarray:
         """
-        Compute Chebyshev polynomial coefficients of degree n.
+        Compute monic Chebyshev polynomial coefficients of degree n.
 
-        Uses numpy.polynomial.chebyshev to generate the coefficients.
+        The monic Chebyshev polynomial is Mₙ(x) = Tₙ(x) / 2^(n-1).
+        Returns coefficients [c₁, c₂, ..., cₙ] in power basis (standard polynomial form).
+
+        For example:
+        - n=2: T₂(x) = 2x² - 1, M₂(x) = x² - 0.5, coeffs = [0, -0.5]
+        - n=3: T₃(x) = 4x³ - 3x, M₃(x) = x³ - 0.75x, coeffs = [0, -0.75, 0]
+
+        Note: Paper notation p^c_n(x) = c₀x^n + c₁x^(n-1) + ... + cₙ where c₀=1 (monic).
+        We return [c₁, c₂, ..., cₙ] (excluding c₀) for use in Algorithm 1.
+        Numpy stores coefficients in increasing power order: [const, x¹, x², ..., x^n].
         """
-        from numpy.polynomial import chebyshev
+        from numpy.polynomial import chebyshev, polynomial
 
-        # Generate Chebyshev polynomial of degree n
+        # Generate Chebyshev polynomial of degree n in Chebyshev basis
         cheb = chebyshev.Chebyshev.basis(n)
-        # Convert to standard polynomial basis and get coefficients
-        coeffs = cheb.coef
 
-        # Return coefficients excluding the constant term (we only need c₁...cₙ)
-        # For preconditioning, we need the recurrence relation coefficients
-        return coeffs[1:]  # Skip c₀, use c₁...cₙ
+        # Convert to standard power basis (monomial form)
+        power_poly = cheb.convert(kind=polynomial.Polynomial)
+
+        # Get coefficients in power basis [c₀, c₁, ..., cₙ] where index=power
+        # e.g., for M₃(x) = x³ - 0.75x: [0, -0.75, 0, 1] = [const, x¹, x², x³]
+        power_coeffs = power_poly.coef
+
+        # Make monic by dividing by leading coefficient (should be 2^(n-1) for Chebyshev)
+        leading_coeff = power_coeffs[-1]
+        monic_coeffs = power_coeffs / leading_coeff
+
+        # Paper notation: p^c_n(x) = c₀x^n + c₁x^(n-1) + ... + cₙ
+        # We need [c₁, c₂, ..., cₙ] which is [coeff(x^(n-1)), coeff(x^(n-2)), ..., coeff(x⁰)]
+        # In numpy order this is [monic_coeffs[-2], monic_coeffs[-3], ..., monic_coeffs[0]]
+        # Which is monic_coeffs[:-1] reversed!
+        # But actually for the convolution, we want c₁ at index 0, c₂ at index 1, etc.
+        # Since convolution applies coeffs[i] to y_{t-(i+1)}, we need:
+        # coeffs[0] = c₁ = coeff of x^(n-1) = monic_coeffs[-2]
+        # coeffs[1] = c₂ = coeff of x^(n-2) = monic_coeffs[-3]
+        # This is monic_coeffs[-2::-1] or equivalently monic_coeffs[:-1][::-1]
+        # Wait, let me reconsider...
+
+        # Actually: monic_coeffs = [const, x¹, x², ..., x^(n-1), x^n]
+        # Exclude leading coeff (x^n=c₀): monic_coeffs[:-1] = [const, x¹, x², ..., x^(n-1)]
+        # Reverse to get [x^(n-1), x^(n-2), ..., x¹, const] = [c₁, c₂, ..., cₙ]
+        return monic_coeffs[:-1][::-1]
 
     def _legendre_coefficients(self, n: int) -> np.ndarray:
         """
-        Compute Legendre polynomial coefficients of degree n.
+        Compute monic Legendre polynomial coefficients of degree n.
 
-        Uses numpy.polynomial.legendre to generate the coefficients.
+        The monic Legendre polynomial is Mₙ(x) = Pₙ(x) / leading_coeff.
+        Returns coefficients [c₁, c₂, ..., cₙ] in power basis (standard polynomial form).
+
+        The leading coefficient of Legendre polynomial Pₙ(x) is (2n)! / (2^n * n! * n!)
+
+        Note: Paper notation p^c_n(x) = c₀x^n + c₁x^(n-1) + ... + cₙ where c₀=1 (monic).
+        We return [c₁, c₂, ..., cₙ] (excluding c₀) for use in Algorithm 1.
+        Numpy stores coefficients in increasing power order: [const, x¹, x², ..., x^n].
         """
-        from numpy.polynomial import legendre
+        from numpy.polynomial import legendre, polynomial
 
-        # Generate Legendre polynomial of degree n
+        # Generate Legendre polynomial of degree n in Legendre basis
         leg = legendre.Legendre.basis(n)
-        # Convert to standard polynomial basis and get coefficients
-        coeffs = leg.coef
 
-        # Return coefficients excluding the constant term
-        return coeffs[1:]  # Skip c₀, use c₁...cₙ
+        # Convert to standard power basis (monomial form)
+        power_poly = leg.convert(kind=polynomial.Polynomial)
+
+        # Get coefficients in power basis where index=power
+        # [const, x¹, x², ..., x^(n-1), x^n]
+        power_coeffs = power_poly.coef
+
+        # Make monic by dividing by leading coefficient
+        leading_coeff = power_coeffs[-1]
+        monic_coeffs = power_coeffs / leading_coeff
+
+        # Exclude leading coeff (x^n=c₀) and reverse to get [c₁, c₂, ..., cₙ]
+        # monic_coeffs[:-1] = [const, x¹, ..., x^(n-1)]
+        # Reversed: [x^(n-1), x^(n-2), ..., x¹, const] = [c₁, c₂, ..., cₙ]
+        return monic_coeffs[:-1][::-1]
 
     def __call__(self, data_entry: dict[str, Any]) -> dict[str, Any]:
         """
@@ -208,7 +258,13 @@ class PolynomialPrecondition(Transformation):
         """
         Apply polynomial convolution to a 1D sequence.
 
-        Implements: ỹₜ = yₜ - ∑ᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ
+        Implements: ỹₜ = yₜ + ∑ᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ
+
+        As per Algorithm 1 (page 2) of Universal Sequence Preconditioning paper:
+        "y^{preconditioned}_t = y_t + Σⱼ₌₁ⁿ cⱼ y_{t-j}"
+
+        This uses ADDITION to create the preconditioned target.
+        For differencing (n=2, c₁=-1): ỹ_t = y_t + (-1)·y_{t-1} = y_t - y_{t-1} ✓
 
         IMPORTANT: This method operates on a single 1D sequence at a time.
         It only looks backward within the SAME sequence, never across
@@ -227,7 +283,7 @@ class PolynomialPrecondition(Transformation):
         result = sequence.copy()
 
         # Vectorized implementation using array slicing
-        # For t >= n, apply: result[t] = sequence[t] - ∑ᵢ₌₀ⁿ⁻¹ coeffs[i] · sequence[t-i-1]
+        # For t >= n, apply: result[t] = sequence[t] + ∑ᵢ₌₀ⁿ⁻¹ coeffs[i] · sequence[t-i-1]
         # This vectorizes the inner sum by using shifted array slices
 
         if len(sequence) > n:
@@ -239,7 +295,7 @@ class PolynomialPrecondition(Transformation):
                 # For all t in [n, len(sequence)), extract sequence[t-(i+1)]
                 weighted_sum += coeffs[i] * sequence[n-i-1:len(sequence)-i-1]
 
-            result[n:] = sequence[n:] - weighted_sum
+            result[n:] = sequence[n:] + weighted_sum  # ADDITION (as per Algorithm 1)
 
         # For t < n, keep original values
         # (already copied in result = sequence.copy())
@@ -255,8 +311,11 @@ class ReversePrecondition(Transformation):
     This transformation reverses the preconditioning applied by
     PolynomialPrecondition, recovering the original scale predictions.
 
-    Mathematical formulation:
-        yₜ = ỹₜ + ∑ᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ  for t > n
+    Since forward preconditioning uses ADDITION:
+        ỹₜ = yₜ + ∑ᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ
+
+    Reverse uses SUBTRACTION:
+        yₜ = ỹₜ - ∑ᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ  for t > n
         yₜ = ỹₜ                     for t ≤ n
 
     Note: This requires the precondition_coeffs to be present in the
@@ -345,7 +404,11 @@ class ReversePrecondition(Transformation):
         """
         Reverse polynomial convolution on a 1D sequence.
 
-        Implements: yₜ = ỹₜ + ∑ᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ
+        Since forward preconditioning uses ADDITION:
+            ỹₜ = yₜ + ∑ᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ
+
+        The reverse uses SUBTRACTION to undo it:
+            yₜ = ỹₜ - ∑ᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ
 
         This is computed iteratively from left to right, since yₜ depends
         on previously computed values yₜ₋₁, yₜ₋₂, etc.
@@ -367,7 +430,7 @@ class ReversePrecondition(Transformation):
                 coeffs[i-1] * result[t-i]
                 for i in range(1, n+1)
             )
-            result[t] = sequence[t] + weighted_sum
+            result[t] = sequence[t] - weighted_sum  # SUBTRACTION (reverse of addition)
 
         # For t ≤ n, keep original values
         # (already copied in result = sequence.copy())

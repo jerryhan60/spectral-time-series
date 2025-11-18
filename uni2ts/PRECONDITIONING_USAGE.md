@@ -2,16 +2,25 @@
 
 This guide explains how to use the **Universal Sequence Preconditioning** feature in Uni2TS, based on the paper by Marsden & Hazan (2025).
 
+## ⚠️ CRITICAL UPDATE (2025-11-17)
+
+**The implementation was fixed on 2025-11-17 to correct two critical bugs:**
+1. Coefficient extraction now uses power basis (not Chebyshev/Legendre basis)
+2. Forward preconditioning now uses ADDITION (not subtraction) as per Algorithm 1
+
+**All models trained before this date need to be retrained.** See `CRITICAL_FIXES_PRECONDITIONING.md`.
+
 ## What is Preconditioning?
 
 Preconditioning applies polynomial transformations (Chebyshev or Legendre) to time series data before training. This improves the condition number of hidden transition matrices and can lead to better forecasting performance.
 
-**Mathematical formulation:**
+**Mathematical formulation (as per Algorithm 1 of the paper):**
 ```
-ỹₜ = yₜ - ∑ᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ  for t > n
+Forward:  ỹₜ = yₜ + ∑ᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ  for t > n  (ADDITION)
+Reverse:  yₜ = ỹₜ - ∑ᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ  for t > n  (SUBTRACTION)
 ```
 
-where `cᵢ` are polynomial coefficients and `n` is the degree.
+where `cᵢ` are monic polynomial coefficients in power basis and `n` is the degree.
 
 ## Implementation
 

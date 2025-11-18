@@ -2,6 +2,27 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## ⚠️ CRITICAL: Recent Implementation Fixes (2025-11-17)
+
+**IMPORTANT:** The preconditioning implementation had two critical bugs that were fixed on 2025-11-17:
+
+1. **Wrong Coefficients** - Code extracted Chebyshev/Legendre basis coefficients instead of power basis coefficients
+2. **Wrong Sign** - Used subtraction instead of addition in forward preconditioning (opposite of Algorithm 1)
+
+**Impact:** All models trained with preconditioning (degree > 2) before 2025-11-17 used **incorrect preconditioning** and should be **retrained** with the fixed implementation.
+
+**See:** `CRITICAL_FIXES_PRECONDITIONING.md` for full details.
+
+**Fixed files:**
+- `uni2ts/src/uni2ts/transform/precondition.py` - Coefficients now use power basis, signs corrected
+- `uni2ts/cli/eval_precond_hybrid.py` - Signs corrected
+
+**Previous checkpoints affected:**
+- ✗ `precond_default_20251102_102511/checkpoints/last.ckpt` - INVALID (trained with bugs)
+- ✓ `pretrain_run_20251020_205126/checkpoints/last.ckpt` - VALID (baseline, no preconditioning)
+
+---
+
 ## Repository Overview
 
 This is a research repository for **Universal Sequence Preconditioning** applied to time series forecasting, built on top of the **Uni2TS** framework (Salesforce's universal time series forecasting library). The research implements polynomial preconditioning (Chebyshev and Legendre) to improve time series model training by transforming the input space.
@@ -19,9 +40,11 @@ This is a research repository for **Universal Sequence Preconditioning** applied
 **Core Contribution**: Introduces a universal preconditioning method for sequential prediction that convolves input sequences with coefficients from orthogonal polynomials (Chebyshev or Legendre).
 
 **Key Concepts**:
-- **Preconditioning Formula**: `ỹₜ = yₜ - Σᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ` where coefficients `cᵢ` come from n-th degree monic Chebyshev/Legendre polynomial
+- **Preconditioning Formula**: `ỹₜ = yₜ + Σᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ` where coefficients `cᵢ` come from n-th degree monic Chebyshev/Legendre polynomial (in power basis)
+- **Reversal Formula**: `yₜ = ỹₜ - Σᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ` (subtraction reverses the addition)
 - **Intuition**: For linear dynamical systems (LDS), preconditioning applies a polynomial to the hidden transition matrix, potentially shrinking the spectral domain and making the system "easier to learn"
 - **Universal Property**: Coefficients are fixed (not learned) and work across different systems without knowing the specific system parameters
+- **Differencing Example**: For n=2 with Chebyshev, c₁≈0, c₂=1. True differencing requires custom coefficients c₁=-1, c₂=0
 
 **Theoretical Results**:
 - First dimension-independent sublinear regret bounds for marginally stable, asymmetric linear dynamical systems
@@ -182,11 +205,14 @@ salloc --nodes=1 --ntasks=1 --mem=128G --time=03:01:00 --gres=gpu:1 --partition=
 ### Key Components
 
 **Preconditioning Transform** (`uni2ts/src/uni2ts/transform/precondition.py`):
-- Implements Universal Sequence Preconditioning using polynomial convolutions
-- Formula: `ỹₜ = yₜ - Σᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ` where `cᵢ` are polynomial coefficients
+- Implements Universal Sequence Preconditioning using polynomial convolutions (Algorithm 1 from paper)
+- **Forward Formula**: `ỹₜ = yₜ + Σᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ` (uses ADDITION as per Algorithm 1)
+- **Reverse Formula**: `yₜ = ỹₜ - Σᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ` (uses SUBTRACTION to undo forward)
+- Coefficients `cᵢ` are from n-th degree **monic** polynomial in **power basis** (not Chebyshev/Legendre basis)
 - Supports Chebyshev and Legendre polynomials
 - Respects series boundaries (no cross-contamination between time series)
 - Recommended degree: 2-10 (paper suggests ≤10 for numerical stability)
+- **IMPORTANT**: Implementation fixed on 2025-11-17 to match paper (see CRITICAL_FIXES_PRECONDITIONING.md)
 
 **Model Architecture**:
 - Based on Transformer architecture with patching
@@ -498,3 +524,46 @@ python -m cli.eval_precond_space \
 ```
 
 If successful, then submit the comprehensive SLURM job.
+
+## Important Notes and Known Issues
+
+### Critical Implementation Fixes (2025-11-17)
+
+**Two critical bugs were discovered and fixed on 2025-11-17:**
+
+1. **Bug: Incorrect Coefficient Extraction**
+   - **Problem**: Code extracted coefficients in Chebyshev/Legendre basis instead of power (monomial) basis
+   - **Impact**: For degree > 2, coefficients were completely wrong (e.g., `[0,0,0,0,1]` instead of `[0.3125, 0, -1.25, 0, 1]` for degree 5)
+   - **Fix**: Now properly converts to power basis and makes polynomial monic
+   - **Location**: `uni2ts/src/uni2ts/transform/precondition.py:93-147`
+
+2. **Bug: Wrong Sign in Convolution**
+   - **Problem**: Forward preconditioning used subtraction when Algorithm 1 specifies addition
+   - **Impact**: Transformation was opposite of paper specification
+   - **Fix**: Changed from `result = sequence - weighted_sum` to `result = sequence + weighted_sum`
+   - **Reverse also fixed**: Changed from addition to subtraction
+   - **Location**: `uni2ts/src/uni2ts/transform/precondition.py:226-276` and `uni2ts/cli/eval_precond_hybrid.py:98-128`
+
+**Verification:**
+- Differencing test: For n=2, c₁=-1: `y_t + (-1)·y_{t-1} = y_t - y_{t-1}` ✓
+- Coefficients match paper's monic polynomials in power basis ✓
+- Forward/reverse are proper inverses ✓
+- Satisfies Lemma 3.2 coefficient bound: max|cᵢ| ≤ 2^(0.3n) ✓
+
+**Action Required:**
+- **All models trained with preconditioning before 2025-11-17 must be retrained**
+- Previous experimental results are not valid
+- Baseline models (no preconditioning) are unaffected
+
+**Documentation:**
+- See `CRITICAL_FIXES_PRECONDITIONING.md` for detailed technical analysis
+- Test scripts: `test_fixed_coefficients.py`, `test_forward_reverse_correctness.py`
+
+### Parallel Evaluation (NEW)
+
+To speed up comprehensive evaluations on GPU nodes:
+- Use `eval/comprehensive_evaluation_parallel.py` instead of sequential version
+- Supports multiprocessing with configurable worker count
+- Example: `--num-workers 8` for 8 parallel dataset evaluations
+- Expected speedup: 10-12x on GPU nodes with multiple cores
+- See `eval/PARALLEL_EVALUATION_README.md` for details

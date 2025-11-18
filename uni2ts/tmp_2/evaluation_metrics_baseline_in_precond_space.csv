@@ -1,2 +1,0 @@
-MSE[mean],MSE[0.5],MAE[0.5],MAPE[0.5],sMAPE[0.5],MASE[0.5],RMSE[mean],NRMSE[mean],ND[0.5],MSIS,mean_weighted_sum_quantile_loss,status,dataset
-689973.105,,607.651,0.168,0.171,2.411,830.646,0.227,0.166,13.473,0.124,success,Aus. Elec. Demand

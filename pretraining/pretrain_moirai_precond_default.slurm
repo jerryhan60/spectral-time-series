@@ -2,14 +2,14 @@
 #SBATCH --job-name=moirai_precond_default
 #SBATCH --output=logs/pretrain_precond_default_%j.out
 #SBATCH --error=logs/pretrain_precond_default_%j.err
-#SBATCH --time=48:00:00
+#SBATCH --time=6:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
 #SBATCH --gres=gpu:1
 #SBATCH --partition=pli
-#SBATCH --account=eladgroup
+#SBATCH --account=hazan_intern
 #SBATCH --mail-type=BEGIN
 #SBATCH --mail-user=jh1161@princeton.edu
 
