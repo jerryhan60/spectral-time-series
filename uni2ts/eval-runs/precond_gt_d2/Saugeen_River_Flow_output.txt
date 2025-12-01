@@ -1,0 +1,37 @@
+[2025-11-19 12:17:49,751][datasets][INFO] - PyTorch version 2.4.1 available.
+[2025-11-19 12:17:49,752][datasets][INFO] - JAX version 0.6.1 available.
+Ground Truth Context Evaluation Configuration:
+  Precond model: uni2ts.model.moirai.forecast_precond.create_precond_forecast_from_checkpoint
+  Preconditioning type: chebyshev
+  Preconditioning degree: 2
+
+Preconditioning coefficients: [ 0.  -0.5]
+
+Loading preconditioned model...
+Extracting ground truth (input + label) from test data...
+Extracted 1 ground truth sequences
+Generating preconditioned model predictions...
+Generated 1 forecasts
+Creating GT-context-reversed forecasts...
+Created 1 GT-context-reversed forecasts
+Computing metrics...
+
+================================================================================
+GROUND TRUTH CONTEXT EVALUATION METRICS
+================================================================================
+      MSE[mean]  MAE[0.5]  MAPE[0.5]  sMAPE[0.5]  MASE[0.5]  RMSE[mean]  NRMSE[mean]  ND[0.5]   MSIS  mean_weighted_sum_quantile_loss
+None    381.996    10.832      0.189       0.238      2.399      19.545        0.498    0.276 24.516                            0.247
+================================================================================
+
+Metrics saved to: /scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/2025-11-19/12-17-49/metrics_gt_context.csv
+
+
+Precond model:   0%|          | 0/1 [00:00<?, ?it/s]
+Precond model: 100%|██████████| 1/1 [00:00<00:00,  3.53it/s]
+Precond model: 100%|██████████| 1/1 [00:00<00:00,  3.53it/s]
+
+GT reversal:   0%|          | 0/1 [00:00<?, ?it/s]
+GT reversal: 100%|██████████| 1/1 [00:00<00:00, 271.63it/s]
+
+0it [00:00, ?it/s]
+1it [00:00, 112.92it/s]

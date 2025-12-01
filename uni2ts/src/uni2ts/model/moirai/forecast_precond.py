@@ -120,21 +120,12 @@ class PreconditionReversingPredictor(Predictor):
             for sample_idx in range(samples.shape[0]):
                 sample = samples[sample_idx]  # [pred_len] or [pred_len, dim]
 
-                # Prepend context to prediction
-                if sample.ndim == 1:
-                    # Univariate: [pred_len]
-                    full_sequence = np.concatenate([context, sample])
-                else:
-                    # Multivariate: [pred_len, dim]
-                    full_sequence = np.concatenate([context, sample], axis=0)
-
-                # Apply reversal using ReversePrecondition transform
-                # We need to reverse the ENTIRE sequence (context + prediction)
-                # because reversal is iterative and depends on previous values
+                # Apply reversal using ReversePrecondition transform with explicit context
+                # We pass the prediction sample and the context separately
 
                 # Prepare data entry for reversal
                 reversal_data = {
-                    "target": full_sequence,
+                    "target": sample,
                     "precondition_coeffs": self.precondition_coeffs,
                     "precondition_degree": self.precondition_degree,
                     "precondition_type": self.precondition_type,
@@ -142,11 +133,8 @@ class PreconditionReversingPredictor(Predictor):
                 }
 
                 # Apply reversal
-                reversed_data = self.reverse_transform(reversal_data)
-                reversed_full = reversed_data["target"]
-
-                # Extract just the prediction part (remove context)
-                reversed_sample = reversed_full[self.precondition_degree:]
+                reversed_data = self.reverse_transform(reversal_data, context=context)
+                reversed_sample = reversed_data["target"]
 
                 reversed_samples_list.append(reversed_sample)
 
@@ -354,25 +342,19 @@ class MoiraiForecastPrecond(MoiraiForecast):
                 pred_sample = predictions[b, s]  # [pred_time, dim]
                 context_b = context[b]  # [context_time, dim]
 
-                # Concatenate context + prediction for reversal
-                # The reversal needs history from the original series
-                full_series = np.concatenate([context_b, pred_sample], axis=0)
-
                 # Create data entry with preconditioning metadata
                 data_entry = {
-                    "prediction": full_series,
+                    "prediction": pred_sample,
                     "precondition_coeffs": coeffs,
                     "precondition_degree": self.precondition_degree,
                     "precondition_type": self.precondition_type,
                     "precondition_enabled": True,
                 }
 
-                # Apply reversal
-                reversed_entry = self.reverse_preconditioner(data_entry)
-                reversed_full = reversed_entry["prediction"]
+                # Apply reversal with explicit context
+                reversed_entry = self.reverse_preconditioner(data_entry, context=context_b)
+                reversed_pred = reversed_entry["prediction"]
 
-                # Extract just the prediction part
-                reversed_pred = reversed_full[-pred_len:]
                 reversed_samples.append(reversed_pred)
 
             reversed_batch.append(np.stack(reversed_samples, axis=0))

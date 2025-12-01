@@ -1,0 +1,50 @@
+[2025-11-18 19:20:19,370][datasets][INFO] - PyTorch version 2.4.1 available.
+[2025-11-18 19:20:19,372][datasets][INFO] - JAX version 0.6.1 available.
+Hybrid Evaluation Configuration:
+  Base model: uni2ts.model.moirai.MoiraiForecast.load_from_checkpoint
+  Precond model: uni2ts.model.moirai.forecast_precond.create_precond_forecast_from_checkpoint
+  Preconditioning type: chebyshev
+  Preconditioning degree: 5
+
+Preconditioning coefficients: [ 0.     -1.25    0.      0.3125  0.    ]
+
+Loading base model...
+Loading preconditioned model...
+
+/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/torch/cuda/__init__.py:654: UserWarning: Can't initialize NVML
+  warnings.warn("Can't initialize NVML")
+Error executing job with overrides: ['run_name=eval_hybrid_last_last_monash_m3_monthly', 'base_model.checkpoint_path=/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai_small/lotsa_v1_unweighted/pretrain_run_20251020_205126/checkpoints/last.ckpt', 'base_model.patch_size=32', 'base_model.context_length=1000', 'precond_model.checkpoint_path=/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai_small/lotsa_v1_unweighted/precond_chebyshev_d5_20251117_204835/checkpoints/last.ckpt', 'precond_model.patch_size=32', 'precond_model.context_length=1000', 'precond_model.precondition_type=chebyshev', 'precond_model.precondition_degree=5', 'batch_size=32', 'data=monash_cached', 'data.dataset_name=monash_m3_monthly', 'data.prediction_length=18']
+Traceback (most recent call last):
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/cli/eval_precond_hybrid.py", line 402, in main
+    base_predictor = base_model.create_predictor(batch_size, cfg.device)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/src/uni2ts/model/moirai/forecast.py", line 144, in create_predictor
+    return PyTorchPredictor(
+           ^^^^^^^^^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/gluonts/core/component.py", line 364, in init_wrapper
+    return init(self, **all_args)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/gluonts/torch/model/predictor.py", line 62, in __init__
+    self.prediction_net = prediction_net.to(self.device)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/lightning/fabric/utilities/device_dtype_mixin.py", line 55, in to
+    return super().to(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1174, in to
+    return self._apply(convert)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 780, in _apply
+    module._apply(fn)
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 780, in _apply
+    module._apply(fn)
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 805, in _apply
+    param_applied = fn(param)
+                    ^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1160, in convert
+    return t.to(
+           ^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/torch/cuda/__init__.py", line 314, in _lazy_init
+    torch._C._cuda_init()
+RuntimeError: No CUDA GPUs are available
+
+Set the environment variable HYDRA_FULL_ERROR=1 for a complete stack trace.

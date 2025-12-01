@@ -1,0 +1,49 @@
+[2025-11-19 12:10:09,912][datasets][INFO] - PyTorch version 2.4.1 available.
+[2025-11-19 12:10:09,912][datasets][INFO] - JAX version 0.6.1 available.
+Hybrid Evaluation Configuration:
+  Base model: uni2ts.model.moirai.MoiraiForecast.load_from_checkpoint
+  Precond model: uni2ts.model.moirai.forecast_precond.create_precond_forecast_from_checkpoint
+  Preconditioning type: chebyshev
+  Preconditioning degree: 5
+
+Preconditioning coefficients: [ 0.     -1.25    0.      0.3125  0.    ]
+
+Loading base model...
+Loading preconditioned model...
+Generating base model predictions...
+Generating preconditioned model predictions...
+Generated 66 forecast pairs
+Extracting input windows from test data...
+Extracted 66 input windows
+Creating hybrid forecasts...
+Created 66 hybrid forecasts
+Computing metrics...
+
+================================================================================
+HYBRID EVALUATION METRICS
+================================================================================
+      MSE[mean]  MAE[0.5]  MAPE[0.5]  sMAPE[0.5]  MASE[0.5]  RMSE[mean]  NRMSE[mean]  ND[0.5]  MSIS  mean_weighted_sum_quantile_loss
+None  81441.195    79.441      1.595       0.621      0.442     285.379        1.737    0.483 4.941                            0.405
+================================================================================
+
+Metrics saved to: /scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/2025-11-19/12-10-09/metrics_hybrid.csv
+
+
+Base model:   0%|          | 0/66 [00:00<?, ?it/s]
+Base model:   2%|▏         | 1/66 [00:00<00:16,  3.91it/s]
+Base model: 100%|██████████| 66/66 [00:00<00:00, 219.09it/s]
+
+Precond model:   0%|          | 0/66 [00:00<?, ?it/s]
+Precond model: 100%|██████████| 66/66 [00:00<00:00, 808.37it/s]
+
+Hybridizing:   0%|          | 0/66 [00:00<?, ?it/s]
+Hybridizing:  23%|██▎       | 15/66 [00:00<00:00, 147.79it/s]
+Hybridizing:  45%|████▌     | 30/66 [00:00<00:00, 148.54it/s]
+Hybridizing:  68%|██████▊   | 45/66 [00:00<00:00, 148.86it/s]
+Hybridizing:  91%|█████████ | 60/66 [00:00<00:00, 149.10it/s]
+Hybridizing: 100%|██████████| 66/66 [00:00<00:00, 148.90it/s]
+
+0it [00:00, ?it/s]
+32it [00:00, 73.74it/s]
+64it [00:00, 122.60it/s]
+66it [00:00, 114.08it/s]

@@ -1,0 +1,40 @@
+[2025-11-19 12:04:00,163][datasets][INFO] - PyTorch version 2.4.1 available.
+[2025-11-19 12:04:00,168][datasets][INFO] - JAX version 0.6.1 available.
+Preconditioning parameters:
+  Type: chebyshev
+  Degree: 5
+Applying preconditioning to ground truth labels only...
+Preconditioning statistics:
+  Total items: 427
+  Items with NaN in original data: 0 (will use masked arrays)
+  Items skipped (new NaN after preconditioning): 0
+  Valid items for evaluation: 427
+Generating predictions (in preconditioned space)...
+Generating predictions for 427 valid samples (out of 427 total)...
+Collecting predictions and preconditioned ground truth...
+Generated 427 forecasts for 427 valid samples
+Computing metrics in preconditioned space...
+
+================================================================================
+EVALUATION METRICS (IN PRECONDITIONED SPACE)
+================================================================================
+           MSE[mean]  MAE[0.5]  MAPE[0.5]  sMAPE[0.5]  MASE[0.5]  RMSE[mean]  NRMSE[mean]  ND[0.5]   MSIS  mean_weighted_sum_quantile_loss
+None 13873953594.304 13900.833      1.067       0.848      2.159  117787.748        4.147    0.489 17.851                            0.411
+================================================================================
+
+Metrics saved to: /scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/eval_precond_space/monash_cached/tourism_quarterly/S/prediction_length=8/eval_precond_last_tourism_quarterly/metrics_precond_space.csv
+
+
+Preconditioning ground truth:   0%|          | 0/427 [00:00<?, ?it/s]
+Preconditioning ground truth: 100%|██████████| 427/427 [00:00<00:00, 38685.99it/s]
+
+Processing forecasts:   0%|          | 0/427 [00:00<?, ?it/s]
+Processing forecasts:   0%|          | 1/427 [00:00<01:52,  3.80it/s]
+Processing forecasts:  38%|███▊      | 161/427 [00:00<00:00, 559.19it/s]
+Processing forecasts:  75%|███████▌  | 321/427 [00:00<00:00, 897.58it/s]
+Processing forecasts: 100%|██████████| 427/427 [00:00<00:00, 799.09it/s]
+
+0it [00:00, ?it/s]
+224it [00:00, 1943.70it/s]
+427it [00:00, 1955.07it/s]
+427it [00:00, 1952.13it/s]

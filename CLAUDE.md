@@ -21,6 +21,72 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - ✗ `precond_default_20251102_102511/checkpoints/last.ckpt` - INVALID (trained with bugs)
 - ✓ `pretrain_run_20251020_205126/checkpoints/last.ckpt` - VALID (baseline, no preconditioning)
 
+## ⚠️ CRITICAL: Reversal Context Bug Fix (2025-11-18)
+
+**IMPORTANT:** The hybrid and ground truth context evaluation scripts had a critical bug where reversal used **incomplete context**.
+
+### The Bug
+
+Both `eval_precond_hybrid.py` and `eval_precond_gt.py` only used the **prediction window** for reversal context, but the reversal formula requires context from **before** the prediction starts (i.e., from the input window).
+
+**Reversal formula**: `y[t] = ỹ[t] - Σ(i=1 to n) c_i · y_context[t-i]`
+
+For the first prediction timestep (t=0) with degree=5:
+- Needs context at positions: t-1, t-2, t-3, t-4, t-5
+- These are positions [-1, -2, -3, -4, -5] relative to prediction start
+- These positions are in the **INPUT WINDOW**, not the prediction window!
+
+### Observable Symptoms (Before Fix)
+
+**M3 Monthly Dataset Example:**
+
+Preconditioned Space Evaluation (correct baseline):
+```
+MSE[mean]: 2,080,377.859
+MAE[0.5]: 645.464
+```
+
+Ground Truth Context (BEFORE FIX - incorrect):
+```
+MSE[mean]: 9,281,208.72  ❌ 4.5x worse!
+MAE[0.5]: 1,789.662      ❌ 2.8x worse!
+```
+
+Ground Truth Context (AFTER FIX - correct):
+```
+MSE[mean]: 2,080,377.859  ✓ Matches precond space!
+MAE[0.5]: 645.464         ✓ Matches precond space!
+```
+
+The bug made GT context reversal perform **worse** than no reversal, which is mathematically impossible. Perfect context should give identical metrics to precond space evaluation.
+
+### What Was Fixed
+
+**1. `eval_precond_gt.py`:**
+- Now extracts **full ground truth** (input + label) instead of just label
+- Reversal function takes `input_length` parameter to know where predictions start
+- Uses correct indexing: `full_gt[input_len + t - i - 1]` for context
+
+**2. `eval_precond_hybrid.py`:**
+- Now extracts **input windows** from test data
+- Creates **full base context** by concatenating: input window + base predictions
+- Reversal function takes `input_length` parameter
+- Uses correct indexing: `full_base_context[input_len + t - i - 1]` for context
+
+### Key Insight
+
+Preconditioning is a **convolution across the full sequence** (input + predictions). The reversal must mirror this - it needs the complete context, not just the prediction window. The first `n` prediction timesteps are most sensitive because they depend entirely on the input window for context.
+
+### Impact
+
+- ✅ **`uni2ts/cli/eval_precond_gt.py`** - FIXED (2025-11-18)
+- ✅ **`uni2ts/cli/eval_precond_hybrid.py`** - FIXED (2025-11-18)
+- ✅ **`eval/comprehensive_evaluation.py`** - Integrated with fixed scripts
+
+**See:** `REVERSAL_CONTEXT_BUG_FIX.md` for complete technical details, verification, and code comparisons.
+
+**Action Required:** Re-run all hybrid and GT context evaluations with the fixed scripts. Previous results from these evaluation modes are **invalid**.
+
 ---
 
 ## Repository Overview
@@ -384,7 +450,7 @@ python debug_rideshare.py
 
 ## Evaluation Approaches
 
-This repository implements **three distinct evaluation methodologies**:
+This repository implements **four distinct evaluation methodologies**:
 
 ### 1. Standard Evaluation (`cli/eval.py`)
 - Predictions in original space (with automatic reversal if model was trained with preconditioning)
@@ -397,13 +463,22 @@ This repository implements **three distinct evaluation methodologies**:
 - Use for: understanding model performance in training space, comparing preconditioned models fairly
 - Set `model.reverse_output=false` when loading model
 
-### 3. Hybrid Evaluation (`cli/eval_precond_hybrid.py`)
+### 3. Hybrid Evaluation (`cli/eval_precond_hybrid.py`) ⚠️ FIXED 2025-11-18
 - Combines base model + preconditioned model predictions
-- Uses base model's predictions as context when reversing preconditioned model's output
-- Formula: `y_hybrid[t] = ỹ_precond[t] + Σ cᵢ · y_base[t-i]`
+- Uses **median** of base model's stochastic predictions (+ input window) as stable context for reversal
+- Formula: `y_hybrid[t] = ỹ_precond[t] - Σ cᵢ · y_median[t-i]` (requires full context: input + median base predictions)
 - Use for: residual modeling, model ensembling, transfer learning
+- **Key design**: Median of 100 base samples provides stable context for ALL preconditioned samples (not stochastic pairing)
+- **Note**: Fixed critical bug where reversal was missing input window context
 
-**Comprehensive evaluation**: All three approaches have corresponding `*_comprehensive.slurm` scripts that evaluate across 29+ benchmark datasets (M1, M3, M4, Tourism, NN5, Traffic, etc.) and automatically aggregate metrics into CSV files.
+### 4. Ground Truth Context Evaluation (`cli/eval_precond_gt.py`) ⚠️ FIXED 2025-11-18
+- Reverses preconditioned model predictions using ground truth as context
+- Uses ground truth (input + label) as perfect context for reversal
+- Formula: `y_gt_reversed[t] = ỹ_precond[t] - Σ cᵢ · y_gt[t-i]` (requires full context: input + ground truth)
+- Use for: upper bound analysis, understanding best-case performance with perfect context
+- **Note**: Should give identical metrics to preconditioned space evaluation (mathematical equivalence)
+
+**Comprehensive evaluation**: All four approaches have corresponding functionality in `eval/comprehensive_evaluation.py` that evaluates across 29+ benchmark datasets (M1, M3, M4, Tourism, NN5, Traffic, etc.) and automatically aggregates metrics into CSV files.
 
 ## Dataset Configuration
 
@@ -491,6 +566,8 @@ Results can be compared across `uni2ts/outputs/precond_*_<timestamp>/` directori
 ## Documentation Index
 
 Key reference documents in repository:
+- `CRITICAL_FIXES_PRECONDITIONING.md`: Critical bug fixes from 2025-11-17 (coefficient extraction, sign errors)
+- `REVERSAL_CONTEXT_BUG_FIX.md`: ⚠️ **NEW** Critical bug fix from 2025-11-18 (reversal context issue)
 - `HYBRID_EVALUATION_README.md`: Hybrid evaluation methodology
 - `EVAL_PRECOND_README.md`: Preconditioned space evaluation
 - `QUICKSTART_PRECONDITIONING.md`: Quick reference for common preconditioning tasks
@@ -558,6 +635,41 @@ If successful, then submit the comprehensive SLURM job.
 **Documentation:**
 - See `CRITICAL_FIXES_PRECONDITIONING.md` for detailed technical analysis
 - Test scripts: `test_fixed_coefficients.py`, `test_forward_reverse_correctness.py`
+
+### Reversal Context Bug Fix (2025-11-18)
+
+**Critical bug discovered and fixed in hybrid and GT context evaluation scripts:**
+
+**Bug: Incomplete Context for Reversal**
+- **Problem**: Both `eval_precond_hybrid.py` and `eval_precond_gt.py` only used the prediction window for reversal context
+- **Impact**: Missing input window context caused mathematically incorrect reversal
+  - Example: M3 Monthly GT context evaluation showed MSE of 9.28M instead of correct 2.08M (4.5x error!)
+  - GT context performed worse than precond space, which is impossible with perfect context
+- **Root Cause**: Reversal formula `y[t] = ỹ[t] - Σ cᵢ · y_context[t-i]` needs context from **before** prediction starts
+  - For t=0 with degree=5, needs positions [-5, -4, -3, -2, -1] from the **input window**
+  - Only using prediction window means these positions are missing!
+
+**Fix: Extract and Use Full Context**
+- `eval_precond_gt.py`: Now extracts input + label, passes `input_length` to reversal
+- `eval_precond_hybrid.py`: Now extracts input windows, concatenates with base predictions
+- Both use correct indexing: `context[input_len + t - i - 1]`
+
+**Additional Improvement (Hybrid Only)**:
+- `eval_precond_hybrid.py` now uses **median** of base model's stochastic samples as context
+- Previous: Paired each precond sample with different base sample (unstable stochastic pairing)
+- Current: Single median trajectory provides stable context for ALL preconditioned samples
+- Benefit: More stable reversal, reduced variance, uses "best estimate" from base model
+
+**Verification:**
+- GT context metrics now **exactly match** precond space metrics (mathematical equivalence confirmed)
+- M3 Monthly: MSE 2.08M (correct) vs previous 9.28M (wrong)
+
+**Action Required:**
+- **Re-run all hybrid and GT context evaluations** - previous results are invalid
+- Preconditioned space and standard evaluations are unaffected
+
+**Documentation:**
+- See `REVERSAL_CONTEXT_BUG_FIX.md` for complete technical details and code comparisons
 
 ### Parallel Evaluation (NEW)
 

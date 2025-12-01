@@ -1,0 +1,78 @@
+[2025-11-19 12:15:32,425][datasets][INFO] - PyTorch version 2.4.1 available.
+[2025-11-19 12:15:32,426][datasets][INFO] - JAX version 0.6.1 available.
+Hybrid Evaluation Configuration:
+  Base model: uni2ts.model.moirai.MoiraiForecast.load_from_checkpoint
+  Precond model: uni2ts.model.moirai.forecast_precond.create_precond_forecast_from_checkpoint
+  Preconditioning type: chebyshev
+  Preconditioning degree: 5
+
+Preconditioning coefficients: [ 0.     -1.25    0.      0.3125  0.    ]
+
+Loading base model...
+Loading preconditioned model...
+Generating base model predictions...
+Generating preconditioned model predictions...
+Generated 767 forecast pairs
+Extracting input windows from test data...
+Extracted 767 input windows
+Creating hybrid forecasts...
+Created 767 hybrid forecasts
+Computing metrics...
+
+================================================================================
+HYBRID EVALUATION METRICS
+================================================================================
+      MSE[mean]  MAE[0.5]  MAPE[0.5]  sMAPE[0.5]  MASE[0.5]  RMSE[mean]  NRMSE[mean]  ND[0.5]   MSIS  mean_weighted_sum_quantile_loss
+None 106265.319    65.444      0.347       0.403      1.690     325.984        1.174    0.236 26.021                            0.212
+================================================================================
+
+Metrics saved to: /scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/2025-11-19/12-15-32/metrics_hybrid.csv
+
+
+Base model:   0%|          | 0/767 [00:00<?, ?it/s]
+Base model:   0%|          | 1/767 [00:00<03:08,  4.06it/s]
+Base model:  25%|██▌       | 193/767 [00:00<00:00, 674.36it/s]
+Base model:  50%|█████     | 385/767 [00:00<00:00, 1045.50it/s]
+Base model:  71%|███████   | 545/767 [00:00<00:00, 1212.84it/s]
+Base model:  96%|█████████▌| 737/767 [00:00<00:00, 1350.70it/s]
+Base model: 100%|██████████| 767/767 [00:00<00:00, 1105.49it/s]
+
+Precond model:   0%|          | 0/767 [00:00<?, ?it/s]
+Precond model:  21%|██        | 161/767 [00:00<00:00, 1359.20it/s]
+Precond model:  46%|████▌     | 353/767 [00:00<00:00, 1515.79it/s]
+Precond model:  67%|██████▋   | 513/767 [00:00<00:00, 1547.46it/s]
+Precond model:  88%|████████▊ | 673/767 [00:00<00:00, 1538.76it/s]
+Precond model: 100%|██████████| 767/767 [00:00<00:00, 1592.89it/s]
+
+Hybridizing:   0%|          | 0/767 [00:00<?, ?it/s]
+Hybridizing:   4%|▍         | 30/767 [00:00<00:02, 299.10it/s]
+Hybridizing:   8%|▊         | 60/767 [00:00<00:02, 297.14it/s]
+Hybridizing:  12%|█▏        | 91/767 [00:00<00:02, 298.61it/s]
+Hybridizing:  16%|█▌        | 121/767 [00:00<00:02, 297.57it/s]
+Hybridizing:  20%|█▉        | 152/767 [00:00<00:02, 298.49it/s]
+Hybridizing:  24%|██▎       | 182/767 [00:00<00:01, 297.74it/s]
+Hybridizing:  28%|██▊       | 212/767 [00:00<00:01, 297.66it/s]
+Hybridizing:  32%|███▏      | 242/767 [00:00<00:01, 297.02it/s]
+Hybridizing:  36%|███▌      | 273/767 [00:00<00:01, 298.40it/s]
+Hybridizing:  40%|███▉      | 304/767 [00:01<00:01, 301.88it/s]
+Hybridizing:  44%|████▍     | 336/767 [00:01<00:01, 304.39it/s]
+Hybridizing:  48%|████▊     | 367/767 [00:01<00:01, 305.64it/s]
+Hybridizing:  52%|█████▏    | 398/767 [00:01<00:01, 294.72it/s]
+Hybridizing:  56%|█████▌    | 428/767 [00:01<00:01, 287.68it/s]
+Hybridizing:  60%|█████▉    | 459/767 [00:01<00:01, 293.94it/s]
+Hybridizing:  64%|██████▍   | 490/767 [00:01<00:00, 298.54it/s]
+Hybridizing:  68%|██████▊   | 522/767 [00:01<00:00, 302.07it/s]
+Hybridizing:  72%|███████▏  | 553/767 [00:01<00:00, 304.12it/s]
+Hybridizing:  76%|███████▌  | 584/767 [00:01<00:00, 305.84it/s]
+Hybridizing:  80%|████████  | 616/767 [00:02<00:00, 307.13it/s]
+Hybridizing:  84%|████████▍ | 647/767 [00:02<00:00, 307.92it/s]
+Hybridizing:  88%|████████▊ | 678/767 [00:02<00:00, 308.35it/s]
+Hybridizing:  93%|█████████▎| 710/767 [00:02<00:00, 308.86it/s]
+Hybridizing:  97%|█████████▋| 741/767 [00:02<00:00, 305.95it/s]
+Hybridizing: 100%|██████████| 767/767 [00:02<00:00, 301.73it/s]
+
+0it [00:00, ?it/s]
+224it [00:00, 1935.28it/s]
+448it [00:00, 1836.77it/s]
+672it [00:00, 1889.75it/s]
+767it [00:00, 1870.82it/s]

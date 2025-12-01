@@ -1,0 +1,44 @@
+[2025-11-19 12:06:33,038][datasets][INFO] - PyTorch version 2.4.1 available.
+[2025-11-19 12:06:33,039][datasets][INFO] - JAX version 0.6.1 available.
+Preconditioning parameters:
+  Type: chebyshev
+  Degree: 5
+Applying preconditioning to ground truth labels only...
+Preconditioning statistics:
+  Total items: 862
+  Items with NaN in original data: 0 (will use masked arrays)
+  Items skipped (new NaN after preconditioning): 0
+  Valid items for evaluation: 862
+Generating predictions (in preconditioned space)...
+Generating predictions for 862 valid samples (out of 862 total)...
+Collecting predictions and preconditioned ground truth...
+Generated 862 forecasts for 862 valid samples
+Computing metrics in preconditioned space...
+
+================================================================================
+EVALUATION METRICS (IN PRECONDITIONED SPACE)
+================================================================================
+      MSE[mean]  MAE[0.5]  MAPE[0.5]  sMAPE[0.5]  MASE[0.5]  RMSE[mean]  NRMSE[mean]  ND[0.5]  MSIS  mean_weighted_sum_quantile_loss
+None      2.010     0.933      3.405       1.048      0.733       1.418        1.265    0.832 6.513                            0.673
+================================================================================
+
+Metrics saved to: /scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/eval_precond_space/monash_cached/traffic_weekly/S/prediction_length=8/eval_precond_last_traffic_weekly/metrics_precond_space.csv
+
+
+Preconditioning ground truth:   0%|          | 0/862 [00:00<?, ?it/s]
+Preconditioning ground truth: 100%|██████████| 862/862 [00:00<00:00, 32589.01it/s]
+
+Processing forecasts:   0%|          | 0/862 [00:00<?, ?it/s]
+Processing forecasts:   0%|          | 1/862 [00:00<04:01,  3.56it/s]
+Processing forecasts:  19%|█▊        | 161/862 [00:00<00:01, 533.82it/s]
+Processing forecasts:  37%|███▋      | 321/862 [00:00<00:00, 831.13it/s]
+Processing forecasts:  56%|█████▌    | 481/862 [00:00<00:00, 1042.79it/s]
+Processing forecasts:  74%|███████▍  | 641/862 [00:00<00:00, 1199.52it/s]
+Processing forecasts:  93%|█████████▎| 801/862 [00:00<00:00, 1307.49it/s]
+Processing forecasts: 100%|██████████| 862/862 [00:00<00:00, 1021.29it/s]
+
+0it [00:00, ?it/s]
+224it [00:00, 1980.77it/s]
+448it [00:00, 1992.94it/s]
+672it [00:00, 1996.84it/s]
+862it [00:00, 1993.84it/s]

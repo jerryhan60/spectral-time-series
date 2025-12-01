@@ -9,3 +9,4 @@ context_length: ???
 enable_preconditioning: true  # Set to true if model was trained with preconditioning
 precondition_type: chebyshev  # Must match training: "chebyshev" or "legendre"
 precondition_degree: 5  # Must match training: typically 5
+reverse_output: true  # Whether to reverse preconditioning on outputs

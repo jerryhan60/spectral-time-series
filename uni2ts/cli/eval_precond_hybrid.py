@@ -7,15 +7,22 @@ This script evaluates a "hybrid" approach that combines:
 2. Preconditioned model forecasts (in preconditioned space)
 
 The hybrid forecast is computed by:
-1. Generate base model predictions y_base in original space
-2. Generate preconditioned model predictions ỹ_precond in preconditioned space
-3. Reverse the preconditioning using base model outputs as context:
+1. Generate base model predictions y_base in original space (stochastic samples)
+2. Compute median of base model predictions across samples for stable context
+3. Generate preconditioned model predictions ỹ_precond in preconditioned space
+4. Reverse the preconditioning using median base model outputs as context:
    Since forward preconditioning uses: ỹ_t = y_t + Σ c_i · y[t-i]
-   Reverse uses: y_hybrid[t] = ỹ_precond[t] - Σ(i=1 to n) c_i · y_context[t-i]
-   where y_context comes from the base model's predictions
+   Reverse uses: y_hybrid[t] = ỹ_precond[t] - Σ(i=1 to n) c_i · y_median[t-i]
+   where y_median is the median of base model's predictions
 
 This allows the preconditioned model to predict "residuals" or "deltas"
-while leveraging the base model's predictions as anchors.
+while leveraging the base model's median prediction as a stable anchor.
+
+Key Design Choice:
+  - Base model predictions are stochastic (100 samples)
+  - Instead of pairing each precond sample with a different base sample,
+    we use the MEDIAN of all base samples as context for ALL precond samples
+  - This provides a stable, deterministic context for reversal
 
 Usage:
     python -m cli.eval_precond_hybrid \
@@ -55,11 +62,12 @@ from gluonts.ev.metrics import (
 
 def reverse_precondition_with_base_context(
     precond_predictions,
-    base_predictions,
+    base_context,
+    input_length: int,
     coeffs: np.ndarray,
 ) -> np.ndarray:
     """
-    Reverse preconditioning using base model predictions as context.
+    Reverse preconditioning using base model context (input + predictions).
 
     Since forward preconditioning uses ADDITION:
         ỹ_t = y_t + Σ c_i · y[t-i]
@@ -67,67 +75,96 @@ def reverse_precondition_with_base_context(
     This implements the hybrid reversal using SUBTRACTION:
         y_hybrid[t] = ỹ_precond[t] - Σ(i=1 to n) c_i · y_base[t-i]
 
+    The key insight: predictions start at position `input_length` in the full sequence.
+    For the first few prediction timesteps, we need context from the input window.
+
     Args:
         precond_predictions: Predictions from preconditioned model (in precond space)
                             Shape: [num_samples, prediction_length] or [prediction_length]
-        base_predictions: Predictions from base model (in original space)
-                         Shape: [num_samples, prediction_length] or [prediction_length]
+        base_context: Full base context (input + base predictions, in original space)
+                     Shape: [input_length + prediction_length] or [num_samples, input_length + prediction_length]
+        input_length: Length of the input window (where predictions start)
         coeffs: Preconditioning coefficients [c_1, c_2, ..., c_n]
 
     Returns:
-        Hybrid predictions in original space, same shape as input
+        Hybrid predictions in original space, same shape as precond_predictions
     """
     # Ensure inputs are numpy arrays
     if not isinstance(precond_predictions, np.ndarray):
         precond_predictions = np.array(precond_predictions)
-    if not isinstance(base_predictions, np.ndarray):
-        base_predictions = np.array(base_predictions)
+    if not isinstance(base_context, np.ndarray):
+        base_context = np.array(base_context)
 
     # Handle different shapes
     if precond_predictions.ndim == 1:
         # Single prediction: [prediction_length]
-        return _reverse_1d(precond_predictions, base_predictions, coeffs)
+        return _reverse_1d_with_context(precond_predictions, base_context, input_length, coeffs)
     elif precond_predictions.ndim == 2:
         # Multiple samples: [num_samples, prediction_length]
-        return np.stack([
-            _reverse_1d(precond_predictions[i], base_predictions[i], coeffs)
-            for i in range(precond_predictions.shape[0])
-        ], axis=0)
+        if base_context.ndim == 1:
+            # Same context for all samples
+            return np.stack([
+                _reverse_1d_with_context(precond_predictions[i], base_context, input_length, coeffs)
+                for i in range(precond_predictions.shape[0])
+            ], axis=0)
+        elif base_context.ndim == 2:
+            # Different context per sample
+            return np.stack([
+                _reverse_1d_with_context(precond_predictions[i], base_context[i], input_length, coeffs)
+                for i in range(precond_predictions.shape[0])
+            ], axis=0)
+        else:
+            raise ValueError(f"base_context must be 1D or 2D when precond_predictions is 2D, got shape {base_context.shape}")
     else:
         raise ValueError(
             f"precond_predictions must be 1D or 2D, got shape {precond_predictions.shape}"
         )
 
 
-def _reverse_1d(precond_seq: np.ndarray, base_seq: np.ndarray, coeffs: np.ndarray) -> np.ndarray:
+def _reverse_1d_with_context(
+    precond_seq: np.ndarray,
+    full_base_context: np.ndarray,
+    input_len: int,
+    coeffs: np.ndarray
+) -> np.ndarray:
     """
-    Reverse preconditioning for a single 1D sequence using base context.
+    Reverse preconditioning for a single 1D sequence using full base context.
 
     Since forward preconditioning uses ADDITION:
         ỹ_t = y_t + Σ(i=1 to n) c_i · y[t-i]
 
-    Reverse uses SUBTRACTION:
+    Reverse uses SUBTRACTION with base context:
         y_t = ỹ_t - Σ(i=1 to n) c_i · y_base[t-i]
 
-    For the first few timesteps where we don't have enough history from base model,
-    we use the preconditioned prediction directly (no reversal).
+    The predictions start at position `input_len` in the full sequence.
+    For early prediction timesteps, we use context from the input window.
+
+    Args:
+        precond_seq: Preconditioned predictions [pred_len]
+        full_base_context: Full base context [input_len + pred_len]
+                          (input window + base model predictions concatenated)
+        input_len: Where predictions start in full sequence
+        coeffs: Preconditioning coefficients [c_1, ..., c_n]
+
+    Returns:
+        Reversed predictions in original space [pred_len]
     """
     n = len(coeffs)
+    pred_len = len(precond_seq)
     result = precond_seq.copy()
 
-    # For t >= n, we can apply full reversal using base model history
-    if len(precond_seq) > n:
-        # Compute weighted sum for all positions t >= n
-        weighted_sum = np.zeros(len(precond_seq) - n)
-        for i in range(n):
-            # coeffs[i] corresponds to base_seq[t-(i+1)]
-            # For all t in [n, len(precond_seq)), extract base_seq[t-(i+1)]
-            weighted_sum += coeffs[i] * base_seq[n-i-1:len(base_seq)-i-1]
+    # For each prediction timestep t
+    for t in range(pred_len):
+        # Actual position in full sequence
+        actual_pos = input_len + t
 
-        result[n:] = precond_seq[n:] - weighted_sum  # SUBTRACTION (reverse of addition)
-
-    # For t < n, keep preconditioned values (we don't have enough base history)
-    # This is analogous to how forward preconditioning keeps original values for t < n
+        # Check if we have enough history
+        if actual_pos >= n:
+            # Apply reversal: result[t] = precond_seq[t] - Σ coeffs[i] * full_base_context[actual_pos - i - 1]
+            for i in range(n):
+                context_idx = actual_pos - i - 1
+                result[t] -= coeffs[i] * full_base_context[context_idx]
+        # else: keep preconditioned value (not enough history, though this is rare with large context windows)
 
     return result
 
@@ -144,10 +181,15 @@ def evaluate_hybrid_model(
     Evaluate hybrid model combining base and preconditioned predictions.
 
     The evaluation flow is:
-    1. Generate predictions from base model (in original space)
-    2. Generate predictions from preconditioned model (in precond space, no reversal)
-    3. Create hybrid predictions by reversing precond predictions using base context
-    4. Evaluate hybrid predictions against ground truth
+    1. Generate predictions from base model (in original space, stochastic samples)
+    2. Compute median of base model predictions for stable context
+    3. Generate predictions from preconditioned model (in precond space, no reversal)
+    4. Create hybrid predictions by reversing precond predictions using median base context
+    5. Evaluate hybrid predictions against ground truth
+
+    Key approach: Uses median of base model predictions as a stable, deterministic
+    context for reversing ALL preconditioned samples, rather than pairing stochastic
+    samples with stochastic samples.
 
     Args:
         base_predictor: Base model predictor (normal model)
@@ -199,12 +241,41 @@ def evaluate_hybrid_model(
 
     print(f"Generated {len(base_forecasts)} forecast pairs")
 
+    # Extract input windows from test data for proper context
+    print("Extracting input windows from test data...")
+    input_windows = []
+    for item in test_data_list:
+        if isinstance(item, tuple):
+            input_dict = item[0]
+        elif hasattr(item, 'input'):
+            input_dict = item.input
+        else:
+            raise ValueError(f"Unknown test data format: {type(item)}")
+
+        # Extract input target
+        if hasattr(input_dict, 'target'):
+            input_target = input_dict.target
+        elif isinstance(input_dict, dict) and 'target' in input_dict:
+            input_target = input_dict['target']
+        else:
+            raise ValueError(f"Cannot extract target from input: {type(input_dict)}")
+
+        # Convert to numpy if needed
+        if torch.is_tensor(input_target):
+            input_target = input_target.cpu().numpy()
+        elif not isinstance(input_target, np.ndarray):
+            input_target = np.array(input_target)
+
+        input_windows.append(input_target)
+
+    print(f"Extracted {len(input_windows)} input windows")
+
     # Create hybrid forecasts
     print("Creating hybrid forecasts...")
     hybrid_forecasts = []
 
-    for base_fc, precond_fc in tqdm(
-        zip(base_forecasts, precond_forecasts),
+    for base_fc, precond_fc, input_window in tqdm(
+        zip(base_forecasts, precond_forecasts, input_windows),
         total=len(base_forecasts),
         desc="Hybridizing"
     ):
@@ -213,10 +284,22 @@ def evaluate_hybrid_model(
         base_samples = base_fc.samples  # [num_samples, pred_len]
         precond_samples = precond_fc.samples  # [num_samples, pred_len]
 
-        # Apply hybrid reversal for each sample
+        # Take median of base model predictions across all samples
+        # This provides a stable, deterministic context for reversing all preconditioned samples
+        # Rather than pairing stochastic samples with stochastic samples
+        base_median = np.median(base_samples, axis=0)  # [pred_len]
+
+        input_len = len(input_window)
+
+        # Create full base context using median: input_window + median base prediction
+        # This single context will be used for reversing ALL preconditioned samples
+        full_context = np.concatenate([input_window, base_median], axis=0)  # [input_len + pred_len]
+
+        # Apply hybrid reversal for all samples using the same median-based context
         hybrid_samples = reverse_precondition_with_base_context(
             precond_predictions=precond_samples,
-            base_predictions=base_samples,
+            base_context=full_context,  # Single median context for all samples
+            input_length=input_len,
             coeffs=precondition_coeffs,
         )
 

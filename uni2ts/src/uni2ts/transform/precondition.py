@@ -331,8 +331,22 @@ class ReversePrecondition(Transformation):
     prediction_field: str = "prediction"
     enabled: bool = True
 
-    def __call__(self, data_entry: dict[str, Any]) -> dict[str, Any]:
-        """Reverse preconditioning on predictions."""
+    def __call__(
+        self,
+        data_entry: dict[str, Any],
+        context: Optional[np.ndarray] = None
+    ) -> dict[str, Any]:
+        """
+        Reverse preconditioning on predictions.
+
+        Args:
+            data_entry: Data dictionary containing predictions
+            context: Optional array of context values (ground truth) immediately
+                     preceding the predictions. Shape should be compatible with
+                     the target/prediction (e.g., 1D for 1D target).
+                     Required for correct reversal of forecast windows where
+                     the start of the window depends on history not in the window.
+        """
         if not self.enabled:
             return data_entry
 
@@ -367,18 +381,41 @@ class ReversePrecondition(Transformation):
         # Apply reversal
         if preconditioned.ndim == 1:
             # 1D case: single time series
-            restored = self._reverse_convolution(preconditioned, coeffs)
+            restored = self._reverse_convolution(preconditioned, coeffs, context)
         elif preconditioned.ndim == 2:
             # 2D case: [time, variate] - apply to each variate
+            # Context must be 2D [context_len, variate] or None
+            if context is not None and context.ndim != 2:
+                 raise ValueError(f"Context must be 2D for 2D predictions, got {context.ndim}D")
+
             restored = np.stack([
-                self._reverse_convolution(preconditioned[:, i], coeffs)
+                self._reverse_convolution(
+                    preconditioned[:, i],
+                    coeffs,
+                    context[:, i] if context is not None else None
+                )
                 for i in range(preconditioned.shape[1])
             ], axis=1)
         elif preconditioned.ndim == 3:
             # 3D case: [batch/sample, time, variate] - common for predictions
+            # Context must be 3D [batch, context_len, variate] or 2D [context_len, variate] (broadcast) or None
+            
+            # Handle context broadcasting if needed
+            ctx = context
+            if context is not None:
+                if context.ndim == 2:
+                    # Broadcast context across batch: [context_len, variate] -> [batch, context_len, variate]
+                    ctx = np.stack([context] * preconditioned.shape[0], axis=0)
+                elif context.ndim != 3:
+                    raise ValueError(f"Context must be 2D or 3D for 3D predictions, got {context.ndim}D")
+
             restored = np.stack([
                 np.stack([
-                    self._reverse_convolution(preconditioned[b, :, v], coeffs)
+                    self._reverse_convolution(
+                        preconditioned[b, :, v],
+                        coeffs,
+                        ctx[b, :, v] if ctx is not None else None
+                    )
                     for v in range(preconditioned.shape[2])
                 ], axis=1)
                 for b in range(preconditioned.shape[0])
@@ -399,7 +436,8 @@ class ReversePrecondition(Transformation):
     def _reverse_convolution(
         self,
         sequence: np.ndarray,
-        coeffs: np.ndarray
+        coeffs: np.ndarray,
+        context: Optional[np.ndarray] = None
     ) -> np.ndarray:
         """
         Reverse polynomial convolution on a 1D sequence.
@@ -410,29 +448,77 @@ class ReversePrecondition(Transformation):
         The reverse uses SUBTRACTION to undo it:
             yₜ = ỹₜ - ∑ᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ
 
-        This is computed iteratively from left to right, since yₜ depends
-        on previously computed values yₜ₋₁, yₜ₋₂, etc.
+        This is computed iteratively from left to right.
 
         Args:
             sequence: 1D preconditioned array of shape [time]
             coeffs: 1D array of coefficients [c₁, c₂, ..., cₙ]
+            context: Optional 1D array of context values (original scale)
+                     preceding the sequence. If provided, these values are
+                     used for the history term ∑ cᵢ · yₜ₋ᵢ when t < n.
 
         Returns:
             Restored sequence of same shape
         """
         n = len(coeffs)
-        result = sequence.copy()
+        
+        # If context is provided, prepend it to simplify indexing
+        if context is not None:
+            if len(context) < n:
+                # We need at least n context values for full reversal
+                # If fewer, we'll do our best but early values might be wrong
+                pass
+            
+            # Create a working buffer: [context, sequence]
+            # We initialize with context (fixed) and sequence (to be updated)
+            # Actually, we need to store the computed y values.
+            # sequence contains ỹ values.
+            
+            full_len = len(context) + len(sequence)
+            # Initialize y buffer with context
+            y_buffer = np.zeros(full_len, dtype=sequence.dtype)
+            y_buffer[:len(context)] = context
+            
+            # We also need access to ỹ (preconditioned) values for the sequence part
+            # ỹ for context part is not needed/available
+            
+            # Iterate through the sequence part
+            for t_seq in range(len(sequence)):
+                t_full = len(context) + t_seq
+                
+                # yₜ = ỹₜ - ∑ᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ
+                # yₜ corresponds to y_buffer[t_full]
+                # ỹₜ corresponds to sequence[t_seq]
+                # yₜ₋ᵢ corresponds to y_buffer[t_full - i]
+                
+                weighted_sum = 0.0
+                for i in range(1, n + 1):
+                    # Check if history index is valid (>= 0)
+                    hist_idx = t_full - i
+                    if hist_idx >= 0:
+                        weighted_sum += coeffs[i-1] * y_buffer[hist_idx]
+                
+                # Compute and store yₜ
+                y_buffer[t_full] = sequence[t_seq] - weighted_sum
+                
+            # Return only the sequence part
+            return y_buffer[len(context):]
 
-        # For t > n, reverse the convolution iteratively
-        for t in range(n, len(sequence)):
-            # Compute weighted sum using already-reversed values: ∑ᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ
-            weighted_sum = sum(
-                coeffs[i-1] * result[t-i]
-                for i in range(1, n+1)
-            )
-            result[t] = sequence[t] - weighted_sum  # SUBTRACTION (reverse of addition)
+        else:
+            # Original behavior (no context provided)
+            # Assumes first n values are identity / unconditioned
+            result = sequence.copy()
 
-        # For t ≤ n, keep original values
-        # (already copied in result = sequence.copy())
+            # For t > n, reverse the convolution iteratively
+            for t in range(n, len(sequence)):
+                # Compute weighted sum using already-reversed values: ∑ᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ
+                weighted_sum = sum(
+                    coeffs[i-1] * result[t-i]
+                    for i in range(1, n+1)
+                )
+                result[t] = sequence[t] - weighted_sum  # SUBTRACTION
 
-        return result
+            # For t ≤ n, keep original values
+            # (already copied in result = sequence.copy())
+
+            return result

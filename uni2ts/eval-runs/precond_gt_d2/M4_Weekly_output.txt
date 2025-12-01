@@ -1,0 +1,46 @@
+[2025-11-19 12:10:31,170][datasets][INFO] - PyTorch version 2.4.1 available.
+[2025-11-19 12:10:31,171][datasets][INFO] - JAX version 0.6.1 available.
+Ground Truth Context Evaluation Configuration:
+  Precond model: uni2ts.model.moirai.forecast_precond.create_precond_forecast_from_checkpoint
+  Preconditioning type: chebyshev
+  Preconditioning degree: 2
+
+Preconditioning coefficients: [ 0.  -0.5]
+
+Loading preconditioned model...
+Extracting ground truth (input + label) from test data...
+Extracted 359 ground truth sequences
+Generating preconditioned model predictions...
+Generated 359 forecasts
+Creating GT-context-reversed forecasts...
+Created 359 GT-context-reversed forecasts
+Computing metrics...
+
+================================================================================
+GROUND TRUTH CONTEXT EVALUATION METRICS
+================================================================================
+      MSE[mean]  MAE[0.5]  MAPE[0.5]  sMAPE[0.5]  MASE[0.5]  RMSE[mean]  NRMSE[mean]  ND[0.5]   MSIS  mean_weighted_sum_quantile_loss
+None 269079.990   254.764      0.072       0.069      2.174     518.729        0.099    0.049 17.125                            0.039
+================================================================================
+
+Metrics saved to: /scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/2025-11-19/12-10-31/metrics_gt_context.csv
+
+
+Precond model:   0%|          | 0/359 [00:00<?, ?it/s]
+Precond model:   0%|          | 1/359 [00:00<01:36,  3.73it/s]
+Precond model:  49%|████▉     | 176/359 [00:00<00:00, 610.26it/s]
+Precond model:  98%|█████████▊| 353/359 [00:00<00:00, 952.06it/s]
+Precond model: 100%|██████████| 359/359 [00:00<00:00, 744.42it/s]
+
+GT reversal:   0%|          | 0/359 [00:00<?, ?it/s]
+GT reversal:  17%|█▋        | 62/359 [00:00<00:00, 610.43it/s]
+GT reversal:  35%|███▍      | 124/359 [00:00<00:00, 611.04it/s]
+GT reversal:  52%|█████▏    | 186/359 [00:00<00:00, 609.74it/s]
+GT reversal:  69%|██████▉   | 247/359 [00:00<00:00, 609.30it/s]
+GT reversal:  86%|████████▋ | 310/359 [00:00<00:00, 614.34it/s]
+GT reversal: 100%|██████████| 359/359 [00:00<00:00, 617.11it/s]
+
+0it [00:00, ?it/s]
+160it [00:00, 1400.98it/s]
+320it [00:00, 1482.90it/s]
+359it [00:00, 1473.83it/s]

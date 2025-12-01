@@ -1,0 +1,54 @@
+[2025-11-19 12:06:17,550][datasets][INFO] - PyTorch version 2.4.1 available.
+[2025-11-19 12:06:17,551][datasets][INFO] - JAX version 0.6.1 available.
+Preconditioning parameters:
+  Type: chebyshev
+  Degree: 2
+Applying preconditioning to ground truth labels only...
+Preconditioning statistics:
+  Total items: 32072
+  Items with NaN in original data: 30921 (will use masked arrays)
+  Items skipped (new NaN after preconditioning): 30913
+  Valid items for evaluation: 1159
+Generating predictions (in preconditioned space)...
+Generating predictions for 1159 valid samples (out of 32072 total)...
+Collecting predictions and preconditioned ground truth...
+Generated 1159 forecasts for 1159 valid samples
+Computing metrics in preconditioned space...
+
+================================================================================
+EVALUATION METRICS (IN PRECONDITIONED SPACE)
+================================================================================
+      MSE[mean]  MAE[0.5]  MAPE[0.5]  sMAPE[0.5]  MASE[0.5]  RMSE[mean]  NRMSE[mean]  ND[0.5]   MSIS  mean_weighted_sum_quantile_loss
+None    137.442     2.986      0.473       0.698      0.955      11.724        1.201    0.306 11.675                            0.260
+================================================================================
+
+Metrics saved to: /scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/eval_precond_space/monash_cached/temperature_rain_with_missing/S/prediction_length=30/eval_precond_last_temperature_rain_with_missing/metrics_precond_space.csv
+
+
+Preconditioning ground truth:   0%|          | 0/32072 [00:00<?, ?it/s]
+Preconditioning ground truth:  16%|█▌        | 4997/32072 [00:00<00:00, 49964.81it/s]
+Preconditioning ground truth:  31%|███       | 10016/32072 [00:00<00:00, 50095.96it/s]
+Preconditioning ground truth:  47%|████▋     | 15026/32072 [00:00<00:00, 49646.81it/s]
+Preconditioning ground truth:  62%|██████▏   | 19992/32072 [00:00<00:00, 49555.38it/s]
+Preconditioning ground truth:  78%|███████▊  | 24996/32072 [00:00<00:00, 49726.09it/s]
+Preconditioning ground truth:  94%|█████████▎| 29997/32072 [00:00<00:00, 49819.19it/s]
+Preconditioning ground truth: 100%|██████████| 32072/32072 [00:00<00:00, 49780.14it/s]
+
+Processing forecasts:   0%|          | 0/1159 [00:00<?, ?it/s]
+Processing forecasts:   0%|          | 1/1159 [00:00<04:51,  3.98it/s]
+Processing forecasts:  14%|█▍        | 161/1159 [00:00<00:01, 580.24it/s]
+Processing forecasts:  28%|██▊       | 321/1159 [00:00<00:00, 927.15it/s]
+Processing forecasts:  42%|████▏     | 483/1159 [00:00<00:00, 1153.73it/s]
+Processing forecasts:  56%|█████▋    | 652/1159 [00:00<00:00, 1324.46it/s]
+Processing forecasts:  71%|███████▏  | 828/1159 [00:00<00:00, 1460.63it/s]
+Processing forecasts:  86%|████████▌ | 993/1159 [00:00<00:00, 1433.41it/s]
+Processing forecasts: 100%|██████████| 1159/1159 [00:00<00:00, 1197.71it/s]
+
+0it [00:00, ?it/s]
+192it [00:00, 1636.47it/s]
+384it [00:00, 1639.92it/s]
+576it [00:00, 1637.20it/s]
+768it [00:00, 1638.58it/s]
+960it [00:00, 1635.91it/s]
+1152it [00:00, 1636.78it/s]
+1159it [00:00, 1630.42it/s]

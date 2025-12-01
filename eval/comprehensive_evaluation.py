@@ -2,10 +2,12 @@
 """
 Comprehensive Model Evaluation Script
 
-This script combines the functionality of three SLURM evaluation scripts:
+This script combines the functionality of five SLURM evaluation scripts:
 1. eval_comprehensive.slurm - Standard evaluation (with reversal)
 2. eval_precond_comprehensive.slurm - Preconditioned space evaluation (no reversal)
 3. eval_baseline_in_precond_space.slurm - Baseline model evaluated in preconditioned space
+4. eval_precond_hybrid.slurm - Hybrid evaluation (base + preconditioned)
+5. eval_precond_gt.py - Ground truth context evaluation (precond model + GT context reversal)
 
 Usage Examples:
 
@@ -25,6 +27,17 @@ Usage Examples:
         --model-path /path/to/baseline_checkpoint.ckpt \
         --precond-type chebyshev --precond-degree 5
 
+    # Hybrid evaluation (base + preconditioned)
+    python comprehensive_evaluation.py --mode hybrid \
+        --base-model-path /path/to/baseline_checkpoint.ckpt \
+        --precond-model-path /path/to/precond_checkpoint.ckpt \
+        --precond-type chebyshev --precond-degree 5
+
+    # Ground truth context evaluation (preconditioned model + GT reversal)
+    python comprehensive_evaluation.py --mode precond-gt \
+        --model-path /path/to/precond_checkpoint.ckpt \
+        --precond-type chebyshev --precond-degree 5
+
     # Evaluate on specific datasets only (for testing)
     python comprehensive_evaluation.py --mode standard --model-version 1.1 \
         --datasets m1_monthly m1_quarterly
@@ -32,7 +45,7 @@ Usage Examples:
     # Compare results from multiple CSV files
     python comprehensive_evaluation.py --mode compare \
         --csv-files results1.csv results2.csv \
-        --labels "Baseline" "Preconditioned"
+        --labels "Baseline" "Preconditioned" "Hybrid"
 """
 
 import os
@@ -718,6 +731,323 @@ def eval_baseline_in_precond_space(
 
 
 # ============================================================================
+# Evaluation Mode 4: Hybrid Evaluation (Base + Preconditioned)
+# ============================================================================
+
+def eval_hybrid(
+    base_model_path: str,
+    precond_model_path: str,
+    precond_type: str = 'chebyshev',
+    precond_degree: int = 5,
+    patch_size: int = 32,
+    context_length: int = 1000,
+    batch_size: int = 32,
+    output_dir: Optional[str] = None,
+    dataset_filter: Optional[List[str]] = None,
+    datasets: Optional[List[Dict]] = None
+) -> pd.DataFrame:
+    """
+    Hybrid evaluation combining base and preconditioned models (reproduces eval_precond_hybrid functionality).
+
+    This approach:
+    1. Generates predictions from base model (in original space)
+    2. Generates predictions from preconditioned model (in precond space, no reversal)
+    3. Creates hybrid predictions by reversing precond predictions using base context
+    4. Evaluates hybrid predictions against ground truth in original space
+
+    Args:
+        base_model_path: Path to base model checkpoint
+        precond_model_path: Path to preconditioned model checkpoint
+        precond_type: 'chebyshev' or 'legendre'
+        precond_degree: Polynomial degree
+        patch_size: Default patch size
+        context_length: Context window size
+        batch_size: Batch size for evaluation
+        output_dir: Directory to save results
+        dataset_filter: List of dataset names to evaluate (None = all)
+        datasets: List of dataset configs (None = load from Excel)
+
+    Returns:
+        DataFrame with evaluation metrics for hybrid approach
+    """
+    print("=" * 80)
+    print("Hybrid Evaluation (Base + Preconditioned)")
+    print("=" * 80)
+
+    # Load datasets if not provided
+    if datasets is None:
+        datasets = load_dataset_config()
+
+    base_model_name = Path(base_model_path).stem
+    precond_model_name = Path(precond_model_path).stem
+
+    print(f"Base Model: {base_model_path}")
+    print(f"Base Model Name: {base_model_name}")
+    print(f"Preconditioned Model: {precond_model_path}")
+    print(f"Preconditioned Model Name: {precond_model_name}")
+    print(f"Preconditioning Type: {precond_type}")
+    print(f"Preconditioning Degree: {precond_degree}")
+    print(f"Patch Size: {patch_size}")
+    print(f"Context Length: {context_length}")
+    print(f"Batch Size: {batch_size}")
+    print(f"Evaluation Mode: HYBRID (base context + precond predictions)")
+
+    # Create output directory
+    if output_dir is None:
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        output_dir = f"/scratch/gpfs/EHAZAN/jh1161/eval/outputs/eval_hybrid_{base_model_name}_{precond_model_name}_{timestamp}"
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    print(f"Results will be saved to: {output_dir}")
+    print()
+
+    # Filter datasets if requested
+    eval_datasets = datasets
+    if dataset_filter:
+        eval_datasets = [ds for ds in datasets if ds['dataset_name'] in dataset_filter]
+        print(f"Filtering to {len(eval_datasets)} datasets")
+
+    # Initialize results
+    results = []
+    successful_datasets = []
+    failed_datasets = []
+
+    # Evaluate each dataset
+    total = len(eval_datasets)
+    for idx, dataset in enumerate(eval_datasets, 1):
+        dataset_name = dataset['dataset_name']
+        display_name = dataset['display_name']
+        pred_length = dataset['prediction_length']
+        frequency = dataset.get('frequency', 'UNKNOWN')
+
+        # Determine patch size
+        dataset_patch_size = get_patch_size_for_frequency(frequency, patch_size)
+
+        print(f"[{idx}/{total}] Evaluating: {display_name}")
+        print(f"  Dataset: {dataset_name}, Freq: {frequency}, Pred Len: {pred_length}, Patch: {dataset_patch_size}")
+        print(f"  Hybrid: {base_model_name} + {precond_model_name}")
+
+        # Build command for hybrid evaluation
+        # Note: default_hybrid.yaml already sets base_model and precond_model configs
+        cmd = [
+            'python', '-m', 'cli.eval_precond_hybrid',
+            f'run_name=eval_hybrid_{base_model_name}_{precond_model_name}_{dataset_name}',
+            # Base model configuration (override checkpoint and params)
+            f'base_model.checkpoint_path={base_model_path}',
+            f'base_model.patch_size={dataset_patch_size}',
+            f'base_model.context_length={context_length}',
+            # Preconditioned model configuration (override checkpoint and params)
+            f'precond_model.checkpoint_path={precond_model_path}',
+            f'precond_model.patch_size={dataset_patch_size}',
+            f'precond_model.context_length={context_length}',
+            f'precond_model.precondition_type={precond_type}',
+            f'precond_model.precondition_degree={precond_degree}',
+            # Data and batch configuration
+            f'batch_size={batch_size}',
+            'data=monash_cached',
+            f'data.dataset_name={dataset_name}',
+            f'data.prediction_length={pred_length}'
+        ]
+
+        # Run evaluation
+        output_file = output_dir / f"{display_name.replace(' ', '_')}_output.txt"
+        exit_code, output = run_evaluation_command(cmd, output_file)
+
+        # Extract metrics (hybrid uses standard format)
+        metrics = extract_metrics_from_output(output)
+        metrics['dataset'] = display_name
+        results.append(metrics)
+
+        if exit_code == 0 and metrics.get('status') == 'success':
+            print(f"  ✓ Completed successfully")
+            successful_datasets.append(display_name)
+        else:
+            print(f"  ✗ Failed (exit code: {exit_code})")
+            failed_datasets.append(display_name)
+
+        print(f"  Progress: {idx}/{total}\n")
+
+    # Create DataFrame
+    df = pd.DataFrame(results)
+    columns = ['dataset', 'MSE[mean]', 'MSE[0.5]', 'MAE[0.5]', 'MASE[0.5]', 'MAPE[0.5]',
+               'sMAPE[0.5]', 'MSIS', 'RMSE[mean]', 'NRMSE[mean]', 'ND[0.5]',
+               'mean_weighted_sum_quantile_loss', 'status']
+    df = df.reindex(columns=[c for c in columns if c in df.columns], fill_value=None)
+
+    # Save to CSV
+    csv_file = output_dir / 'evaluation_metrics_hybrid.csv'
+    df.to_csv(csv_file, index=False)
+
+    # Print summary
+    print("=" * 80)
+    print("Evaluation Completed")
+    print("=" * 80)
+    print(f"Total datasets: {total}")
+    print(f"Successful: {len(successful_datasets)}")
+    print(f"Failed: {len(failed_datasets)}")
+    print(f"\nResults saved to: {csv_file}")
+    print(f"\nNOTE: Hybrid predictions combine base model context with precond model predictions")
+
+    return df
+
+
+# ============================================================================
+# Evaluation Mode 5: Ground Truth Context Evaluation
+# ============================================================================
+
+def eval_precond_gt(
+    model_path: str,
+    precond_type: str = 'chebyshev',
+    precond_degree: int = 5,
+    patch_size: int = 32,
+    context_length: int = 1000,
+    batch_size: int = 32,
+    output_dir: Optional[str] = None,
+    dataset_filter: Optional[List[str]] = None,
+    datasets: Optional[List[Dict]] = None
+) -> pd.DataFrame:
+    """
+    Ground truth context evaluation for preconditioned models.
+
+    This approach:
+    1. Generates predictions from preconditioned model (in precond space, no reversal)
+    2. Extracts ground truth from test data
+    3. Creates GT-context-reversed predictions by reversing using ground truth
+    4. Evaluates GT-context-reversed predictions against ground truth in original space
+
+    This represents the "best case" scenario where the model has perfect context for reversal,
+    useful for understanding the upper bound of performance with this architecture.
+
+    Args:
+        model_path: Path to preconditioned model checkpoint
+        precond_type: 'chebyshev' or 'legendre'
+        precond_degree: Polynomial degree
+        patch_size: Default patch size
+        context_length: Context window size
+        batch_size: Batch size for evaluation
+        output_dir: Directory to save results
+        dataset_filter: List of dataset names to evaluate (None = all)
+        datasets: List of dataset configs (None = load from Excel)
+
+    Returns:
+        DataFrame with evaluation metrics for GT-context approach
+    """
+    print("=" * 80)
+    print("Ground Truth Context Evaluation")
+    print("=" * 80)
+
+    # Load datasets if not provided
+    if datasets is None:
+        datasets = load_dataset_config()
+
+    model_name = Path(model_path).stem
+
+    print(f"Preconditioned Model: {model_path}")
+    print(f"Model Name: {model_name}")
+    print(f"Preconditioning Type: {precond_type}")
+    print(f"Preconditioning Degree: {precond_degree}")
+    print(f"Patch Size: {patch_size}")
+    print(f"Context Length: {context_length}")
+    print(f"Batch Size: {batch_size}")
+    print(f"Evaluation Mode: GT CONTEXT (perfect context reversal)")
+
+    # Create output directory
+    if output_dir is None:
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        output_dir = f"/scratch/gpfs/EHAZAN/jh1161/eval/outputs/eval_precond_gt_{model_name}_{timestamp}"
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    print(f"Results will be saved to: {output_dir}")
+    print()
+
+    # Filter datasets if requested
+    eval_datasets = datasets
+    if dataset_filter:
+        eval_datasets = [ds for ds in datasets if ds['dataset_name'] in dataset_filter]
+        print(f"Filtering to {len(eval_datasets)} datasets")
+
+    # Initialize results
+    results = []
+    successful_datasets = []
+    failed_datasets = []
+
+    # Evaluate each dataset
+    total = len(eval_datasets)
+    for idx, dataset in enumerate(eval_datasets, 1):
+        dataset_name = dataset['dataset_name']
+        display_name = dataset['display_name']
+        pred_length = dataset['prediction_length']
+        frequency = dataset.get('frequency', 'UNKNOWN')
+
+        # Determine patch size
+        dataset_patch_size = get_patch_size_for_frequency(frequency, patch_size)
+
+        print(f"[{idx}/{total}] Evaluating: {display_name}")
+        print(f"  Dataset: {dataset_name}, Freq: {frequency}, Pred Len: {pred_length}, Patch: {dataset_patch_size}")
+        print(f"  Ground truth context reversal: {model_name}")
+
+        # Build command for GT context evaluation
+        cmd = [
+            'python', '-m', 'cli.eval_precond_gt',
+            f'run_name=eval_precond_gt_{model_name}_{dataset_name}',
+            # Preconditioned model configuration
+            f'model.checkpoint_path={model_path}',
+            f'model.patch_size={dataset_patch_size}',
+            f'model.context_length={context_length}',
+            f'model.precondition_type={precond_type}',
+            f'model.precondition_degree={precond_degree}',
+            # Data and batch configuration
+            f'batch_size={batch_size}',
+            'data=monash_cached',
+            f'data.dataset_name={dataset_name}',
+            f'data.prediction_length={pred_length}'
+        ]
+
+        # Run evaluation
+        output_file = output_dir / f"{display_name.replace(' ', '_')}_output.txt"
+        exit_code, output = run_evaluation_command(cmd, output_file)
+
+        # Extract metrics (GT context uses standard format)
+        metrics = extract_metrics_from_output(output)
+        metrics['dataset'] = display_name
+        results.append(metrics)
+
+        if exit_code == 0 and metrics.get('status') == 'success':
+            print(f"  ✓ Completed successfully")
+            successful_datasets.append(display_name)
+        else:
+            print(f"  ✗ Failed (exit code: {exit_code})")
+            failed_datasets.append(display_name)
+
+        print(f"  Progress: {idx}/{total}\n")
+
+    # Create DataFrame
+    df = pd.DataFrame(results)
+    columns = ['dataset', 'MSE[mean]', 'MSE[0.5]', 'MAE[0.5]', 'MASE[0.5]', 'MAPE[0.5]',
+               'sMAPE[0.5]', 'MSIS', 'RMSE[mean]', 'NRMSE[mean]', 'ND[0.5]',
+               'mean_weighted_sum_quantile_loss', 'status']
+    df = df.reindex(columns=[c for c in columns if c in df.columns], fill_value=None)
+
+    # Save to CSV
+    csv_file = output_dir / 'evaluation_metrics_precond_gt.csv'
+    df.to_csv(csv_file, index=False)
+
+    # Print summary
+    print("=" * 80)
+    print("Evaluation Completed")
+    print("=" * 80)
+    print(f"Total datasets: {total}")
+    print(f"Successful: {len(successful_datasets)}")
+    print(f"Failed: {len(failed_datasets)}")
+    print(f"\nResults saved to: {csv_file}")
+    print(f"\nNOTE: Predictions reversed using ground truth as context (best case scenario)")
+
+    return df
+
+
+# ============================================================================
 # Results Comparison
 # ============================================================================
 
@@ -784,6 +1114,111 @@ def compare_results(csv_files: List[str], labels: Optional[List[str]] = None, ou
 # Command Line Interface
 # ============================================================================
 
+def eval_precond_reversed(
+    model_path,
+    precond_type='chebyshev',
+    precond_degree=5,
+    patch_size=32,
+    context_length=1000,
+    batch_size=32,
+    output_dir=None,
+    dataset_filter=None
+):
+    """
+    Evaluate a preconditioned model using its own autoregressive reversal.
+    
+    This uses MoiraiForecastPrecond with reverse_output=True.
+    """
+    print(f"Evaluating preconditioned model with autoregressive reversal: {model_path}")
+    print(f"Preconditioning: {precond_type} (degree {precond_degree})")
+    
+    # Setup output directory
+    if output_dir is None:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_dir = f"eval_results_precond_reversed_{timestamp}"
+    
+    os.makedirs(output_dir, exist_ok=True)
+    print(f"Results will be saved to: {output_dir}")
+    
+    # Load dataset config
+    datasets = load_dataset_config()
+    
+    # Filter datasets if requested
+    if dataset_filter:
+        datasets = [d for d in datasets if d['dataset_name'] in dataset_filter or d['display_name'] in dataset_filter]
+        print(f"Filtered to {len(datasets)} datasets")
+    
+    results = []
+    
+    for i, dataset in enumerate(datasets):
+        display_name = dataset['display_name']
+        dataset_name = dataset['dataset_name']
+        pred_length = dataset['prediction_length']
+        
+        print(f"\n[{i+1}/{len(datasets)}] Evaluating {display_name} (pred_len={pred_length})...")
+        
+        # Determine patch size (simplified logic, similar to bash script)
+        # For now using the default passed in, or 32
+        current_patch_size = patch_size
+        
+        run_name = f"eval_precond_reversed_{display_name}"
+        
+        # Construct command for cli.eval
+        # We use the standard cli.eval with the moirai_precond_ckpt model config
+        cmd = [
+            "python", "-m", "cli.eval",
+            f"run_name={run_name}",
+            "model=moirai_precond_ckpt",
+            f"model.checkpoint_path={model_path}",
+            f"model.patch_size={current_patch_size}",
+            f"model.context_length={context_length}",
+            f"model.enable_preconditioning=True",
+            f"model.precondition_type={precond_type}",
+            f"model.precondition_degree={precond_degree}",
+            "model.reverse_output=True",  # Enable autoregressive reversal
+            f"batch_size={batch_size}",
+            "data=monash_cached",
+            f"data.dataset_name={dataset_name}",
+            f"data.prediction_length={pred_length}",
+            f"hydra.run.dir={output_dir}/{display_name}"
+        ]
+        
+        print(f"Running: {' '.join(cmd)}")
+        
+        try:
+            # Run evaluation
+            subprocess.run(cmd, check=True)
+            
+            # Extract metrics
+            dataset_output_dir = f"{output_dir}/{display_name}"
+            # Find the metrics file (usually in the run dir)
+            # cli.eval saves to hydra.run.dir
+            
+            # We need to parse the output or find the saved metrics
+            # For now, we'll assume success and mark it
+            results.append({
+                'dataset': display_name,
+                'status': 'success',
+                'path': dataset_output_dir
+            })
+            
+        except subprocess.CalledProcessError as e:
+            print(f"Error evaluating {display_name}: {e}")
+            results.append({
+                'dataset': display_name,
+                'status': 'failed',
+                'error': str(e)
+            })
+            
+    # Compile results
+    results_df = pd.DataFrame(results)
+    csv_path = f"{output_dir}/summary.csv"
+    results_df.to_csv(csv_path, index=False)
+    print(f"\nSummary saved to {csv_path}")
+    
+    return results_df
+
+
 def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
@@ -794,12 +1229,16 @@ def parse_args():
 
     # Evaluation mode
     parser.add_argument('--mode', type=str, required=True,
-                        choices=['standard', 'precond', 'baseline-precond', 'compare'],
+                        choices=['standard', 'precond', 'baseline-precond', 'hybrid', 'precond-gt', 'compare'],
                         help='Evaluation mode')
 
     # Model configuration
     parser.add_argument('--model-path', type=str, default=None,
                         help='Path to model checkpoint')
+    parser.add_argument('--base-model-path', type=str, default=None,
+                        help='Path to base model checkpoint (for hybrid mode)')
+    parser.add_argument('--precond-model-path', type=str, default=None,
+                        help='Path to preconditioned model checkpoint (for hybrid mode)')
     parser.add_argument('--model-version', type=str, default='1.1',
                         choices=['1.0', '1.1'],
                         help='Official model version (for standard mode without custom checkpoint)')
@@ -838,70 +1277,114 @@ def parse_args():
     return parser.parse_args()
 
 def new_main():
+    """
+    Example usage of the comprehensive evaluation functions.
+    Uncomment the desired evaluation mode to run.
+    """
     setup_environment()
-    our_precond_model_path  = "/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai_small_precond/lotsa_v1_unweighted/precond_default_20251102_102511/checkpoints/last.ckpt"
-    our_pretrained_model_path= "/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai_small/lotsa_v1_unweighted/pretrain_run_20251020_205126/checkpoints/last.ckpt"
+    d5_precond_model_path = "/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai_small/lotsa_v1_unweighted/precond_chebyshev_d5_20251117_204835/checkpoints/last.ckpt"
+    d2_precond_model_path = "/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai_small/lotsa_v1_unweighted/precond_chebyshev_d2_20251117_203920/checkpoints/last.ckpt"
+    our_pretrained_model_path = "/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai_small/lotsa_v1_unweighted/pretrain_run_20251020_205126/checkpoints/last.ckpt"
+    datasets = ["monash_m3_monthly"]
+    # datasets = None
 
-    # Test with just one small dataset first
-    # df = eval_standard(
-    #     model_path = None,
-    #     model_version="1.0",  # Use 1.1 since 1.0 needs to be cached
-    #     patch_size=32,
-    #     context_length=1000,
-    #     batch_size=32,
-    #     output_dir="eval-runs/standard_model_1.0",
-    # )
-    # df = eval_standard(
-    #     model_path = None,
-    #     model_version="1.1",  # Use 1.1 since 1.0 needs to be cached
-    #     patch_size=32,
-    #     context_length=1000,
-    #     batch_size=32,
-    #     output_dir="eval-runs/standard_model_1.1",
-    # )
-    # df = eval_standard(
-    #     # model_path = None,
-    #     model_path= our_pretrained_model_path,
-    #     # model_version="1.1",  # Use 1.1 since 1.0 needs to be cached
-    #     patch_size=32,
-    #     context_length=1000,
-    #     batch_size=32,
-    #     output_dir="eval-runs/pretrained_model_in_standard_space",
-    # )
-    # print("\nResults:")
-    # print(df)
-
-    # df = eval_standard(
-    #     model_path= our_pretrained_model_path,
-    #     # model_path = None,
-    #     # model_version="1.0",  # Use 1.1 since 1.0 needs to be cached
-    #     patch_size=32,
-    #     context_length=1000,
-    #     batch_size=32,
-    #     output_dir="tmp",
-    #     dataset_filter=["sunspot_with_missing"]  # Start with just one dataset
-    # )
-    # print("\nResults:")
-    # print(df)
-
+    # Example 1: Evaluate preconditioned model in preconditioned space
     # df = eval_precond_space(
-    #     model_path= our_precond_model_path,
-    #     # precond_type=args.precond_type,
-    #     # precond_degree=args.precond_degree,
-    #     # patch_size=args.patch_size,
-    #     # context_length=args.context_length,
-    #     # batch_size=args.batch_size,
-    #     output_dir="tmp",
-    #     # dataset_filter=["sunspot_with_missing"]  # Start with just one dataset
+    #     model_path=d5_precond_model_path,
+    #     output_dir="eval-runs/precond_space_d5",
+    #     dataset_filter=datasets
     # )
-    # print("\nResults:")
+    # df = eval_precond_space(
+    #     model_path=d2_precond_model_path,
+    #     output_dir="eval-runs/precond_space_d2",
+    #     dataset_filter=datasets
+    # )
+    # print("\nPreconditioned Space Results:")
     # print(df)
 
-    df = eval_baseline_in_precond_space(
-        model_path=our_pretrained_model_path,
-        output_dir="eval-runs/baseline_in_precond_space",
-        dataset_filter=["weather"]
+    df = eval_precond_gt(
+        model_path=d5_precond_model_path,
+        precond_type='chebyshev',
+        precond_degree=5,
+        output_dir="eval-runs/precond_gt_d5",
+        dataset_filter=datasets
     )
+    print("\nGround Truth Context Evaluation Results:")
+    print(df)
+
+    df = eval_precond_gt(
+        model_path=d2_precond_model_path,
+        precond_type='chebyshev',
+        precond_degree=2,
+        output_dir="eval-runs/precond_gt_d2",
+        dataset_filter=datasets
+    )
+    print("\nGround Truth Context Evaluation Results:")
+    print(df)
+
+
+    df = eval_precond_reversed(
+        model_path=d2_precond_model_path,
+        precond_type='chebyshev',
+        precond_degree=2,
+        output_dir="eval-runs/precond_reversed_d2",
+        dataset_filter=datasets
+    )
+    print("\nPreconditioned Reversed Results:")
+    print(df)
+    df = eval_precond_reversed(
+        model_path=d5_precond_model_path,
+        precond_type='chebyshev',
+        precond_degree=5,
+        output_dir="eval-runs/precond_reversed_d5",
+        dataset_filter=datasets
+    )
+    print("\nPreconditioned Reversed Results:")
+    print(df)
+
+
+    
+    # Example 2: Evaluate baseline model in preconditioned space
+    # df = eval_baseline_in_precond_space(
+    #     model_path=our_pretrained_model_path,
+    #     output_dir="eval-runs/baseline_in_precond_space",
+    #     dataset_filter=datasets
+    # )
+    # print("\nBaseline in Precond Space Results:")
+    # print(df)
+
+    # Example 3: Hybrid evaluation (base + preconditioned)
+    # Uncomment below to run hybrid evaluation
+    # df = eval_hybrid(
+    #     base_model_path=our_pretrained_model_path,
+    #     precond_model_path=d5_precond_model_path,
+    #     precond_type='chebyshev',
+    #     precond_degree=5,
+    #     output_dir="eval-runs/hybrid_d5",
+    #     dataset_filter=datasets
+    # )
+
+
+    # df = eval_hybrid(
+    #     base_model_path=our_pretrained_model_path,
+    #     precond_model_path=d2_precond_model_path,
+    #     precond_type='chebyshev',
+    #     precond_degree=2,
+    #     output_dir="eval-runs/hybrid_d2",
+    #     dataset_filter=datasets
+    # )
+    # print("\nHybrid Evaluation Results:")
+    # print(df)
+
+    # Example 4: Ground truth context evaluation
+    # df = eval_precond_gt(
+    #     model_path=d5_precond_model_path,
+    #     precond_type='chebyshev',
+    #     precond_degree=5,
+    #     output_dir="eval-runs/precond_gt_d5",
+    #     dataset_filter=datasets
+    # )
+
 
 def main():
     """Main entry point."""
@@ -957,6 +1440,61 @@ def main():
             dataset_filter=args.datasets
         )
 
+    elif args.mode == 'hybrid':
+        if not args.base_model_path:
+            print("ERROR: --base-model-path is required for hybrid mode")
+            sys.exit(1)
+        if not args.precond_model_path:
+            print("ERROR: --precond-model-path is required for hybrid mode")
+            sys.exit(1)
+
+        print("Running hybrid evaluation (base + preconditioned)...")
+        eval_hybrid(
+            base_model_path=args.base_model_path,
+            precond_model_path=args.precond_model_path,
+            precond_type=args.precond_type,
+            precond_degree=args.precond_degree,
+            patch_size=args.patch_size,
+            context_length=args.context_length,
+            batch_size=args.batch_size,
+            output_dir=args.output_dir,
+            dataset_filter=args.datasets
+        )
+
+    elif args.mode == 'precond-gt':
+        if not args.model_path:
+            print("ERROR: --model-path is required for precond-gt mode")
+            sys.exit(1)
+
+        print("Running ground truth context evaluation...")
+        eval_precond_gt(
+            model_path=args.model_path,
+            precond_type=args.precond_type,
+            precond_degree=args.precond_degree,
+            patch_size=args.patch_size,
+            context_length=args.context_length,
+            batch_size=args.batch_size,
+            output_dir=args.output_dir,
+            dataset_filter=args.datasets
+        )
+
+    elif args.mode == 'precond-reversed':
+        if not args.model_path:
+            print("ERROR: --model-path is required for precond-reversed mode")
+            sys.exit(1)
+
+        print("Running preconditioned evaluation with autoregressive reversal...")
+        eval_precond_reversed(
+            model_path=args.model_path,
+            precond_type=args.precond_type,
+            precond_degree=args.precond_degree,
+            patch_size=args.patch_size,
+            context_length=args.context_length,
+            batch_size=args.batch_size,
+            output_dir=args.output_dir,
+            dataset_filter=args.datasets
+        )
+
     elif args.mode == 'compare':
         if not args.csv_files:
             print("ERROR: --csv-files is required for compare mode")
@@ -973,5 +1511,5 @@ def main():
 
 
 if __name__ == '__main__':
-    # main()
+    # main()  # Use this for CLI/sbatch usage
     new_main()

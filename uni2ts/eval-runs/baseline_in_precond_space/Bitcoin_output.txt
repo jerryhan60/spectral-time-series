@@ -8,8 +8,8 @@ Preconditioning Configuration:
 
 Loading test data: bitcoin_with_missing
   Prediction length: 30
-[2025-11-17 02:00:12,543][datasets][INFO] - PyTorch version 2.4.1 available.
-[2025-11-17 02:00:12,545][datasets][INFO] - JAX version 0.6.1 available.
+[2025-11-19 13:09:53,790][datasets][INFO] - PyTorch version 2.4.1 available.
+[2025-11-19 13:09:53,791][datasets][INFO] - JAX version 0.6.1 available.
   Target dim: 1
   Feat dynamic real dim: 0
   Past feat dynamic real dim: 0
@@ -32,7 +32,7 @@ Computing metrics in preconditioned space...
 EVALUATION METRICS (BASELINE IN PRECONDITIONED SPACE)
 ================================================================================
       MSE[mean]                MAE[0.5]  MAPE[0.5]  sMAPE[0.5]  MASE[0.5]  RMSE[mean]  NRMSE[mean]  ND[0.5]    MSIS  mean_weighted_sum_quantile_loss
-None        inf 1034595679397169664.000      0.470       0.291     29.072         inf          inf    0.132 192.525                            0.102
+None        inf 1010643918097697280.000      0.460       0.285     28.414         inf          inf    0.129 172.686                            0.100
 ================================================================================
 
 Results saved to: /scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/eval_baseline_in_precond_space/monash_cached/bitcoin_with_missing/S/prediction_length=30/eval_baseline_precond_bitcoin_with_missing/metrics_baseline_in_precond_space.csv
@@ -40,29 +40,29 @@ Results saved to: /scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/eval_baseline_in_pr
 
 
 Preconditioning:   0%|          | 0/18 [00:00<?, ?it/s]
-Preconditioning:   6%|▌         | 1/18 [00:00<00:06,  2.47it/s]
-Preconditioning:  11%|█         | 2/18 [00:00<00:06,  2.47it/s]
-Preconditioning:  17%|█▋        | 3/18 [00:01<00:06,  2.46it/s]
-Preconditioning:  22%|██▏       | 4/18 [00:01<00:05,  2.46it/s]
-Preconditioning:  28%|██▊       | 5/18 [00:02<00:05,  2.42it/s]
-Preconditioning:  33%|███▎      | 6/18 [00:02<00:04,  2.44it/s]
-Preconditioning:  39%|███▉      | 7/18 [00:02<00:04,  2.44it/s]
-Preconditioning:  44%|████▍     | 8/18 [00:03<00:04,  2.41it/s]
-Preconditioning:  50%|█████     | 9/18 [00:03<00:03,  2.42it/s]
-Preconditioning:  56%|█████▌    | 10/18 [00:04<00:03,  2.43it/s]
-Preconditioning:  61%|██████    | 11/18 [00:04<00:02,  2.44it/s]
-Preconditioning:  67%|██████▋   | 12/18 [00:04<00:02,  2.41it/s]
-Preconditioning:  72%|███████▏  | 13/18 [00:05<00:02,  2.43it/s]
-Preconditioning:  78%|███████▊  | 14/18 [00:05<00:01,  2.44it/s]
-Preconditioning:  83%|████████▎ | 15/18 [00:06<00:01,  2.44it/s]
-Preconditioning:  89%|████████▉ | 16/18 [00:06<00:00,  2.40it/s]
-Preconditioning:  94%|█████████▍| 17/18 [00:06<00:00,  2.42it/s]
-Preconditioning: 100%|██████████| 18/18 [00:07<00:00,  2.43it/s]
-Preconditioning: 100%|██████████| 18/18 [00:07<00:00,  2.43it/s]
+Preconditioning:   6%|▌         | 1/18 [00:00<00:07,  2.31it/s]
+Preconditioning:  11%|█         | 2/18 [00:00<00:06,  2.30it/s]
+Preconditioning:  17%|█▋        | 3/18 [00:01<00:06,  2.30it/s]
+Preconditioning:  22%|██▏       | 4/18 [00:01<00:06,  2.31it/s]
+Preconditioning:  28%|██▊       | 5/18 [00:02<00:05,  2.30it/s]
+Preconditioning:  33%|███▎      | 6/18 [00:02<00:05,  2.27it/s]
+Preconditioning:  39%|███▉      | 7/18 [00:03<00:04,  2.28it/s]
+Preconditioning:  44%|████▍     | 8/18 [00:03<00:04,  2.29it/s]
+Preconditioning:  50%|█████     | 9/18 [00:03<00:03,  2.29it/s]
+Preconditioning:  56%|█████▌    | 10/18 [00:04<00:03,  2.29it/s]
+Preconditioning:  61%|██████    | 11/18 [00:04<00:03,  2.27it/s]
+Preconditioning:  67%|██████▋   | 12/18 [00:05<00:02,  2.25it/s]
+Preconditioning:  72%|███████▏  | 13/18 [00:05<00:02,  2.27it/s]
+Preconditioning:  78%|███████▊  | 14/18 [00:06<00:01,  2.28it/s]
+Preconditioning:  83%|████████▎ | 15/18 [00:06<00:01,  2.28it/s]
+Preconditioning:  89%|████████▉ | 16/18 [00:07<00:00,  2.29it/s]
+Preconditioning:  94%|█████████▍| 17/18 [00:07<00:00,  2.29it/s]
+Preconditioning: 100%|██████████| 18/18 [00:07<00:00,  2.29it/s]
+Preconditioning: 100%|██████████| 18/18 [00:07<00:00,  2.29it/s]
 
 0it [00:00, ?it/s]/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/gluonts/ev/stats.py:44: RuntimeWarning: overflow encountered in square
   return np.square(error(data, forecast_type))
 /scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/numpy/core/_methods.py:49: RuntimeWarning: overflow encountered in reduce
   return umr_sum(a, axis, dtype, out, keepdims, initial, where)
 
-18it [00:00, 706.19it/s]
+18it [00:00, 659.20it/s]

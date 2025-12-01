@@ -1,0 +1,37 @@
+[2025-11-19 12:04:25,173][datasets][INFO] - PyTorch version 2.4.1 available.
+[2025-11-19 12:04:25,174][datasets][INFO] - JAX version 0.6.1 available.
+Preconditioning parameters:
+  Type: chebyshev
+  Degree: 5
+Applying preconditioning to ground truth labels only...
+Preconditioning statistics:
+  Total items: 5
+  Items with NaN in original data: 0 (will use masked arrays)
+  Items skipped (new NaN after preconditioning): 0
+  Valid items for evaluation: 5
+Generating predictions (in preconditioned space)...
+Generating predictions for 5 valid samples (out of 5 total)...
+Collecting predictions and preconditioned ground truth...
+Generated 5 forecasts for 5 valid samples
+Computing metrics in preconditioned space...
+
+================================================================================
+EVALUATION METRICS (IN PRECONDITIONED SPACE)
+================================================================================
+      MSE[mean]  MAE[0.5]  MAPE[0.5]  sMAPE[0.5]  MASE[0.5]  RMSE[mean]  NRMSE[mean]  ND[0.5]   MSIS  mean_weighted_sum_quantile_loss
+None  27945.710   121.871      1.818       0.668      2.246     167.170        0.700    0.510 12.764                            0.390
+================================================================================
+
+Metrics saved to: /scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/eval_precond_space/monash_cached/australian_electricity_demand/S/prediction_length=336/eval_precond_last_australian_electricity_demand/metrics_precond_space.csv
+
+
+Preconditioning ground truth:   0%|          | 0/5 [00:00<?, ?it/s]
+Preconditioning ground truth: 100%|██████████| 5/5 [00:00<00:00, 477.10it/s]
+
+Processing forecasts:   0%|          | 0/5 [00:00<?, ?it/s]
+Processing forecasts:  20%|██        | 1/5 [00:00<00:01,  3.65it/s]
+Processing forecasts: 100%|██████████| 5/5 [00:00<00:00, 18.22it/s]
+
+0it [00:00, ?it/s]
+5it [00:00, 20.46it/s]
+5it [00:00, 20.45it/s]

@@ -1,0 +1,44 @@
+[2025-11-19 12:09:16,139][datasets][INFO] - PyTorch version 2.4.1 available.
+[2025-11-19 12:09:16,140][datasets][INFO] - JAX version 0.6.1 available.
+Hybrid Evaluation Configuration:
+  Base model: uni2ts.model.moirai.MoiraiForecast.load_from_checkpoint
+  Precond model: uni2ts.model.moirai.forecast_precond.create_precond_forecast_from_checkpoint
+  Preconditioning type: chebyshev
+  Preconditioning degree: 2
+
+Preconditioning coefficients: [ 0.  -0.5]
+
+Loading base model...
+Loading preconditioned model...
+Generating base model predictions...
+Generating preconditioned model predictions...
+Generated 107 forecast pairs
+Extracting input windows from test data...
+Extracted 107 input windows
+Creating hybrid forecasts...
+Created 107 hybrid forecasts
+Computing metrics...
+
+================================================================================
+HYBRID EVALUATION METRICS
+================================================================================
+          MSE[mean]  MAE[0.5]  MAPE[0.5]  sMAPE[0.5]  MASE[0.5]  RMSE[mean]  NRMSE[mean]  ND[0.5]   MSIS  mean_weighted_sum_quantile_loss
+None 1080751581.809  3582.175      0.116       0.139      1.995   32874.786        0.682    0.074 56.862                            0.067
+================================================================================
+
+Metrics saved to: /scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/2025-11-19/12-09-15/metrics_hybrid.csv
+
+
+Base model:   0%|          | 0/107 [00:00<?, ?it/s]
+Base model:   1%|          | 1/107 [00:00<00:26,  4.08it/s]
+Base model: 100%|██████████| 107/107 [00:00<00:00, 347.96it/s]
+
+Precond model:   0%|          | 0/107 [00:00<?, ?it/s]
+Precond model: 100%|██████████| 107/107 [00:00<00:00, 1404.84it/s]
+
+Hybridizing:   0%|          | 0/107 [00:00<?, ?it/s]
+Hybridizing:  61%|██████    | 65/107 [00:00<00:00, 645.89it/s]
+Hybridizing: 100%|██████████| 107/107 [00:00<00:00, 646.53it/s]
+
+0it [00:00, ?it/s]
+107it [00:00, 1331.60it/s]

@@ -1,0 +1,43 @@
+[2025-11-19 12:14:13,637][datasets][INFO] - PyTorch version 2.4.1 available.
+[2025-11-19 12:14:13,638][datasets][INFO] - JAX version 0.6.1 available.
+Ground Truth Context Evaluation Configuration:
+  Precond model: uni2ts.model.moirai.forecast_precond.create_precond_forecast_from_checkpoint
+  Preconditioning type: chebyshev
+  Preconditioning degree: 5
+
+Preconditioning coefficients: [ 0.     -1.25    0.      0.3125  0.    ]
+
+Loading preconditioned model...
+Extracting ground truth (input + label) from test data...
+Extracted 66 ground truth sequences
+Generating preconditioned model predictions...
+Generated 66 forecasts
+Creating GT-context-reversed forecasts...
+Created 66 GT-context-reversed forecasts
+Computing metrics...
+
+================================================================================
+GROUND TRUTH CONTEXT EVALUATION METRICS
+================================================================================
+      MSE[mean]  MAE[0.5]  MAPE[0.5]  sMAPE[0.5]  MASE[0.5]  RMSE[mean]  NRMSE[mean]  ND[0.5]  MSIS  mean_weighted_sum_quantile_loss
+None  40953.636    52.711      0.965       0.624      0.303     202.370        1.232    0.321 2.205                            0.255
+================================================================================
+
+Metrics saved to: /scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/2025-11-19/12-14-13/metrics_gt_context.csv
+
+
+Precond model:   0%|          | 0/66 [00:00<?, ?it/s]
+Precond model:   2%|▏         | 1/66 [00:00<00:17,  3.73it/s]
+Precond model: 100%|██████████| 66/66 [00:00<00:00, 209.35it/s]
+
+GT reversal:   0%|          | 0/66 [00:00<?, ?it/s]
+GT reversal:  24%|██▍       | 16/66 [00:00<00:00, 150.40it/s]
+GT reversal:  48%|████▊     | 32/66 [00:00<00:00, 151.27it/s]
+GT reversal:  73%|███████▎  | 48/66 [00:00<00:00, 151.71it/s]
+GT reversal:  97%|█████████▋| 64/66 [00:00<00:00, 151.73it/s]
+GT reversal: 100%|██████████| 66/66 [00:00<00:00, 151.54it/s]
+
+0it [00:00, ?it/s]
+32it [00:00, 73.25it/s]
+64it [00:00, 120.58it/s]
+66it [00:00, 112.48it/s]

@@ -1,0 +1,70 @@
+[2025-11-19 12:11:50,395][datasets][INFO] - PyTorch version 2.4.1 available.
+[2025-11-19 12:11:50,396][datasets][INFO] - JAX version 0.6.1 available.
+Ground Truth Context Evaluation Configuration:
+  Precond model: uni2ts.model.moirai.forecast_precond.create_precond_forecast_from_checkpoint
+  Preconditioning type: chebyshev
+  Preconditioning degree: 2
+
+Preconditioning coefficients: [ 0.  -0.5]
+
+Loading preconditioned model...
+Extracting ground truth (input + label) from test data...
+Extracted 329 ground truth sequences
+Generating preconditioned model predictions...
+Generated 329 forecasts
+Creating GT-context-reversed forecasts...
+Created 329 GT-context-reversed forecasts
+Computing metrics...
+
+
+Precond model:   0%|          | 0/329 [00:00<?, ?it/s]
+Precond model:   0%|          | 1/329 [00:00<01:31,  3.59it/s]
+Precond model:  49%|████▉     | 161/329 [00:00<00:00, 542.43it/s]
+Precond model:  98%|█████████▊| 321/329 [00:00<00:00, 878.69it/s]
+Precond model: 100%|██████████| 329/329 [00:00<00:00, 681.47it/s]
+
+GT reversal:   0%|          | 0/329 [00:00<?, ?it/s]
+GT reversal:   9%|▉         | 30/329 [00:00<00:01, 296.91it/s]
+GT reversal:  18%|█▊        | 60/329 [00:00<00:00, 297.13it/s]
+GT reversal:  27%|██▋       | 90/329 [00:00<00:00, 297.17it/s]
+GT reversal:  36%|███▋      | 120/329 [00:00<00:00, 297.26it/s]
+GT reversal:  46%|████▌     | 150/329 [00:00<00:00, 297.44it/s]
+GT reversal:  55%|█████▍    | 180/329 [00:00<00:00, 297.42it/s]
+GT reversal:  64%|██████▍   | 210/329 [00:00<00:00, 297.32it/s]
+GT reversal:  73%|███████▎  | 240/329 [00:00<00:00, 297.62it/s]
+GT reversal:  82%|████████▏ | 270/329 [00:00<00:00, 294.93it/s]
+GT reversal:  91%|█████████ | 300/329 [00:01<00:00, 295.74it/s]
+GT reversal: 100%|██████████| 329/329 [00:01<00:00, 296.69it/s]
+
+0it [00:00, ?it/s]Error executing job with overrides: ['run_name=eval_precond_gt_last_vehicle_trips_with_missing', 'model.checkpoint_path=/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai_small/lotsa_v1_unweighted/precond_chebyshev_d2_20251117_203920/checkpoints/last.ckpt', 'model.patch_size=32', 'model.context_length=1000', 'model.precondition_type=chebyshev', 'model.precondition_degree=2', 'batch_size=32', 'data=monash_cached', 'data.dataset_name=vehicle_trips_with_missing', 'data.prediction_length=30']
+Traceback (most recent call last):
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/cli/eval_precond_gt.py", line 375, in main
+    res = evaluate_gt_context_model(
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/cli/eval_precond_gt.py", line 314, in evaluate_gt_context_model
+    res = evaluate_forecasts(
+          ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/src/uni2ts/eval_util/evaluation.py", line 201, in evaluate_forecasts
+    metrics_values = evaluate_forecasts_raw(
+                     ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/src/uni2ts/eval_util/evaluation.py", line 161, in evaluate_forecasts_raw
+    evaluator.update(data_batch)
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/gluonts/ev/metrics.py", line 101, in update
+    self.aggregate.step(self.stat(data))
+                        ^^^^^^^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/gluonts/ev/stats.py", line 44, in squared_error
+    return np.square(error(data, forecast_type))
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/gluonts/ev/stats.py", line 32, in error
+    return data["label"] - data[forecast_type]
+                           ~~~~^^^^^^^^^^^^^^^
+  File "/usr/licensed/anaconda3/2024.6/lib/python3.12/collections/__init__.py", line 1012, in __getitem__
+    return mapping[key]             # can't use 'key in mapping' with defaultdict
+           ~~~~~~~^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/src/uni2ts/eval_util/evaluation.py", line 50, in __getitem__
+    raise ValueError("Forecast contains NaN values")
+ValueError: Forecast contains NaN values
+
+Set the environment variable HYDRA_FULL_ERROR=1 for a complete stack trace.
+
+0it [00:00, ?it/s]

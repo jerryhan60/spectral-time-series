@@ -1,0 +1,48 @@
+[2025-11-19 12:10:02,966][datasets][INFO] - PyTorch version 2.4.1 available.
+[2025-11-19 12:10:02,967][datasets][INFO] - JAX version 0.6.1 available.
+Hybrid Evaluation Configuration:
+  Base model: uni2ts.model.moirai.MoiraiForecast.load_from_checkpoint
+  Precond model: uni2ts.model.moirai.forecast_precond.create_precond_forecast_from_checkpoint
+  Preconditioning type: chebyshev
+  Preconditioning degree: 5
+
+Preconditioning coefficients: [ 0.     -1.25    0.      0.3125  0.    ]
+
+Loading base model...
+Loading preconditioned model...
+Generating base model predictions...
+Generating preconditioned model predictions...
+Generated 18 forecast pairs
+Extracting input windows from test data...
+Extracted 18 input windows
+Creating hybrid forecasts...
+Created 18 hybrid forecasts
+Computing metrics...
+
+================================================================================
+HYBRID EVALUATION METRICS
+================================================================================
+      MSE[mean]                MAE[0.5]  MAPE[0.5]  sMAPE[0.5]  MASE[0.5]  RMSE[mean]  NRMSE[mean]  ND[0.5]    MSIS  mean_weighted_sum_quantile_loss
+None        inf 1502277820700975872.000      0.525       0.391     41.334         inf          inf    0.192 992.583                            0.164
+================================================================================
+
+Metrics saved to: /scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/2025-11-19/12-10-02/metrics_hybrid.csv
+
+
+Base model:   0%|          | 0/18 [00:00<?, ?it/s]
+Base model:   6%|▌         | 1/18 [00:00<00:04,  3.92it/s]
+Base model: 100%|██████████| 18/18 [00:00<00:00, 70.42it/s]
+
+Precond model:   0%|          | 0/18 [00:00<?, ?it/s]
+Precond model: 100%|██████████| 18/18 [00:00<00:00, 958.39it/s]
+
+Hybridizing:   0%|          | 0/18 [00:00<?, ?it/s]
+Hybridizing:  67%|██████▋   | 12/18 [00:00<00:00, 117.68it/s]
+Hybridizing: 100%|██████████| 18/18 [00:00<00:00, 117.23it/s]
+
+0it [00:00, ?it/s]/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/gluonts/ev/stats.py:44: RuntimeWarning: overflow encountered in square
+  return np.square(error(data, forecast_type))
+/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/numpy/core/_methods.py:49: RuntimeWarning: overflow encountered in reduce
+  return umr_sum(a, axis, dtype, out, keepdims, initial, where)
+
+18it [00:00, 663.41it/s]

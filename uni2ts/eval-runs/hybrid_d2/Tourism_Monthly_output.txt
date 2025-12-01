@@ -1,0 +1,57 @@
+[2025-11-19 12:07:04,609][datasets][INFO] - PyTorch version 2.4.1 available.
+[2025-11-19 12:07:04,610][datasets][INFO] - JAX version 0.6.1 available.
+Hybrid Evaluation Configuration:
+  Base model: uni2ts.model.moirai.MoiraiForecast.load_from_checkpoint
+  Precond model: uni2ts.model.moirai.forecast_precond.create_precond_forecast_from_checkpoint
+  Preconditioning type: chebyshev
+  Preconditioning degree: 2
+
+Preconditioning coefficients: [ 0.  -0.5]
+
+Loading base model...
+Loading preconditioned model...
+Generating base model predictions...
+Generating preconditioned model predictions...
+Generated 366 forecast pairs
+Extracting input windows from test data...
+Extracted 366 input windows
+Creating hybrid forecasts...
+Created 366 hybrid forecasts
+Computing metrics...
+
+================================================================================
+HYBRID EVALUATION METRICS
+================================================================================
+         MSE[mean]  MAE[0.5]  MAPE[0.5]  sMAPE[0.5]  MASE[0.5]  RMSE[mean]  NRMSE[mean]  ND[0.5]   MSIS  mean_weighted_sum_quantile_loss
+None 222145310.616  3749.787      0.347       0.311      2.431   14904.540        0.895    0.225 18.998                            0.185
+================================================================================
+
+Metrics saved to: /scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/2025-11-19/12-07-04/metrics_hybrid.csv
+
+
+Base model:   0%|          | 0/366 [00:00<?, ?it/s]
+Base model:   0%|          | 1/366 [00:00<01:30,  4.01it/s]
+Base model:  53%|█████▎    | 193/366 [00:00<00:00, 664.53it/s]
+Base model: 100%|██████████| 366/366 [00:00<00:00, 788.30it/s]
+
+Precond model:   0%|          | 0/366 [00:00<?, ?it/s]
+Precond model:  35%|███▌      | 129/366 [00:00<00:00, 1280.13it/s]
+Precond model:  79%|███████▉  | 289/366 [00:00<00:00, 1467.63it/s]
+Precond model: 100%|██████████| 366/366 [00:00<00:00, 1544.03it/s]
+
+Hybridizing:   0%|          | 0/366 [00:00<?, ?it/s]
+Hybridizing:  10%|▉         | 35/366 [00:00<00:00, 348.32it/s]
+Hybridizing:  19%|█▉        | 70/366 [00:00<00:00, 339.07it/s]
+Hybridizing:  28%|██▊       | 104/366 [00:00<00:00, 339.33it/s]
+Hybridizing:  38%|███▊      | 138/366 [00:00<00:00, 328.86it/s]
+Hybridizing:  48%|████▊     | 175/366 [00:00<00:00, 340.00it/s]
+Hybridizing:  57%|█████▋    | 210/366 [00:00<00:00, 327.86it/s]
+Hybridizing:  67%|██████▋   | 244/366 [00:00<00:00, 331.47it/s]
+Hybridizing:  76%|███████▌  | 279/366 [00:00<00:00, 334.32it/s]
+Hybridizing:  86%|████████▌ | 313/366 [00:00<00:00, 335.04it/s]
+Hybridizing:  95%|█████████▍| 347/366 [00:01<00:00, 335.41it/s]
+Hybridizing: 100%|██████████| 366/366 [00:01<00:00, 335.61it/s]
+
+0it [00:00, ?it/s]
+192it [00:00, 1781.97it/s]
+366it [00:00, 1763.43it/s]

@@ -1,0 +1,47 @@
+================================================================================
+Baseline Model Evaluation in Preconditioned Space
+================================================================================
+
+Preconditioning Configuration:
+  Type: chebyshev
+  Degree: 5
+
+Loading test data: us_births
+  Prediction length: 30
+[2025-11-19 15:47:48,547][datasets][INFO] - PyTorch version 2.4.1 available.
+[2025-11-19 15:47:48,548][datasets][INFO] - JAX version 0.6.1 available.
+  Target dim: 1
+  Feat dynamic real dim: 0
+  Past feat dynamic real dim: 0
+
+Loading baseline model: uni2ts.model.moirai.MoiraiForecast.load_from_checkpoint
+  Patch size: 32
+  Context length: 1000
+  Checkpoint: /scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai_small/lotsa_v1_unweighted/pretrain_run_20251020_205126/checkpoints/last.ckpt
+
+Generating forecasts from baseline model...
+Generated 1 forecasts
+
+Applying preconditioning to both predictions and ground truth...
+Preconditioned 1 forecasts and ground truth
+
+Computing metrics in preconditioned space...
+================================================================================
+
+================================================================================
+EVALUATION METRICS (BASELINE IN PRECONDITIONED SPACE)
+================================================================================
+      MSE[mean]  MAE[0.5]  MAPE[0.5]  sMAPE[0.5]  MASE[0.5]  RMSE[mean]  NRMSE[mean]  ND[0.5]  MSIS  mean_weighted_sum_quantile_loss
+None 857917.600   648.333      0.068       0.064      0.943     926.238        0.088    0.062 6.786                            0.051
+================================================================================
+
+Results saved to: /scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/eval_baseline_in_precond_space/monash_cached/us_births/S/prediction_length=30/eval_baseline_precond_us_births/metrics_baseline_in_precond_space.csv
+
+
+
+Preconditioning:   0%|          | 0/1 [00:00<?, ?it/s]
+Preconditioning: 100%|██████████| 1/1 [00:00<00:00,  1.33it/s]
+Preconditioning: 100%|██████████| 1/1 [00:00<00:00,  1.33it/s]
+
+0it [00:00, ?it/s]
+1it [00:00, 168.93it/s]

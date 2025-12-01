@@ -1,0 +1,13 @@
+- run_name=eval_precond_reversed_M3 Monthly
+- model=moirai_precond_ckpt
+- model.checkpoint_path=/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai_small/lotsa_v1_unweighted/precond_chebyshev_d5_20251117_204835/checkpoints/last.ckpt
+- model.patch_size=32
+- model.context_length=1000
+- model.enable_preconditioning=True
+- model.precondition_type=chebyshev
+- model.precondition_degree=5
+- model.reverse_output=True
+- batch_size=32
+- data=monash_cached
+- data.dataset_name=monash_m3_monthly
+- data.prediction_length=18

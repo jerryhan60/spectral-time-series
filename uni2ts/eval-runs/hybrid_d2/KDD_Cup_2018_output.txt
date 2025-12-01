@@ -1,0 +1,111 @@
+[2025-11-19 12:07:50,874][datasets][INFO] - PyTorch version 2.4.1 available.
+[2025-11-19 12:07:50,875][datasets][INFO] - JAX version 0.6.1 available.
+Hybrid Evaluation Configuration:
+  Base model: uni2ts.model.moirai.MoiraiForecast.load_from_checkpoint
+  Precond model: uni2ts.model.moirai.forecast_precond.create_precond_forecast_from_checkpoint
+  Preconditioning type: chebyshev
+  Preconditioning degree: 2
+
+Preconditioning coefficients: [ 0.  -0.5]
+
+Loading base model...
+Loading preconditioned model...
+Generating base model predictions...
+Generating preconditioned model predictions...
+Generated 270 forecast pairs
+Extracting input windows from test data...
+Extracted 270 input windows
+Creating hybrid forecasts...
+Created 270 hybrid forecasts
+Computing metrics...
+
+
+Base model:   0%|          | 0/270 [00:00<?, ?it/s]
+Base model:   0%|          | 1/270 [00:00<01:09,  3.89it/s]
+Base model:  60%|█████▉    | 161/270 [00:00<00:00, 547.13it/s]
+Base model: 100%|██████████| 270/270 [00:00<00:00, 622.87it/s]
+
+Precond model:   0%|          | 0/270 [00:00<?, ?it/s]
+Precond model:  48%|████▊     | 129/270 [00:00<00:00, 1046.57it/s]
+Precond model: 100%|██████████| 270/270 [00:00<00:00, 1258.77it/s]
+
+Hybridizing:   0%|          | 0/270 [00:00<?, ?it/s]
+Hybridizing:   2%|▏         | 6/270 [00:00<00:05, 51.18it/s]
+Hybridizing:   4%|▍         | 12/270 [00:00<00:05, 51.02it/s]
+Hybridizing:   7%|▋         | 18/270 [00:00<00:04, 50.99it/s]
+Hybridizing:   9%|▉         | 24/270 [00:00<00:04, 50.93it/s]
+Hybridizing:  11%|█         | 30/270 [00:00<00:04, 48.94it/s]
+Hybridizing:  13%|█▎        | 35/270 [00:00<00:04, 47.52it/s]
+Hybridizing:  15%|█▌        | 41/270 [00:00<00:04, 48.58it/s]
+Hybridizing:  17%|█▋        | 47/270 [00:00<00:04, 49.32it/s]
+Hybridizing:  20%|█▉        | 53/270 [00:01<00:04, 49.82it/s]
+Hybridizing:  22%|██▏       | 59/270 [00:01<00:04, 50.13it/s]
+Hybridizing:  24%|██▍       | 65/270 [00:01<00:04, 50.32it/s]
+Hybridizing:  26%|██▋       | 71/270 [00:01<00:03, 50.47it/s]
+Hybridizing:  29%|██▊       | 77/270 [00:01<00:03, 50.55it/s]
+Hybridizing:  31%|███       | 83/270 [00:01<00:03, 50.60it/s]
+Hybridizing:  33%|███▎      | 89/270 [00:01<00:03, 50.67it/s]
+Hybridizing:  35%|███▌      | 95/270 [00:01<00:03, 50.71it/s]
+Hybridizing:  37%|███▋      | 101/270 [00:02<00:03, 50.73it/s]
+Hybridizing:  40%|███▉      | 107/270 [00:02<00:03, 50.75it/s]
+Hybridizing:  42%|████▏     | 113/270 [00:02<00:03, 50.76it/s]
+Hybridizing:  44%|████▍     | 119/270 [00:02<00:02, 50.78it/s]
+Hybridizing:  46%|████▋     | 125/270 [00:02<00:02, 49.16it/s]
+Hybridizing:  49%|████▊     | 131/270 [00:02<00:02, 49.64it/s]
+Hybridizing:  51%|█████     | 137/270 [00:02<00:02, 49.96it/s]
+Hybridizing:  53%|█████▎    | 143/270 [00:02<00:02, 48.55it/s]
+Hybridizing:  55%|█████▍    | 148/270 [00:02<00:02, 48.81it/s]
+Hybridizing:  57%|█████▋    | 154/270 [00:03<00:02, 49.37it/s]
+Hybridizing:  59%|█████▉    | 160/270 [00:03<00:02, 49.80it/s]
+Hybridizing:  61%|██████▏   | 166/270 [00:03<00:02, 50.09it/s]
+Hybridizing:  64%|██████▎   | 172/270 [00:03<00:01, 50.31it/s]
+Hybridizing:  66%|██████▌   | 178/270 [00:03<00:01, 50.46it/s]
+Hybridizing:  68%|██████▊   | 184/270 [00:03<00:01, 50.58it/s]
+Hybridizing:  70%|███████   | 190/270 [00:03<00:01, 50.63it/s]
+Hybridizing:  73%|███████▎  | 196/270 [00:03<00:01, 50.68it/s]
+Hybridizing:  75%|███████▍  | 202/270 [00:04<00:01, 50.71it/s]
+Hybridizing:  77%|███████▋  | 208/270 [00:04<00:01, 50.74it/s]
+Hybridizing:  79%|███████▉  | 214/270 [00:04<00:01, 50.76it/s]
+Hybridizing:  81%|████████▏ | 220/270 [00:04<00:01, 49.22it/s]
+Hybridizing:  84%|████████▎ | 226/270 [00:04<00:00, 49.67it/s]
+Hybridizing:  86%|████████▌ | 232/270 [00:04<00:00, 49.97it/s]
+Hybridizing:  88%|████████▊ | 238/270 [00:04<00:00, 50.20it/s]
+Hybridizing:  90%|█████████ | 244/270 [00:04<00:00, 48.75it/s]
+Hybridizing:  93%|█████████▎| 250/270 [00:05<00:00, 49.36it/s]
+Hybridizing:  95%|█████████▍| 256/270 [00:05<00:00, 49.81it/s]
+Hybridizing:  97%|█████████▋| 262/270 [00:05<00:00, 50.21it/s]
+Hybridizing:  99%|█████████▉| 268/270 [00:05<00:00, 50.25it/s]
+Hybridizing: 100%|██████████| 270/270 [00:05<00:00, 50.03it/s]
+
+0it [00:00, ?it/s]Error executing job with overrides: ['run_name=eval_hybrid_last_last_kdd_cup_2018_with_missing', 'base_model.checkpoint_path=/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai_small/lotsa_v1_unweighted/pretrain_run_20251020_205126/checkpoints/last.ckpt', 'base_model.patch_size=32', 'base_model.context_length=1000', 'precond_model.checkpoint_path=/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai_small/lotsa_v1_unweighted/precond_chebyshev_d2_20251117_203920/checkpoints/last.ckpt', 'precond_model.patch_size=32', 'precond_model.context_length=1000', 'precond_model.precondition_type=chebyshev', 'precond_model.precondition_degree=2', 'batch_size=32', 'data=monash_cached', 'data.dataset_name=kdd_cup_2018_with_missing', 'data.prediction_length=168']
+Traceback (most recent call last):
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/cli/eval_precond_hybrid.py", line 406, in main
+    res = evaluate_hybrid_model(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/cli/eval_precond_hybrid.py", line 334, in evaluate_hybrid_model
+    res = evaluate_forecasts(
+          ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/src/uni2ts/eval_util/evaluation.py", line 201, in evaluate_forecasts
+    metrics_values = evaluate_forecasts_raw(
+                     ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/src/uni2ts/eval_util/evaluation.py", line 161, in evaluate_forecasts_raw
+    evaluator.update(data_batch)
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/gluonts/ev/metrics.py", line 101, in update
+    self.aggregate.step(self.stat(data))
+                        ^^^^^^^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/gluonts/ev/stats.py", line 44, in squared_error
+    return np.square(error(data, forecast_type))
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/gluonts/ev/stats.py", line 32, in error
+    return data["label"] - data[forecast_type]
+                           ~~~~^^^^^^^^^^^^^^^
+  File "/usr/licensed/anaconda3/2024.6/lib/python3.12/collections/__init__.py", line 1012, in __getitem__
+    return mapping[key]             # can't use 'key in mapping' with defaultdict
+           ~~~~~~~^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/src/uni2ts/eval_util/evaluation.py", line 50, in __getitem__
+    raise ValueError("Forecast contains NaN values")
+ValueError: Forecast contains NaN values
+
+Set the environment variable HYDRA_FULL_ERROR=1 for a complete stack trace.
+
+0it [00:00, ?it/s]

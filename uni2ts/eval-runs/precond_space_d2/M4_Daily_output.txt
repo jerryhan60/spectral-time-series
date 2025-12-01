@@ -1,0 +1,91 @@
+[2025-11-19 12:03:25,379][datasets][INFO] - PyTorch version 2.4.1 available.
+[2025-11-19 12:03:25,380][datasets][INFO] - JAX version 0.6.1 available.
+Preconditioning parameters:
+  Type: chebyshev
+  Degree: 2
+Applying preconditioning to ground truth labels only...
+Preconditioning statistics:
+  Total items: 4227
+  Items with NaN in original data: 0 (will use masked arrays)
+  Items skipped (new NaN after preconditioning): 0
+  Valid items for evaluation: 4227
+Generating predictions (in preconditioned space)...
+Generating predictions for 4227 valid samples (out of 4227 total)...
+Collecting predictions and preconditioned ground truth...
+Generated 4227 forecasts for 4227 valid samples
+Computing metrics in preconditioned space...
+
+================================================================================
+EVALUATION METRICS (IN PRECONDITIONED SPACE)
+================================================================================
+      MSE[mean]  MAE[0.5]  MAPE[0.5]  sMAPE[0.5]  MASE[0.5]  RMSE[mean]  NRMSE[mean]  ND[0.5]   MSIS  mean_weighted_sum_quantile_loss
+None 226098.389   124.996      0.047       0.042      1.934     475.498        0.149    0.039 15.812                            0.031
+================================================================================
+
+Metrics saved to: /scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/eval_precond_space/monash_cached/m4_daily/S/prediction_length=14/eval_precond_last_m4_daily/metrics_precond_space.csv
+
+
+Preconditioning ground truth:   0%|          | 0/4227 [00:00<?, ?it/s]
+Preconditioning ground truth:  65%|██████▍   | 2743/4227 [00:00<00:00, 13588.31it/s]
+Preconditioning ground truth: 100%|██████████| 4227/4227 [00:00<00:00, 17034.70it/s]
+
+Processing forecasts:   0%|          | 0/4227 [00:00<?, ?it/s]
+Processing forecasts:   0%|          | 1/4227 [00:00<17:54,  3.93it/s]
+Processing forecasts:   4%|▍         | 161/4227 [00:00<00:07, 575.53it/s]
+Processing forecasts:   8%|▊         | 326/4227 [00:00<00:04, 939.18it/s]
+Processing forecasts:  11%|█▏        | 481/4227 [00:00<00:03, 1136.74it/s]
+Processing forecasts:  15%|█▌        | 641/4227 [00:00<00:02, 1278.15it/s]
+Processing forecasts:  19%|█▉        | 801/4227 [00:00<00:02, 1372.70it/s]
+Processing forecasts:  23%|██▎       | 961/4227 [00:00<00:02, 1434.88it/s]
+Processing forecasts:  27%|██▋       | 1121/4227 [00:00<00:02, 1482.59it/s]
+Processing forecasts:  30%|███       | 1281/4227 [00:01<00:01, 1514.65it/s]
+Processing forecasts:  34%|███▍      | 1441/4227 [00:01<00:01, 1537.99it/s]
+Processing forecasts:  38%|███▊      | 1601/4227 [00:01<00:01, 1553.32it/s]
+Processing forecasts:  42%|████▏     | 1785/4227 [00:01<00:01, 1639.26it/s]
+Processing forecasts:  46%|████▌     | 1952/4227 [00:01<00:01, 1648.41it/s]
+Processing forecasts:  50%|█████     | 2118/4227 [00:01<00:01, 1558.37it/s]
+Processing forecasts:  54%|█████▍    | 2276/4227 [00:01<00:01, 1562.96it/s]
+Processing forecasts:  58%|█████▊    | 2434/4227 [00:01<00:01, 1564.68it/s]
+Processing forecasts:  61%|██████▏   | 2593/4227 [00:01<00:01, 1571.41it/s]
+Processing forecasts:  65%|██████▌   | 2753/4227 [00:01<00:00, 1576.26it/s]
+Processing forecasts:  69%|██████▉   | 2913/4227 [00:02<00:00, 1580.74it/s]
+Processing forecasts:  73%|███████▎  | 3073/4227 [00:02<00:00, 1584.91it/s]
+Processing forecasts:  76%|███████▋  | 3233/4227 [00:02<00:00, 1586.34it/s]
+Processing forecasts:  80%|████████  | 3393/4227 [00:02<00:00, 1587.52it/s]
+Processing forecasts:  84%|████████▍ | 3553/4227 [00:02<00:00, 1590.30it/s]
+Processing forecasts:  88%|████████▊ | 3713/4227 [00:02<00:00, 1589.97it/s]
+Processing forecasts:  92%|█████████▏| 3881/4227 [00:02<00:00, 1616.80it/s]
+Processing forecasts:  96%|█████████▌| 4065/4227 [00:02<00:00, 1590.84it/s]
+Processing forecasts: 100%|█████████▉| 4225/4227 [00:02<00:00, 1548.07it/s]
+Processing forecasts: 100%|██████████| 4227/4227 [00:02<00:00, 1448.70it/s]
+
+0it [00:00, ?it/s]
+160it [00:00, 1538.76it/s]
+352it [00:00, 1647.73it/s]
+544it [00:00, 1417.57it/s]
+704it [00:00, 1292.62it/s]
+864it [00:00, 1124.63it/s]
+992it [00:00, 1053.77it/s]
+1120it [00:00, 1048.81it/s]
+1248it [00:01, 998.30it/s] 
+1376it [00:01, 983.78it/s]
+1504it [00:01, 980.71it/s]
+1632it [00:01, 978.65it/s]
+1824it [00:01, 1189.73it/s]
+2016it [00:01, 1356.30it/s]
+2176it [00:01, 1417.01it/s]
+2336it [00:01, 1294.94it/s]
+2496it [00:02, 1161.13it/s]
+2624it [00:02, 1128.77it/s]
+2752it [00:02, 1060.66it/s]
+2880it [00:02, 1025.30it/s]
+3008it [00:02, 994.79it/s] 
+3136it [00:02, 994.01it/s]
+3264it [00:02, 968.06it/s]
+3392it [00:03, 947.74it/s]
+3488it [00:03, 945.95it/s]
+3616it [00:03, 969.37it/s]
+3808it [00:03, 1195.58it/s]
+4000it [00:03, 1374.71it/s]
+4192it [00:03, 1506.80it/s]
+4227it [00:03, 1160.13it/s]

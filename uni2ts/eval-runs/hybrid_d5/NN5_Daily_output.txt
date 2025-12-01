@@ -1,0 +1,79 @@
+[2025-11-19 12:11:48,112][datasets][INFO] - PyTorch version 2.4.1 available.
+[2025-11-19 12:11:48,113][datasets][INFO] - JAX version 0.6.1 available.
+Hybrid Evaluation Configuration:
+  Base model: uni2ts.model.moirai.MoiraiForecast.load_from_checkpoint
+  Precond model: uni2ts.model.moirai.forecast_precond.create_precond_forecast_from_checkpoint
+  Preconditioning type: chebyshev
+  Preconditioning degree: 5
+
+Preconditioning coefficients: [ 0.     -1.25    0.      0.3125  0.    ]
+
+Loading base model...
+Loading preconditioned model...
+Generating base model predictions...
+Generating preconditioned model predictions...
+Generated 111 forecast pairs
+Extracting input windows from test data...
+Extracted 111 input windows
+Creating hybrid forecasts...
+Created 111 hybrid forecasts
+Computing metrics...
+
+
+Base model:   0%|          | 0/111 [00:00<?, ?it/s]
+Base model:   1%|          | 1/111 [00:00<00:27,  3.94it/s]
+Base model: 100%|██████████| 111/111 [00:00<00:00, 357.41it/s]
+
+Precond model:   0%|          | 0/111 [00:00<?, ?it/s]
+Precond model: 100%|██████████| 111/111 [00:00<00:00, 1434.41it/s]
+
+Hybridizing:   0%|          | 0/111 [00:00<?, ?it/s]
+Hybridizing:   6%|▋         | 7/111 [00:00<00:01, 64.04it/s]
+Hybridizing:  13%|█▎        | 14/111 [00:00<00:01, 63.74it/s]
+Hybridizing:  19%|█▉        | 21/111 [00:00<00:01, 60.66it/s]
+Hybridizing:  25%|██▌       | 28/111 [00:00<00:01, 61.82it/s]
+Hybridizing:  32%|███▏      | 35/111 [00:00<00:01, 62.44it/s]
+Hybridizing:  38%|███▊      | 42/111 [00:00<00:01, 60.24it/s]
+Hybridizing:  44%|████▍     | 49/111 [00:00<00:01, 61.34it/s]
+Hybridizing:  50%|█████     | 56/111 [00:00<00:00, 62.07it/s]
+Hybridizing:  57%|█████▋    | 63/111 [00:01<00:00, 62.56it/s]
+Hybridizing:  63%|██████▎   | 70/111 [00:01<00:00, 62.91it/s]
+Hybridizing:  69%|██████▉   | 77/111 [00:01<00:00, 63.06it/s]
+Hybridizing:  76%|███████▌  | 84/111 [00:01<00:00, 63.19it/s]
+Hybridizing:  82%|████████▏ | 91/111 [00:01<00:00, 63.31it/s]
+Hybridizing:  88%|████████▊ | 98/111 [00:01<00:00, 63.37it/s]
+Hybridizing:  95%|█████████▍| 105/111 [00:01<00:00, 63.44it/s]
+Hybridizing: 100%|██████████| 111/111 [00:01<00:00, 62.69it/s]
+
+0it [00:00, ?it/s]Error executing job with overrides: ['run_name=eval_hybrid_last_last_nn5_daily_with_missing', 'base_model.checkpoint_path=/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai_small/lotsa_v1_unweighted/pretrain_run_20251020_205126/checkpoints/last.ckpt', 'base_model.patch_size=32', 'base_model.context_length=1000', 'precond_model.checkpoint_path=/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai_small/lotsa_v1_unweighted/precond_chebyshev_d5_20251117_204835/checkpoints/last.ckpt', 'precond_model.patch_size=32', 'precond_model.context_length=1000', 'precond_model.precondition_type=chebyshev', 'precond_model.precondition_degree=5', 'batch_size=32', 'data=monash_cached', 'data.dataset_name=nn5_daily_with_missing', 'data.prediction_length=56']
+Traceback (most recent call last):
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/cli/eval_precond_hybrid.py", line 406, in main
+    res = evaluate_hybrid_model(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/cli/eval_precond_hybrid.py", line 334, in evaluate_hybrid_model
+    res = evaluate_forecasts(
+          ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/src/uni2ts/eval_util/evaluation.py", line 201, in evaluate_forecasts
+    metrics_values = evaluate_forecasts_raw(
+                     ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/src/uni2ts/eval_util/evaluation.py", line 161, in evaluate_forecasts_raw
+    evaluator.update(data_batch)
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/gluonts/ev/metrics.py", line 101, in update
+    self.aggregate.step(self.stat(data))
+                        ^^^^^^^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/gluonts/ev/stats.py", line 44, in squared_error
+    return np.square(error(data, forecast_type))
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/gluonts/ev/stats.py", line 32, in error
+    return data["label"] - data[forecast_type]
+                           ~~~~^^^^^^^^^^^^^^^
+  File "/usr/licensed/anaconda3/2024.6/lib/python3.12/collections/__init__.py", line 1012, in __getitem__
+    return mapping[key]             # can't use 'key in mapping' with defaultdict
+           ~~~~~~~^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/src/uni2ts/eval_util/evaluation.py", line 50, in __getitem__
+    raise ValueError("Forecast contains NaN values")
+ValueError: Forecast contains NaN values
+
+Set the environment variable HYDRA_FULL_ERROR=1 for a complete stack trace.
+
+0it [00:00, ?it/s]
