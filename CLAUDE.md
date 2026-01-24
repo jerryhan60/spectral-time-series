@@ -247,22 +247,33 @@ salloc --nodes=1 --ntasks=1 --mem=128G --time=03:01:00 --gres=gpu:1 --partition=
 │   │   ├── train.py                 # Training entry point (Hydra-based)
 │   │   ├── eval.py                  # Standard evaluation
 │   │   ├── eval_precond_space.py    # Evaluation in transformed space
-│   │   └── eval_precond_hybrid.py   # Hybrid base+precond evaluation
+│   │   ├── eval_precond_hybrid.py   # Hybrid base+precond evaluation
+│   │   └── eval_precond_gt.py       # Ground truth context evaluation
 │   ├── src/uni2ts/
 │   │   ├── model/                   # Model implementations
 │   │   │   ├── moirai/              # Moirai model (Salesforce foundation model)
+│   │   │   │   ├── pretrain.py      # Standard pretraining
+│   │   │   │   └── pretrain_patched.py  # Pretraining with patch-level preconditioning
 │   │   │   ├── moirai_moe/          # Moirai Mixture-of-Experts variant
 │   │   │   └── moirai2/             # Moirai 2.0
+│   │   ├── module/                  # Neural network modules
+│   │   │   └── learnable_precondition.py  # Learnable preconditioning nn.Module
 │   │   ├── transform/               # Data transformations
-│   │   │   └── precondition.py      # Polynomial preconditioning implementation
+│   │   │   ├── precondition.py      # Static polynomial preconditioning
+│   │   │   └── patch_precondition.py # Patch-level preconditioning
 │   │   ├── data/                    # Data loading and processing
 │   │   ├── loss/                    # Loss functions
 │   │   └── distribution/            # Output distributions
 │   └── cli/conf/                    # Hydra configuration files
 │       ├── pretrain/                # Pre-training configs
+│       │   └── model/moirai_small_precond.yaml  # Precond-enabled model config
 │       ├── finetune/                # Fine-tuning configs
 │       └── eval/                    # Evaluation configs
-├── *.slurm                          # SLURM batch job scripts
+├── pretraining/                     # SLURM pretraining scripts
+│   ├── pretrain_moirai.slurm        # Baseline training
+│   ├── pretrain_moirai_precond.slurm # Standard preconditioned training
+│   └── pretrain_moirai_precond_d4_orig_loss_learnable.slurm  # Learnable precond
+├── eval/                            # Evaluation scripts and SLURM jobs
 ├── eval_confs/                      # Evaluation dataset configurations
 ├── logs/                            # SLURM job outputs
 └── Time-Series-Library/             # External benchmark datasets
@@ -279,6 +290,19 @@ salloc --nodes=1 --ntasks=1 --mem=128G --time=03:01:00 --gres=gpu:1 --partition=
 - Respects series boundaries (no cross-contamination between time series)
 - Recommended degree: 2-10 (paper suggests ≤10 for numerical stability)
 - **IMPORTANT**: Implementation fixed on 2025-11-17 to match paper (see CRITICAL_FIXES_PRECONDITIONING.md)
+
+**Learnable Preconditioning** (`uni2ts/src/uni2ts/module/learnable_precondition.py`):
+- nn.Module variant that makes preconditioning coefficients learnable parameters
+- Initializes coefficients from Chebyshev/Legendre polynomials (same as static transform)
+- Coefficients can be optimized during training via backpropagation
+- Enable with: `model.learnable_preconditioning=true`
+- Uses same forward/reverse formulas as static preconditioning
+
+**Patch-Level Preconditioning** (`uni2ts/src/uni2ts/transform/patch_precondition.py`):
+- Applies preconditioning AFTER patching instead of before
+- Input shape: `(..., time, patch_size)` - operates along time dimension
+- Each patch element treated as independent channel
+- Used by `MoiraiPretrainPatched` class in `uni2ts/src/uni2ts/model/moirai/pretrain_patched.py`
 
 **Model Architecture**:
 - Based on Transformer architecture with patching
@@ -337,16 +361,27 @@ python -m cli.train \
   seed=0
 ```
 
-**Pre-training with preconditioning**:
+**Pre-training with preconditioning** (using precond config):
 ```bash
 python -m cli.train \
   -cp conf/pretrain \
   run_name=precond_chebyshev_d5 \
-  model=moirai_small \
+  model=moirai_small_precond \
   data=lotsa_v1_unweighted \
-  model.enable_preconditioning=true \
-  model.precondition_type=chebyshev \
   model.precondition_degree=5 \
+  seed=0
+```
+
+**Pre-training with learnable preconditioning and loss in original space**:
+```bash
+python -m cli.train \
+  -cp conf/pretrain \
+  run_name=precond_d4_learnable \
+  model=moirai_small_precond \
+  data=lotsa_v1_unweighted \
+  model.precondition_degree=4 \
+  model.learnable_preconditioning=true \
+  model.loss_in_original_space=true \
   seed=0
 ```
 
@@ -514,11 +549,13 @@ All scripts use Hydra for configuration:
 - Multiple configs: `-cp conf/pretrain` (change config path)
 
 **Key config parameters**:
-- `model`: Model architecture (moirai_small, moirai_base, moirai_large)
+- `model`: Model architecture (moirai_small, moirai_base, moirai_large, moirai_small_precond)
 - `data`: Training data source (lotsa_v1_unweighted, monash_cached, etc.)
 - `model.enable_preconditioning`: Enable/disable preconditioning
 - `model.precondition_type`: chebyshev or legendre
 - `model.precondition_degree`: 2-10 (recommended ≤10)
+- `model.learnable_preconditioning`: Make coefficients learnable (default: false)
+- `model.loss_in_original_space`: Compute loss after reversing preconditioning (default: false)
 - `model.patch_size`: 8, 16, 32, 64, or 128
 - `model.context_length`: Input context window size
 - `data.prediction_length`: Forecast horizon

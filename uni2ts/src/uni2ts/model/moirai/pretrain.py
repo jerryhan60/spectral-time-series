@@ -20,6 +20,7 @@ from typing import Any, Optional
 import lightning as L
 import numpy as np
 import torch
+import torch.nn.functional as F
 from jaxtyping import Bool, Float, Int
 from torch import nn
 from torch.distributions import Distribution
@@ -60,6 +61,7 @@ from uni2ts.transform import (
     Transformation,
 )
 
+from uni2ts.module.learnable_precondition import LearnablePrecondition
 from .module import MoiraiModule
 
 
@@ -102,6 +104,10 @@ class MoiraiPretrain(L.LightningModule):
         enable_preconditioning: bool = False,
         precondition_type: str = "chebyshev",
         precondition_degree: int = 5,
+        loss_in_original_space: bool = False,
+        learnable_preconditioning: bool = False,
+        precondition_weight_decay: float = 0.0,
+        reversal_loss_weight: float = 0.1,
     ):
         assert (module is not None) or (
             module_kwargs is not None
@@ -112,6 +118,15 @@ class MoiraiPretrain(L.LightningModule):
         super().__init__()
         self.save_hyperparameters(ignore=["module"])
         self.module = MoiraiModule(**module_kwargs) if module is None else module
+        # Initialize learnable preconditioning module
+        # If learnable_preconditioning is True, gradients are enabled.
+        # If False, we still create it (frozen) to use for reversal in loss_in_original_space if needed.
+        self.preconditioner_module = LearnablePrecondition(
+            degree=precondition_degree,
+            polynomial_type=precondition_type,
+        )
+        if not learnable_preconditioning:
+            self.preconditioner_module.coeffs.requires_grad = False
 
     def forward(
         self,
@@ -156,10 +171,39 @@ class MoiraiPretrain(L.LightningModule):
         :param batch_idx: index of current batch
         :return: training loss for current batch
         """
+        # Handle learnable preconditioning
+        target_orig = batch["target"]
+        if self.hparams.learnable_preconditioning:
+            # Apply preconditioning on-the-fly
+            # Flatten target: [batch, seq_len, patch_size] -> [batch, seq_len * patch_size, 1]
+            b, s, p = target_orig.shape
+            target_flat = target_orig.view(b, s * p, 1)
+            
+            # Expand sample_id: [batch, seq_len] -> [batch, seq_len * patch_size]
+            sample_id = batch["sample_id"]
+            sample_id_flat = sample_id.unsqueeze(-1).expand(-1, -1, p).reshape(b, s * p)
+            
+            # Apply forward
+            target_precond_flat = self.preconditioner_module(target_flat, sample_id=sample_id_flat)
+            target_precond = target_precond_flat.view(b, s, p)
+            
+            # Update batch for forward pass
+            batch["target"] = target_precond
+        
         distr = self(
             **{field: batch[field] for field in list(self.seq_fields) + ["sample_id"]}
         )
-        loss = self.hparams.loss_func(
+        
+        # Handle loss calculation
+        #
+        # For NLL loss with pure location shift (preconditioning), loss in original space
+        # equals loss in preconditioned space due to mathematical equivalence:
+        # log_prob(y_orig | distr_shifted) = log_prob(y_orig + correction | distr) = log_prob(y_precond | distr)
+        #
+        # This means we can compute the loss directly with the preconditioned target,
+        # avoiding TransformedDistribution which caused in-place modification issues
+        # with the Mixture distribution's internal caching.
+        nll_loss = self.hparams.loss_func(
             pred=distr,
             **{
                 field: batch[field]
@@ -172,6 +216,78 @@ class MoiraiPretrain(L.LightningModule):
                 ]
             },
         )
+
+        # Compute hybrid loss for learnable preconditioning with loss_in_original_space
+        # This adds a reconstruction loss term that penalizes coefficients causing unstable reversal
+        if self.hparams.learnable_preconditioning and self.hparams.loss_in_original_space:
+            # target_precond is in batch["target"], target_orig was saved earlier
+            target_precond = batch["target"]
+            b, s, p = target_precond.shape
+
+            sample_id = batch["sample_id"]
+            sample_id_flat = sample_id.unsqueeze(-1).expand(-1, -1, p).reshape(b, s * p)
+
+            # Get model's prediction in preconditioned space
+            # Use the distribution mean as the point prediction
+            pred_precond = distr.mean  # [batch, seq_len, patch_size]
+
+            # Flatten for reversal
+            pred_precond_flat = pred_precond.view(b, s * p, 1)
+
+            # Reverse the model's prediction to original space
+            pred_orig_flat = self.preconditioner_module.reverse(
+                pred_precond_flat, sample_id=sample_id_flat
+            )
+            pred_orig = pred_orig_flat.view(b, s, p)
+
+            # Compute reconstruction loss: MSE between reversed prediction and original ground truth
+            # This measures end-to-end forecasting error in original space
+            # Coefficients that amplify forecast errors will have higher reconstruction loss
+            prediction_mask = batch["prediction_mask"]  # [batch, seq_len]
+            observed_mask = batch["observed_mask"]  # [batch, seq_len, patch_size]
+
+            # Combine masks: we care about observed values in the prediction window
+            combined_mask = prediction_mask.unsqueeze(-1) & observed_mask.bool()
+
+            # Compute masked MSE
+            diff = (pred_orig - target_orig) ** 2
+            if combined_mask.any():
+                reconstruction_loss = diff[combined_mask].mean()
+            else:
+                reconstruction_loss = diff.mean()
+
+            # Combine losses
+            loss = nll_loss + self.hparams.reversal_loss_weight * reconstruction_loss
+
+            # Log individual components
+            batch_size = (
+                batch["sample_id"].max(dim=1).values.sum() if "sample_id" in batch else None
+            )
+            self.log(
+                "train/nll_loss",
+                nll_loss,
+                on_step=self.hparams.log_on_step,
+                on_epoch=True,
+                prog_bar=False,
+                logger=True,
+                sync_dist=True,
+                batch_size=batch_size,
+                rank_zero_only=True,
+            )
+            self.log(
+                "train/reconstruction_loss",
+                reconstruction_loss,
+                on_step=self.hparams.log_on_step,
+                on_epoch=True,
+                prog_bar=False,
+                logger=True,
+                sync_dist=True,
+                batch_size=batch_size,
+                rank_zero_only=True,
+            )
+        else:
+            loss = nll_loss
+
         batch_size = (
             batch["sample_id"].max(dim=1).values.sum() if "sample_id" in batch else None
         )
@@ -199,13 +315,31 @@ class MoiraiPretrain(L.LightningModule):
         :param dataloader_idx:
         :return: validation loss for current batch
         """
+        # Handle learnable preconditioning
+        target_orig = batch["target"]
+        if self.hparams.learnable_preconditioning:
+            b, s, p = target_orig.shape
+            target_flat = target_orig.view(b, s * p, 1)
+            sample_id = batch["sample_id"]
+            sample_id_flat = sample_id.unsqueeze(-1).expand(-1, -1, p).reshape(b, s * p)
+            target_precond_flat = self.preconditioner_module(target_flat, sample_id=sample_id_flat)
+            target_precond = target_precond_flat.view(b, s, p)
+            batch["target"] = target_precond
+            
         distr = self(
             **{field: batch[field] for field in list(self.seq_fields) + ["sample_id"]}
         )
-        val_loss = self.hparams.loss_func(
-            pred=distr,
+        
+        # For NLL loss with pure location shift (preconditioning), loss in original space
+        # equals loss in preconditioned space due to mathematical equivalence:
+        # log_prob(y_orig | distr_shifted) = log_prob(y_precond | distr)
+        distr_for_loss = distr
+        target_for_metric = batch["target"]
+
+        nll_loss = self.hparams.loss_func(
+            pred=distr_for_loss,
             **{
-                field: batch[field]
+                field: batch[field] if field != "target" else target_for_metric
                 for field in [
                     "target",
                     "prediction_mask",
@@ -215,6 +349,69 @@ class MoiraiPretrain(L.LightningModule):
                 ]
             },
         )
+
+        # Compute hybrid loss for learnable preconditioning with loss_in_original_space
+        if self.hparams.learnable_preconditioning and self.hparams.loss_in_original_space:
+            target_precond = batch["target"]
+            b, s, p = target_precond.shape
+
+            sample_id = batch["sample_id"]
+            sample_id_flat = sample_id.unsqueeze(-1).expand(-1, -1, p).reshape(b, s * p)
+
+            # Get model's prediction in preconditioned space
+            pred_precond = distr.mean  # [batch, seq_len, patch_size]
+
+            # Flatten for reversal
+            pred_precond_flat = pred_precond.view(b, s * p, 1)
+
+            # Reverse the model's prediction to original space
+            pred_orig_flat = self.preconditioner_module.reverse(
+                pred_precond_flat, sample_id=sample_id_flat
+            )
+            pred_orig = pred_orig_flat.view(b, s, p)
+
+            # Compute reconstruction loss: MSE between reversed prediction and original ground truth
+            prediction_mask = batch["prediction_mask"]
+            observed_mask = batch["observed_mask"]
+            combined_mask = prediction_mask.unsqueeze(-1) & observed_mask.bool()
+
+            diff = (pred_orig - target_orig) ** 2
+            if combined_mask.any():
+                reconstruction_loss = diff[combined_mask].mean()
+            else:
+                reconstruction_loss = diff.mean()
+
+            val_loss = nll_loss + self.hparams.reversal_loss_weight * reconstruction_loss
+
+            # Log individual components
+            batch_size = (
+                batch["sample_id"].max(dim=1).values.sum() if "sample_id" in batch else None
+            )
+            self.log(
+                "val/nll_loss",
+                nll_loss,
+                on_step=self.hparams.log_on_step,
+                on_epoch=True,
+                prog_bar=False,
+                logger=True,
+                sync_dist=True,
+                batch_size=batch_size,
+                rank_zero_only=True,
+            )
+            self.log(
+                "val/reconstruction_loss",
+                reconstruction_loss,
+                on_step=self.hparams.log_on_step,
+                on_epoch=True,
+                prog_bar=False,
+                logger=True,
+                sync_dist=True,
+                batch_size=batch_size,
+                rank_zero_only=True,
+            )
+        else:
+            val_loss = nll_loss
+
         batch_size = (
             batch["sample_id"].max(dim=1).values.sum() if "sample_id" in batch else None
         )
@@ -238,17 +435,19 @@ class MoiraiPretrain(L.LightningModule):
             )
             for metric_func in val_metrics:
                 if isinstance(metric_func, PackedPointLoss):
-                    pred = distr.sample(torch.Size((self.hparams.num_samples,)))
+                    # For point loss, we need to sample/mean from the distribution
+                    # If we are in original space, we should sample from distr_for_loss (which is shifted)
+                    pred = distr_for_loss.sample(torch.Size((self.hparams.num_samples,)))
                     pred = torch.median(pred, dim=0).values
                 elif isinstance(metric_func, PackedDistributionLoss):
-                    pred = distr
+                    pred = distr_for_loss
                 else:
                     raise ValueError(f"Unsupported loss function: {metric_func}")
 
                 metric = metric_func(
                     pred=pred,
                     **{
-                        field: batch[field]
+                        field: batch[field] if field != "target" else target_for_metric
                         for field in [
                             "target",
                             "prediction_mask",
@@ -288,6 +487,10 @@ class MoiraiPretrain(L.LightningModule):
             MultiInSizeLinear,
             MultiOutSizeLinear,
             nn.Linear,
+            # Add LearnablePrecondition to whitelist for decay? Or no decay?
+            # Usually coefficients are small, maybe decay is good.
+            # But they are parameters.
+            LearnablePrecondition,
         )
         blacklist_params = (
             BinaryAttentionBias,
@@ -309,6 +512,13 @@ class MoiraiPretrain(L.LightningModule):
                     decay.add(fpn)
                 elif pn.endswith("weight") and isinstance(m, blacklist_params):
                     no_decay.add(fpn)
+                # Handle LearnablePrecondition coeffs
+                elif isinstance(m, LearnablePrecondition) and pn.endswith("coeffs"):
+                     # Maybe no decay for coefficients? Or decay?
+                     # Let's put them in no_decay for now to be safe, or decay.
+                     # If we put in decay, we need to ensure it's in whitelist.
+                     # 'coeffs' is not 'weight'.
+                     decay.add(fpn)
 
         # validate that we considered every parameter
         param_dict = {pn: p for pn, p in self.named_parameters() if p.requires_grad}
@@ -385,11 +595,14 @@ class MoiraiPretrain(L.LightningModule):
 
         def default_train_transform():
             # Start with optional preconditioning transform
+            # Disable static preconditioning if learnable is enabled
+            static_precond_enabled = self.hparams.enable_preconditioning and not self.hparams.learnable_preconditioning
+            
             transform = PolynomialPrecondition(
                 polynomial_type=self.hparams.precondition_type,
                 degree=self.hparams.precondition_degree,
                 target_field="target",
-                enabled=self.hparams.enable_preconditioning,
+                enabled=static_precond_enabled,
                 store_original=False,
             )
 

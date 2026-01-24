@@ -36,6 +36,7 @@ from uni2ts.module.position import (
 )
 from uni2ts.module.transformer import TransformerEncoder
 from uni2ts.module.ts_embed import MultiInSizeLinear
+from uni2ts.module.embedding_precondition import EmbeddingPrecondition
 
 
 def encode_distr_output(
@@ -99,6 +100,12 @@ class MoiraiModule(
         attn_dropout_p: float,
         dropout_p: float,
         scaling: bool = True,
+        # Embedding-level preconditioning parameters
+        enable_embedding_preconditioning: bool = False,
+        embedding_precondition_type: str = "chebyshev",
+        embedding_precondition_degree: int = 5,
+        embedding_precondition_reverse: bool = True,
+        num_target_variates: int = None,
     ):
         """
         :param distr_output: distribution output object
@@ -109,6 +116,14 @@ class MoiraiModule(
         :param attn_dropout_p: dropout probability for attention layers
         :param dropout_p: dropout probability for all other layers
         :param scaling: whether to apply scaling (standardization)
+        :param enable_embedding_preconditioning: whether to apply polynomial preconditioning to embeddings
+        :param embedding_precondition_type: "chebyshev" or "legendre"
+        :param embedding_precondition_degree: polynomial degree (recommended 2-10)
+        :param embedding_precondition_reverse: whether to apply reverse preconditioning after transformer
+        :param num_target_variates: number of variates to precondition (first N variates are targets).
+               If None, all variates are preconditioned. Set to specific value to only precondition
+               target variates and leave covariate variates (u_t) unchanged, following the Universal
+               Sequence Preconditioning theory.
         """
         super().__init__()
         self.d_model = d_model
@@ -116,6 +131,9 @@ class MoiraiModule(
         self.patch_sizes = patch_sizes
         self.max_seq_len = max_seq_len
         self.scaling = scaling
+        self.enable_embedding_preconditioning = enable_embedding_preconditioning
+        self.embedding_precondition_reverse = embedding_precondition_reverse
+        self.num_target_variates = num_target_variates
 
         self.mask_encoding = nn.Embedding(num_embeddings=1, embedding_dim=d_model)
         self.scaler = PackedStdScaler() if scaling else PackedNOPScaler()
@@ -147,6 +165,15 @@ class MoiraiModule(
         )
         self.distr_output = distr_output
         self.param_proj = self.distr_output.get_param_proj(d_model, patch_sizes)
+
+        # Initialize embedding preconditioning module if enabled
+        if enable_embedding_preconditioning:
+            self.embedding_preconditioner = EmbeddingPrecondition(
+                degree=embedding_precondition_degree,
+                polynomial_type=embedding_precondition_type,
+            )
+        else:
+            self.embedding_preconditioner = None
 
     def forward(
         self,
@@ -186,6 +213,19 @@ class MoiraiModule(
         )
         scaled_target = (target - loc) / scale
         reprs = self.in_proj(scaled_target, patch_size)
+
+        # Apply forward embedding preconditioning if enabled
+        if self.enable_embedding_preconditioning and self.embedding_preconditioner is not None:
+            # Create target_mask if num_target_variates is specified
+            # target_mask: True for target variates (variate_id < num_target_variates)
+            # target_mask: False for covariate variates (variate_id >= num_target_variates)
+            # Following Universal Sequence Preconditioning theory: only precondition y_t, not u_t
+            if self.num_target_variates is not None:
+                target_mask = variate_id < self.num_target_variates
+            else:
+                target_mask = None  # Precondition all variates
+            reprs = self.embedding_preconditioner(reprs, sample_id, target_mask=target_mask)
+
         masked_reprs = mask_fill(reprs, prediction_mask, self.mask_encoding.weight)
         reprs = self.encoder(
             masked_reprs,
@@ -193,6 +233,13 @@ class MoiraiModule(
             time_id=time_id,
             var_id=variate_id,
         )
+
+        # Apply reverse embedding preconditioning if enabled (compensating filter)
+        if (self.enable_embedding_preconditioning
+            and self.embedding_precondition_reverse
+            and self.embedding_preconditioner is not None):
+            reprs = self.embedding_preconditioner.reverse(reprs, sample_id)
+
         distr_param = self.param_proj(reprs, patch_size)
         distr = self.distr_output.distribution(distr_param, loc=loc, scale=scale)
         return distr

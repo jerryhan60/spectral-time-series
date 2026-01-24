@@ -29,6 +29,7 @@ from gluonts.transform import TestSplitSampler, Transformation
 from gluonts.transform.split import TFTInstanceSplitter
 
 from uni2ts.transform import PolynomialPrecondition, ReversePrecondition
+from uni2ts.module.learnable_precondition import LearnablePrecondition
 from .forecast import MoiraiForecast
 
 
@@ -218,6 +219,7 @@ class MoiraiForecastPrecond(MoiraiForecast):
         precondition_type: str = "chebyshev",
         precondition_degree: int = 5,
         reverse_output: bool = True,
+        learnable_preconditioning: bool = False,
     ):
         """
         Initialize MoiraiForecastPrecond.
@@ -227,6 +229,7 @@ class MoiraiForecastPrecond(MoiraiForecast):
             precondition_type: "chebyshev" or "legendre" (must match training!)
             precondition_degree: Polynomial degree (must match training!)
             reverse_output: Whether to reverse preconditioning on outputs (True: output in original scale, False: output in preconditioned space)
+            learnable_preconditioning: Whether preconditioning coefficients are learnable (must match training!)
         """
         super().__init__(
             prediction_length=prediction_length,
@@ -245,9 +248,17 @@ class MoiraiForecastPrecond(MoiraiForecast):
         self.precondition_type = precondition_type
         self.precondition_degree = precondition_degree
         self.reverse_output = reverse_output
+        self.learnable_preconditioning = learnable_preconditioning
 
         # Create preconditioning transforms
         if self.enable_preconditioning:
+            if self.learnable_preconditioning:
+                # Initialize learnable module to load weights
+                self.preconditioner_module = LearnablePrecondition(
+                    degree=precondition_degree,
+                    polynomial_type=precondition_type,
+                )
+            
             self.preconditioner = PolynomialPrecondition(
                 polynomial_type=precondition_type,
                 degree=precondition_degree,
@@ -306,7 +317,15 @@ class MoiraiForecastPrecond(MoiraiForecast):
             preconditioned_data = preconditioned_data.squeeze(-1)
 
         # Get coefficients for reversal
-        coeffs = self.preconditioner.coeffs if self.enable_preconditioning else None
+        if self.enable_preconditioning:
+            if self.learnable_preconditioning:
+                # Use learned coefficients
+                coeffs = self.preconditioner_module.coeffs.detach().cpu().numpy()
+            else:
+                # Use static coefficients
+                coeffs = self.preconditioner.coeffs
+        else:
+            coeffs = None
 
         return preconditioned_data, coeffs
 
@@ -485,7 +504,7 @@ class MoiraiForecastPrecond(MoiraiForecast):
         # Pass the wrapper so we can access stored contexts
         return PreconditionReversingPredictor(
             base_predictor=base_predictor,
-            precondition_coeffs=self.preconditioner.coeffs,
+            precondition_coeffs=self.preconditioner_module.coeffs.detach().cpu().numpy() if self.learnable_preconditioning else self.preconditioner.coeffs,
             precondition_degree=self.precondition_degree,
             precondition_type=self.precondition_type,
             context_wrapper=input_transform_with_precond,
@@ -543,6 +562,7 @@ def create_precond_forecast_from_checkpoint(
     precondition_type: str = "chebyshev",
     precondition_degree: int = 5,
     reverse_output: bool = True,
+    learnable_preconditioning: bool = False,
 ) -> MoiraiForecastPrecond:
     """
     Create MoiraiForecastPrecond from a checkpoint.
@@ -557,6 +577,7 @@ def create_precond_forecast_from_checkpoint(
         precondition_type: Must match training config
         precondition_degree: Must match training config
         reverse_output: Whether to reverse preconditioning on outputs (True: output in original scale, False: output in preconditioned space)
+        learnable_preconditioning: Whether preconditioning coefficients are learnable (must match training!)
     """
     # Load base model from checkpoint
     model = MoiraiForecastPrecond.load_from_checkpoint(
@@ -572,6 +593,7 @@ def create_precond_forecast_from_checkpoint(
         precondition_type=precondition_type,
         precondition_degree=precondition_degree,
         reverse_output=reverse_output,
+        learnable_preconditioning=learnable_preconditioning,
         strict=False,  # Allow loading with extra/missing keys
     )
 

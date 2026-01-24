@@ -8,3 +8,10 @@ defaults:
 enable_preconditioning: true
 precondition_type: chebyshev  # chebyshev or legendre
 precondition_degree: 5  # recommended: 2-10, paper suggests <= 10 for stability
+loss_in_original_space: false
+learnable_preconditioning: false
+
+# Hybrid loss parameter for learnable preconditioning with loss_in_original_space=true
+# The reconstruction loss = MSE(reverse(model_prediction), original_target)
+# This encourages coefficients that don't amplify forecast errors during reversal
+reversal_loss_weight: 0.1  # weight for reconstruction loss term

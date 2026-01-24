@@ -1,0 +1,35 @@
+#!/bin/bash
+#SBATCH --job-name=eval_emb_d4_lotsa
+#SBATCH --output=logs/eval_emb_d4_lotsa_%j.out
+#SBATCH --error=logs/eval_emb_d4_lotsa_%j.err
+#SBATCH --time=04:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=64G
+#SBATCH --gres=gpu:1
+#SBATCH --partition=pli
+#SBATCH --account=eladgroup
+
+echo "Embedding Precond D4 Evaluation on LOTSA In-Distribution"
+echo "================================================="
+
+cd /scratch/gpfs/EHAZAN/jh1161
+module load anaconda3/2024.6
+module load cudatoolkit/12.6
+source uni2ts/venv/bin/activate
+
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+
+MODEL_PATH="/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai_small_embedding_precond/lotsa_v1_unweighted/embed_precond_chebyshev_d4_20251205_174706/checkpoints/last.ckpt"
+OUTPUT_DIR="uni2ts/eval-runs/embedding_precond_d4_lotsa-indist"
+
+python eval/comprehensive_evaluation.py \
+    --mode embedding \
+    --model-path "$MODEL_PATH" \
+    --dataset-source lotsa-indist \
+    --output-dir "$OUTPUT_DIR" \
+    --batch-size 32
+
+echo "Results saved to: $OUTPUT_DIR"

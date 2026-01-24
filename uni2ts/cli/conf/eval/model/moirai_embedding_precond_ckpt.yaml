@@ -1,0 +1,35 @@
+# Evaluation config for embedding-preconditioned models
+#
+# Embedding-level preconditioning is handled INSIDE the model (MoiraiModule),
+# so no special handling is needed during evaluation. The checkpoint contains
+# all necessary parameters:
+#   - enable_embedding_preconditioning
+#   - embedding_precondition_type (chebyshev/legendre)
+#   - embedding_precondition_degree
+#   - embedding_precondition_reverse (should be false)
+#   - num_target_variates (None = all, or specific number)
+#
+# Key difference from data-level preconditioning:
+# - Data-level: Preconditioning applied in data pipeline, reversal needed at eval
+# - Embedding-level: Preconditioning applied in model forward, output is in original space
+#
+# Following Universal Sequence Preconditioning theory:
+# - Only target variates (y_t) are preconditioned
+# - Covariate variates (u_t) are left unchanged
+# - Reversal is DISABLED (not a true inverse due to non-linear transformer mixing)
+#
+# Usage:
+#   python -m cli.eval \
+#     model=moirai_embedding_precond_ckpt \
+#     model.checkpoint_path=/path/to/checkpoint.ckpt \
+#     model.patch_size=32 \
+#     model.context_length=1000 \
+#     data=monash_cached \
+#     data.dataset_name=m1_monthly
+
+_target_: uni2ts.model.moirai.MoiraiForecast.load_from_checkpoint
+checkpoint_path: ???
+num_samples: 100
+patch_size: ???
+context_length: ???
+# Note: All embedding preconditioning parameters are loaded from checkpoint automatically

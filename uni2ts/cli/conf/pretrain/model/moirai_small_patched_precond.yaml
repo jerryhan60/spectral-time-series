@@ -1,4 +1,15 @@
-_target_: uni2ts.model.moirai.MoiraiPretrain
+# Moirai Small model with PATCH-LEVEL preconditioning
+# Uses MoiraiPretrainPatched which applies preconditioning AFTER patching
+#
+# Key differences from moirai_small_precond.yaml:
+# - Uses MoiraiPretrainPatched instead of MoiraiPretrain
+# - Preconditioning is applied to patches, not individual time steps
+# - Does NOT support learnable_preconditioning or loss_in_original_space
+#
+# Training loss is computed in preconditioned (patch) space.
+# At inference, predictions are reversed to original space.
+
+_target_: uni2ts.model.moirai.pretrain_patched.MoiraiPretrainPatched
 module_kwargs:
   _target_: builtins.dict
   distr_output:
@@ -27,9 +38,13 @@ beta1: 0.9
 beta2: 0.98
 num_training_steps: ${mul:${trainer.max_epochs},${train_dataloader.num_batches_per_epoch}}
 num_warmup_steps: 10_000
-# Preconditioning configuration
-enable_preconditioning: false
+
+# Patch-level preconditioning configuration
+enable_preconditioning: true
 precondition_type: chebyshev  # chebyshev or legendre
 precondition_degree: 5  # recommended: 2-10
+
+# These MUST be false for MoiraiPretrainPatched
+# (will raise ValueError if set to true)
 loss_in_original_space: false
 learnable_preconditioning: false
