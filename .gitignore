@@ -49,9 +49,6 @@ uni2ts/outputs/
 eval_*_results_*/
 eval/outputs/
 
-# External libraries (not our code)
-Time-Series-Library/
-
 # Temporary files
 *.tmp
 *.bak

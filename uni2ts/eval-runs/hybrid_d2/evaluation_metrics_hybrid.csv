@@ -1,2 +1,0 @@
-dataset,MSE[mean],MSE[0.5],MAE[0.5],MASE[0.5],MAPE[0.5],sMAPE[0.5],MSIS,RMSE[mean],NRMSE[mean],ND[0.5],mean_weighted_sum_quantile_loss,status
-M3 Monthly,2187387.239,,809.594,1.27,0.213,0.179,15.463,1478.982,0.285,0.156,0.126,success

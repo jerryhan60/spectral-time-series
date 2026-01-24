@@ -2,717 +2,124 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## ⚠️ CRITICAL: Recent Implementation Fixes (2025-11-17)
-
-**IMPORTANT:** The preconditioning implementation had two critical bugs that were fixed on 2025-11-17:
-
-1. **Wrong Coefficients** - Code extracted Chebyshev/Legendre basis coefficients instead of power basis coefficients
-2. **Wrong Sign** - Used subtraction instead of addition in forward preconditioning (opposite of Algorithm 1)
-
-**Impact:** All models trained with preconditioning (degree > 2) before 2025-11-17 used **incorrect preconditioning** and should be **retrained** with the fixed implementation.
-
-**See:** `CRITICAL_FIXES_PRECONDITIONING.md` for full details.
-
-**Fixed files:**
-- `uni2ts/src/uni2ts/transform/precondition.py` - Coefficients now use power basis, signs corrected
-- `uni2ts/cli/eval_precond_hybrid.py` - Signs corrected
-
-**Previous checkpoints affected:**
-- ✗ `precond_default_20251102_102511/checkpoints/last.ckpt` - INVALID (trained with bugs)
-- ✓ `pretrain_run_20251020_205126/checkpoints/last.ckpt` - VALID (baseline, no preconditioning)
-
-## ⚠️ CRITICAL: Reversal Context Bug Fix (2025-11-18)
-
-**IMPORTANT:** The hybrid and ground truth context evaluation scripts had a critical bug where reversal used **incomplete context**.
-
-### The Bug
-
-Both `eval_precond_hybrid.py` and `eval_precond_gt.py` only used the **prediction window** for reversal context, but the reversal formula requires context from **before** the prediction starts (i.e., from the input window).
-
-**Reversal formula**: `y[t] = ỹ[t] - Σ(i=1 to n) c_i · y_context[t-i]`
-
-For the first prediction timestep (t=0) with degree=5:
-- Needs context at positions: t-1, t-2, t-3, t-4, t-5
-- These are positions [-1, -2, -3, -4, -5] relative to prediction start
-- These positions are in the **INPUT WINDOW**, not the prediction window!
-
-### Observable Symptoms (Before Fix)
-
-**M3 Monthly Dataset Example:**
-
-Preconditioned Space Evaluation (correct baseline):
-```
-MSE[mean]: 2,080,377.859
-MAE[0.5]: 645.464
-```
-
-Ground Truth Context (BEFORE FIX - incorrect):
-```
-MSE[mean]: 9,281,208.72  ❌ 4.5x worse!
-MAE[0.5]: 1,789.662      ❌ 2.8x worse!
-```
-
-Ground Truth Context (AFTER FIX - correct):
-```
-MSE[mean]: 2,080,377.859  ✓ Matches precond space!
-MAE[0.5]: 645.464         ✓ Matches precond space!
-```
-
-The bug made GT context reversal perform **worse** than no reversal, which is mathematically impossible. Perfect context should give identical metrics to precond space evaluation.
-
-### What Was Fixed
-
-**1. `eval_precond_gt.py`:**
-- Now extracts **full ground truth** (input + label) instead of just label
-- Reversal function takes `input_length` parameter to know where predictions start
-- Uses correct indexing: `full_gt[input_len + t - i - 1]` for context
-
-**2. `eval_precond_hybrid.py`:**
-- Now extracts **input windows** from test data
-- Creates **full base context** by concatenating: input window + base predictions
-- Reversal function takes `input_length` parameter
-- Uses correct indexing: `full_base_context[input_len + t - i - 1]` for context
-
-### Key Insight
-
-Preconditioning is a **convolution across the full sequence** (input + predictions). The reversal must mirror this - it needs the complete context, not just the prediction window. The first `n` prediction timesteps are most sensitive because they depend entirely on the input window for context.
-
-### Impact
-
-- ✅ **`uni2ts/cli/eval_precond_gt.py`** - FIXED (2025-11-18)
-- ✅ **`uni2ts/cli/eval_precond_hybrid.py`** - FIXED (2025-11-18)
-- ✅ **`eval/comprehensive_evaluation.py`** - Integrated with fixed scripts
-
-**See:** `REVERSAL_CONTEXT_BUG_FIX.md` for complete technical details, verification, and code comparisons.
-
-**Action Required:** Re-run all hybrid and GT context evaluations with the fixed scripts. Previous results from these evaluation modes are **invalid**.
-
----
-
 ## Repository Overview
 
-This is a research repository for **Universal Sequence Preconditioning** applied to time series forecasting, built on top of the **Uni2TS** framework (Salesforce's universal time series forecasting library). The research implements polynomial preconditioning (Chebyshev and Legendre) to improve time series model training by transforming the input space.
+Research repository for time series forecasting built on **Uni2TS** (Salesforce's universal time series forecasting library).
 
-**Key Research Papers**:
-1. Marsden, A., & Hazan, E. (2025). Universal Sequence Preconditioning. arXiv:2502.06545.
-2. Woo, G., et al. (2024). Unified Training of Universal Time Series Forecasting Transformers. ICML 2024.
+**Key Research Paper**: Woo et al. (2024). Unified Training of Universal Time Series Forecasting Transformers. ICML 2024
 
-**Base Framework**: Uni2TS - PyTorch/Lightning-based library for pre-training, fine-tuning, and evaluation of Universal Time Series Transformers (Moirai models).
+## Environment Setup (Princeton PLI Cluster)
 
-## Research Papers Summary
-
-### Paper 1: Universal Sequence Preconditioning (Marsden & Hazan, 2025)
-
-**Core Contribution**: Introduces a universal preconditioning method for sequential prediction that convolves input sequences with coefficients from orthogonal polynomials (Chebyshev or Legendre).
-
-**Key Concepts**:
-- **Preconditioning Formula**: `ỹₜ = yₜ + Σᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ` where coefficients `cᵢ` come from n-th degree monic Chebyshev/Legendre polynomial (in power basis)
-- **Reversal Formula**: `yₜ = ỹₜ - Σᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ` (subtraction reverses the addition)
-- **Intuition**: For linear dynamical systems (LDS), preconditioning applies a polynomial to the hidden transition matrix, potentially shrinking the spectral domain and making the system "easier to learn"
-- **Universal Property**: Coefficients are fixed (not learned) and work across different systems without knowing the specific system parameters
-- **Differencing Example**: For n=2 with Chebyshev, c₁≈0, c₂=1. True differencing requires custom coefficients c₁=-1, c₂=0
-
-**Theoretical Results**:
-- First dimension-independent sublinear regret bounds for marginally stable, asymmetric linear dynamical systems
-- Two main algorithms: (1) USP + Regression achieving O(T^(-2/13)) regret, (2) USP + Spectral Filtering achieving O(T^(-3/13)) regret
-- Works for systems with eigenvalues having imaginary parts bounded by O(1/log T)
-- Recommended polynomial degree: 2-10 (coefficients grow exponentially as 2^(0.3n), limiting practical degree)
-
-**Empirical Validation**:
-- Tested on synthetic LDS, nonlinear dynamical systems, deep RNNs, and real ETTh1 dataset
-- Consistent improvements across regression, spectral filtering, and neural network predictors
-- Chebyshev and Legendre polynomials yield nearly identical performance
-- Best performance typically at degrees 5-10 before coefficient growth degrades results
-
-### Paper 2: Unified Training of Universal Time Series Forecasting Transformers (Woo et al., 2024)
-
-**Core Contribution**: Introduces MOIRAI (Masked EncOder-based UnIveRsAl TIme Series Forecasting Transformer), a foundation model for universal time series forecasting trained on the large-scale LOTSA dataset.
-
-**Key Architectural Innovations**:
-1. **Multi Patch Size Projection**: Different patch sizes (8, 16, 32, 64, 128) for different frequencies
-   - Larger patches for high-frequency data (efficient processing)
-   - Smaller patches for low-frequency data (preserve temporal detail)
-
-2. **Any-variate Attention**: Handles arbitrary number of variates by "flattening" multivariate series
-   - Uses Rotary Position Embeddings (RoPE) for time encoding
-   - Learned binary attention biases for variate disambiguation
-   - Ensures permutation equivariance w.r.t. variate ordering
-
-3. **Mixture Distribution Output**: Flexible probabilistic forecasting
-   - Components: Student's t, Negative Binomial, Log-Normal, Low-variance Normal
-   - Adapts to different data characteristics (symmetric, count, skewed, deterministic)
-
-**LOTSA Dataset**: 27+ billion observations across 9 domains, 105 datasets
-- Domains: Energy, Transport, Climate, CloudOps, Web, Sales, Nature, Economics/Finance, Healthcare
-- Frequencies: Yearly to second-level (8 frequency categories)
-- 59% energy domain, 72% hourly frequency, 25% minute-level
-
-**Training Methodology**:
-- Optimize mixture distribution log-likelihood
-- Random context/prediction length sampling during training
-- Sequence packing for efficiency (reduces padding from 61% to 0.38%)
-- Three model sizes: Small (14M params), Base (91M), Large (311M)
-
-**Empirical Results**:
-- Strong zero-shot performance competitive with full-shot baselines
-- Outperforms all baselines on Monash benchmark (in-distribution)
-- Competitive on LSF benchmark and probabilistic forecasting tasks (out-of-distribution)
-
-## Research Experiment Design
-
-### Primary Research Question
-**Can Universal Sequence Preconditioning improve the Moirai-Small model's forecasting performance?**
-
-### Experimental Approach
-
-This repository implements a controlled comparison experiment:
-
-**1. Baseline Training** (no preconditioning):
-- Pre-train Moirai-Small from scratch on LOTSA dataset
-- Standard architecture without any input transformation
-- Script: `pretraining/pretrain_moirai.slurm`
-
-**2. Preconditioned Training** (with polynomial preconditioning):
-- Pre-train Moirai-Small with Chebyshev/Legendre preconditioning
-- Test multiple polynomial degrees (typically 2, 3, 5, 7, 10)
-- Script: `pretraining/pretrain_moirai_precond.slurm`
-- Variants: Test both Chebyshev and Legendre polynomials
-
-**3. Comprehensive Evaluation**:
-- Evaluate both baseline and preconditioned models on Monash benchmark datasets
-- Use standard evaluation (with reversal) for fair comparison in original space
-- Scripts: `eval/eval_comprehensive.slurm`
-- Metrics: MAE, MSE, CRPS, MSIS across 29+ datasets
-
-### Key Experimental Variables
-
-**Independent Variables**:
-- Preconditioning type: None (baseline), Chebyshev, Legendre
-- Polynomial degree: 2, 3, 5, 7, 10
-
-**Dependent Variables**:
-- Forecasting accuracy: MAE, MSE, CRPS, MSIS
-- Cross-domain generalization: Performance across different dataset domains
-- Different prediction horizons: 96, 192, 336, 720 timesteps
-
-**Controlled Variables**:
-- Model architecture: Moirai-Small (384 dim, 6 layers, 14M params)
-- Training data: LOTSA (27B observations)
-- Context length: 1000-2000 timesteps
-- Patch sizes: Adaptive (8, 16, 32, 64, 128 based on frequency)
-
-### Expected Outcomes
-
-Based on theoretical results from the Universal Sequence Preconditioning paper:
-- Preconditioning should reduce prediction error by transforming the learning space
-- Optimal polynomial degree likely in range 5-10 (balancing shrinkage vs coefficient growth)
-- Improvements should be consistent across diverse datasets if time series exhibit LDS-like properties
-- May see diminishing returns or degradation at very high degrees (>10) due to exponential coefficient growth
-
-## Environment Setup
-
-### HPC Cluster (Princeton PLI)
-
-This repository runs on Princeton's PLI cluster using SLURM.
-
-**Module loads** (required before every session):
 ```bash
+# Module loads (required every session)
 module load anaconda3/2024.6
 module load intel-mkl/2024.2
 module load cudatoolkit/12.6
-```
 
-**Virtual environment**:
-```bash
+# Activate virtual environment
 source uni2ts/venv/bin/activate
-```
 
-**Request GPU** (interactive):
-```bash
+# Request GPU (interactive)
 salloc --nodes=1 --ntasks=1 --mem=128G --time=03:01:00 --gres=gpu:1 --partition=pli --account=eladgroup
 ```
 
-**Environment variables** (configured in `uni2ts/.env`):
-- `LOTSA_V1_PATH`: Path to LOTSA (Large-scale Open Time Series Archive) dataset
+**Available accounts**: `eladgroup` (pli-low), `hazan_intern` (pli-low), `spectralssmtorch` (pli-low), `ehazan` (various gpu queues)
+
+**Environment variables** (in `uni2ts/.env`):
+- `LOTSA_V1_PATH`: Path to LOTSA dataset
 - `LSF_PATH`: Path to Long Sequence Forecasting benchmark datasets
 
 ## Core Architecture
 
-### Directory Structure
-
 ```
 .
 ├── uni2ts/                          # Main framework code
-│   ├── cli/                         # Command-line interface scripts
-│   │   ├── train.py                 # Training entry point (Hydra-based)
-│   │   ├── eval.py                  # Standard evaluation
-│   │   ├── eval_precond_space.py    # Evaluation in transformed space
-│   │   ├── eval_precond_hybrid.py   # Hybrid base+precond evaluation
-│   │   └── eval_precond_gt.py       # Ground truth context evaluation
+│   ├── cli/                         # Command-line scripts
+│   │   ├── train.py                 # Training (Hydra-based)
+│   │   └── eval.py                  # Standard evaluation
 │   ├── src/uni2ts/
-│   │   ├── model/                   # Model implementations
-│   │   │   ├── moirai/              # Moirai model (Salesforce foundation model)
-│   │   │   │   ├── pretrain.py      # Standard pretraining
-│   │   │   │   └── pretrain_patched.py  # Pretraining with patch-level preconditioning
-│   │   │   ├── moirai_moe/          # Moirai Mixture-of-Experts variant
-│   │   │   └── moirai2/             # Moirai 2.0
+│   │   ├── model/moirai/            # Moirai model implementations
 │   │   ├── module/                  # Neural network modules
-│   │   │   └── learnable_precondition.py  # Learnable preconditioning nn.Module
 │   │   ├── transform/               # Data transformations
-│   │   │   ├── precondition.py      # Static polynomial preconditioning
-│   │   │   └── patch_precondition.py # Patch-level preconditioning
-│   │   ├── data/                    # Data loading and processing
-│   │   ├── loss/                    # Loss functions
-│   │   └── distribution/            # Output distributions
-│   └── cli/conf/                    # Hydra configuration files
-│       ├── pretrain/                # Pre-training configs
-│       │   └── model/moirai_small_precond.yaml  # Precond-enabled model config
-│       ├── finetune/                # Fine-tuning configs
-│       └── eval/                    # Evaluation configs
+│   │   ├── data/                    # Data loading
+│   │   └── loss/                    # Loss functions
+│   └── cli/conf/                    # Hydra configurations
 ├── pretraining/                     # SLURM pretraining scripts
-│   ├── pretrain_moirai.slurm        # Baseline training
-│   ├── pretrain_moirai_precond.slurm # Standard preconditioned training
-│   └── pretrain_moirai_precond_d4_orig_loss_learnable.slurm  # Learnable precond
 ├── eval/                            # Evaluation scripts and SLURM jobs
-├── eval_confs/                      # Evaluation dataset configurations
-├── logs/                            # SLURM job outputs
-└── Time-Series-Library/             # External benchmark datasets
+├── eval_confs/                      # Dataset configurations (forecast_datasets.xlsx)
+└── logs/                            # SLURM job outputs
 ```
-
-### Key Components
-
-**Preconditioning Transform** (`uni2ts/src/uni2ts/transform/precondition.py`):
-- Implements Universal Sequence Preconditioning using polynomial convolutions (Algorithm 1 from paper)
-- **Forward Formula**: `ỹₜ = yₜ + Σᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ` (uses ADDITION as per Algorithm 1)
-- **Reverse Formula**: `yₜ = ỹₜ - Σᵢ₌₁ⁿ cᵢ · yₜ₋ᵢ` (uses SUBTRACTION to undo forward)
-- Coefficients `cᵢ` are from n-th degree **monic** polynomial in **power basis** (not Chebyshev/Legendre basis)
-- Supports Chebyshev and Legendre polynomials
-- Respects series boundaries (no cross-contamination between time series)
-- Recommended degree: 2-10 (paper suggests ≤10 for numerical stability)
-- **IMPORTANT**: Implementation fixed on 2025-11-17 to match paper (see CRITICAL_FIXES_PRECONDITIONING.md)
-
-**Learnable Preconditioning** (`uni2ts/src/uni2ts/module/learnable_precondition.py`):
-- nn.Module variant that makes preconditioning coefficients learnable parameters
-- Initializes coefficients from Chebyshev/Legendre polynomials (same as static transform)
-- Coefficients can be optimized during training via backpropagation
-- Enable with: `model.learnable_preconditioning=true`
-- Uses same forward/reverse formulas as static preconditioning
-
-**Patch-Level Preconditioning** (`uni2ts/src/uni2ts/transform/patch_precondition.py`):
-- Applies preconditioning AFTER patching instead of before
-- Input shape: `(..., time, patch_size)` - operates along time dimension
-- Each patch element treated as independent channel
-- Used by `MoiraiPretrainPatched` class in `uni2ts/src/uni2ts/model/moirai/pretrain_patched.py`
-
-**Model Architecture**:
-- Based on Transformer architecture with patching
-- Patch sizes: 8, 16, 32, 64, 128 (adaptive)
-- Context length: typically 1000-2000 timesteps
-- Output distributions: Mixture of StudentT, Normal, NegativeBinomial, LogNormal
-- Model variants: small (384 dim, 6 layers), base, large
-
-**Training Framework**:
-- PyTorch Lightning for training loop
-- Hydra for configuration management
-- Distributed training support via PyTorch DDP
-- Supports both pre-training (from scratch) and fine-tuning (from checkpoints)
 
 ## Common Commands
 
-### Core Experimental Scripts
+### Pre-training
 
-**Submit baseline pre-training** (no preconditioning):
 ```bash
-cd /scratch/gpfs/EHAZAN/jh1161
+# Standard pretraining
 sbatch pretraining/pretrain_moirai.slurm
-```
-
-**Submit preconditioned pre-training** (Chebyshev or Legendre):
-```bash
-cd /scratch/gpfs/EHAZAN/jh1161
-# Default: Chebyshev degree 5
-sbatch pretraining/pretrain_moirai_precond.slurm
-
-# Custom degree/type
-sbatch --export=PRECOND_TYPE=chebyshev,PRECOND_DEGREE=7 pretraining/pretrain_moirai_precond.slurm
-sbatch --export=PRECOND_TYPE=legendre,PRECOND_DEGREE=5 pretraining/pretrain_moirai_precond.slurm
-```
-
-**Submit comprehensive evaluation on Monash datasets**:
-```bash
-cd /scratch/gpfs/EHAZAN/jh1161
-# Evaluate baseline model
-sbatch --export=MODEL_PATH=/path/to/baseline_checkpoint.ckpt eval/eval_comprehensive.slurm
-
-# Evaluate preconditioned model
-sbatch --export=MODEL_PATH=/path/to/precond_checkpoint.ckpt,PRECOND_TYPE=chebyshev,PRECOND_DEGREE=5 eval/eval_precond_comprehensive.slurm
-```
-
-### Training (Interactive/Direct)
-
-**Baseline pre-training** (no preconditioning):
-```bash
-cd /scratch/gpfs/EHAZAN/jh1161/uni2ts
-python -m cli.train \
-  -cp conf/pretrain \
-  run_name=baseline_run \
-  model=moirai_small \
-  data=lotsa_v1_unweighted \
-  seed=0
-```
-
-**Pre-training with preconditioning** (using precond config):
-```bash
-python -m cli.train \
-  -cp conf/pretrain \
-  run_name=precond_chebyshev_d5 \
-  model=moirai_small_precond \
-  data=lotsa_v1_unweighted \
-  model.precondition_degree=5 \
-  seed=0
-```
-
-**Pre-training with learnable preconditioning and loss in original space**:
-```bash
-python -m cli.train \
-  -cp conf/pretrain \
-  run_name=precond_d4_learnable \
-  model=moirai_small_precond \
-  data=lotsa_v1_unweighted \
-  model.precondition_degree=4 \
-  model.learnable_preconditioning=true \
-  model.loss_in_original_space=true \
-  seed=0
-```
-
-**Fine-tuning** on a specific dataset:
-```bash
-python -m cli.train \
-  -cp conf/finetune \
-  exp_name=lsf_finetune \
-  run_name=etth1_run \
-  model=moirai_1.0_R_small \
-  model.patch_size=32 \
-  model.context_length=1000 \
-  model.prediction_length=96 \
-  data=etth1 \
-  val_data=etth1
 ```
 
 ### Evaluation
 
-**Standard evaluation** (with preconditioning reversal):
+```bash
+# Standard evaluation (official Moirai)
+sbatch eval/eval_comprehensive.slurm
+
+# Evaluate custom checkpoint
+sbatch --export=MODEL_PATH=/path/to/checkpoint.ckpt eval/eval_comprehensive.slurm
+```
+
+### Interactive Training/Evaluation
+
 ```bash
 cd /scratch/gpfs/EHAZAN/jh1161/uni2ts
-python -m cli.eval \
-  run_name=eval_standard \
-  model=moirai_1.0_R_small \
-  model.patch_size=32 \
-  model.context_length=1000 \
-  data=lsf_test \
-  data.dataset_name=ETTh1 \
-  data.prediction_length=96
+
+# Training
+python -m cli.train -cp conf/pretrain run_name=my_run model=moirai_small data=lotsa_v1_unweighted
+
+# Evaluation
+python -m cli.eval run_name=eval model=moirai_1.0_R_small model.patch_size=32 model.context_length=1000 data=lsf_test data.dataset_name=ETTh1 data.prediction_length=96
 ```
 
-**Preconditioned space evaluation** (no reversal):
+### SLURM Job Management
+
 ```bash
-python -m cli.eval_precond_space \
-  model=moirai_precond_ckpt_no_reverse \
-  model.checkpoint_path=/path/to/checkpoint.ckpt \
-  model.patch_size=32 \
-  model.context_length=1000 \
-  model.precondition_type=chebyshev \
-  model.precondition_degree=5 \
-  data=monash_cached \
-  data.dataset_name=m1_monthly
+squeue -u $USER              # Check queue
+tail -f logs/pretrain_*.out  # Monitor log
+scancel JOBID                # Cancel job
 ```
 
-**Hybrid evaluation** (base + preconditioned):
-```bash
-python -m cli.eval_precond_hybrid \
-  run_name=hybrid_eval \
-  base_model=moirai_1.1_R_small \
-  precond_model.checkpoint_path=/path/to/precond.ckpt \
-  precond_model.precondition_type=chebyshev \
-  precond_model.precondition_degree=5 \
-  precond_model.reverse_output=false \
-  data=monash_cached \
-  data.dataset_name=m1_monthly
-```
+## Key Configuration Parameters (Hydra)
 
-### SLURM Batch Jobs
-
-**Submit pre-training job**:
-```bash
-cd /scratch/gpfs/EHAZAN/jh1161
-sbatch pretrain_moirai_precond.slurm
-```
-
-**With custom parameters**:
-```bash
-sbatch --export=PRECOND_TYPE=legendre,PRECOND_DEGREE=7 pretrain_moirai_precond.slurm
-```
-
-**Submit comprehensive evaluation**:
-```bash
-sbatch --export=MODEL_PATH=/path/to/checkpoint.ckpt eval_precond_comprehensive.slurm
-```
-
-**Monitor jobs**:
-```bash
-squeue -u $USER                      # Check queue
-tail -f logs/pretrain_*.out          # Monitor log
-scancel JOBID                        # Cancel job
-```
-
-### Testing
-
-**Run single dataset test**:
-```bash
-cd /scratch/gpfs/EHAZAN/jh1161
-bash test_config_loading.sh
-```
-
-**Test preconditioning pipeline**:
-```bash
-python test_full_precond_pipeline.py
-```
-
-**Debug specific dataset**:
-```bash
-python debug_rideshare.py
-```
-
-## Evaluation Approaches
-
-This repository implements **four distinct evaluation methodologies**:
-
-### 1. Standard Evaluation (`cli/eval.py`)
-- Predictions in original space (with automatic reversal if model was trained with preconditioning)
-- Compare predictions vs original ground truth
-- Use for: end-user metrics, baseline comparisons
-
-### 2. Preconditioned Space Evaluation (`cli/eval_precond_space.py`)
-- Predictions in transformed/preconditioned space (no reversal)
-- Compare transformed predictions vs transformed ground truth
-- Use for: understanding model performance in training space, comparing preconditioned models fairly
-- Set `model.reverse_output=false` when loading model
-
-### 3. Hybrid Evaluation (`cli/eval_precond_hybrid.py`) ⚠️ FIXED 2025-11-18
-- Combines base model + preconditioned model predictions
-- Uses **median** of base model's stochastic predictions (+ input window) as stable context for reversal
-- Formula: `y_hybrid[t] = ỹ_precond[t] - Σ cᵢ · y_median[t-i]` (requires full context: input + median base predictions)
-- Use for: residual modeling, model ensembling, transfer learning
-- **Key design**: Median of 100 base samples provides stable context for ALL preconditioned samples (not stochastic pairing)
-- **Note**: Fixed critical bug where reversal was missing input window context
-
-### 4. Ground Truth Context Evaluation (`cli/eval_precond_gt.py`) ⚠️ FIXED 2025-11-18
-- Reverses preconditioned model predictions using ground truth as context
-- Uses ground truth (input + label) as perfect context for reversal
-- Formula: `y_gt_reversed[t] = ỹ_precond[t] - Σ cᵢ · y_gt[t-i]` (requires full context: input + ground truth)
-- Use for: upper bound analysis, understanding best-case performance with perfect context
-- **Note**: Should give identical metrics to preconditioned space evaluation (mathematical equivalence)
-
-**Comprehensive evaluation**: All four approaches have corresponding functionality in `eval/comprehensive_evaluation.py` that evaluates across 29+ benchmark datasets (M1, M3, M4, Tourism, NN5, Traffic, etc.) and automatically aggregates metrics into CSV files.
-
-## Dataset Configuration
-
-Evaluation datasets are configured in `eval_confs/forecast_datasets.xlsx` (read by `read_datasets_config.py`). This specifies:
-- Dataset display names
-- Internal dataset identifiers for Monash archive
-- Prediction lengths for each dataset
-- Evaluation order
-
-The datasets are cached locally in `/scratch/gpfs/EHAZAN/jh1161/uni2ts/data/lotsa_v1` to enable **offline mode** (no HuggingFace Hub access required during jobs).
-
-## Important Implementation Details
-
-### Preconditioning
-
-**Series Boundary Safety**: The preconditioning implementation correctly handles multiple time series in a batch:
-- Each series is processed independently
-- No coefficients are computed across series boundaries
-- Verified in `SERIES_BOUNDARY_VERIFICATION.md`
-
-**Reversal Modes**:
-- During training: preconditioning applied, no reversal
-- During standard evaluation: preconditioning applied, then reversed before computing metrics
-- During preconditioned space evaluation: preconditioning applied, no reversal
-- Control with `model.reverse_output=true/false` or `model.enable_preconditioning=false`
-
-### Configuration Management (Hydra)
-
-All scripts use Hydra for configuration:
-- Configurations in `uni2ts/cli/conf/`
-- Override with command-line args: `key=value`
-- Nested configs: `model.patch_size=32`
-- Multiple configs: `-cp conf/pretrain` (change config path)
-
-**Key config parameters**:
-- `model`: Model architecture (moirai_small, moirai_base, moirai_large, moirai_small_precond)
-- `data`: Training data source (lotsa_v1_unweighted, monash_cached, etc.)
-- `model.enable_preconditioning`: Enable/disable preconditioning
-- `model.precondition_type`: chebyshev or legendre
-- `model.precondition_degree`: 2-10 (recommended ≤10)
-- `model.learnable_preconditioning`: Make coefficients learnable (default: false)
-- `model.loss_in_original_space`: Compute loss after reversing preconditioning (default: false)
+- `model`: moirai_small, moirai_base, moirai_large
 - `model.patch_size`: 8, 16, 32, 64, or 128
 - `model.context_length`: Input context window size
 - `data.prediction_length`: Forecast horizon
 
-### Output Locations
+## Output Locations
 
-**Training outputs**: `uni2ts/outputs/<run_name>/`
-- Checkpoints: `*.ckpt` files
-- Logs: TensorBoard logs
-- Configs: Hydra config snapshots
+- **Training**: `uni2ts/outputs/<run_name>/` (checkpoints, TensorBoard logs)
+- **Evaluation**: `eval/outputs/` (metrics CSV, per-dataset outputs)
+- **SLURM logs**: `logs/`
 
-**Evaluation outputs**: `eval_*_results_*/`
-- Metrics CSV: aggregated metrics across datasets
-- Individual outputs: `<dataset>_output.txt` per dataset
+## Patch Size Configuration
 
-**SLURM logs**: `logs/`
-- Standard output: `*_<jobid>.out`
-- Error output: `*_<jobid>.err`
+Based on the Moirai paper (Appendix B.1), patch sizes are **frequency-dependent**:
 
-## Known Issues and Workarounds
+| Frequency | Patch Size |
+|-----------|------------|
+| Quarterly (Q) | 8 |
+| All others | 32 |
 
-**NaN handling**: Some datasets (e.g., Rideshare) contain NaN values in ground truth. Evaluation scripts filter these out and report status as `all_nan`, `partial_success`, or `failed` in results CSV.
+## Known Issues
 
-**Memory issues**: If OOM errors occur during evaluation, reduce `BATCH_SIZE` environment variable when submitting SLURM jobs.
+**NaN handling**: Some datasets (e.g., Rideshare) contain NaN values. Evaluation scripts handle these and report status in results CSV.
 
-**Offline mode**: All comprehensive evaluation scripts set `HF_HUB_OFFLINE=1` and `TRANSFORMERS_OFFLINE=1` to prevent network access. Ensure datasets are cached locally first.
+**Memory**: Reduce `BATCH_SIZE` env var for OOM errors.
 
-**Checkpoint loading**: Training checkpoints use Lightning format. For evaluation, specify `model.checkpoint_path=/path/to/file.ckpt`.
+**Offline mode**: Evaluation scripts set `HF_HUB_OFFLINE=1`. Ensure datasets are cached locally.
 
-## Parameter Sweeps
+## Documentation References
 
-Use `submit_precond_sweep.sh` to run systematic experiments across multiple preconditioning configurations:
-```bash
-cd /scratch/gpfs/EHAZAN/jh1161
-bash submit_precond_sweep.sh
-```
-
-This submits 7 jobs:
-- 1 baseline (no preconditioning)
-- 5 Chebyshev degrees (2, 3, 5, 7, 10)
-- 1 Legendre comparison (degree 5)
-
-Results can be compared across `uni2ts/outputs/precond_*_<timestamp>/` directories.
-
-## Documentation Index
-
-Key reference documents in repository:
-- `CRITICAL_FIXES_PRECONDITIONING.md`: Critical bug fixes from 2025-11-17 (coefficient extraction, sign errors)
-- `REVERSAL_CONTEXT_BUG_FIX.md`: ⚠️ **NEW** Critical bug fix from 2025-11-18 (reversal context issue)
-- `HYBRID_EVALUATION_README.md`: Hybrid evaluation methodology
-- `EVAL_PRECOND_README.md`: Preconditioned space evaluation
-- `QUICKSTART_PRECONDITIONING.md`: Quick reference for common preconditioning tasks
-- `README_SCRIPTS.md`: Overview of SLURM scripts
-- `SLURM_PRECONDITIONING_GUIDE.md`: Detailed SLURM usage guide
-- `uni2ts/README.md`: Upstream Uni2TS framework documentation
-- `PRECONDITIONING_QUICK_REFERENCE.md`: Mathematical formulation reference
-
-## Development Workflow
-
-1. **Experiment setup**: Modify or create SLURM scripts for your configuration
-2. **Submit job**: `sbatch <script>.slurm` with appropriate environment variables
-3. **Monitor**: Use `squeue -u $USER` and `tail -f logs/...` to track progress
-4. **Analyze results**: Check `uni2ts/outputs/` for training results or `eval_*_results_*/` for evaluation metrics
-5. **Compare**: Use plotting scripts like `plot_training_comparison.py` or analyze CSV metrics
-6. **Iterate**: Adjust hyperparameters and resubmit
-
-## Testing Before Large Runs
-
-Always test on a single dataset before submitting comprehensive evaluation jobs:
-```bash
-# Test single dataset interactively
-cd /scratch/gpfs/EHAZAN/jh1161/uni2ts
-python -m cli.eval_precond_space \
-  model=moirai_precond_ckpt_no_reverse \
-  model.checkpoint_path=/path/to/checkpoint.ckpt \
-  model.precondition_type=chebyshev \
-  model.precondition_degree=5 \
-  data=monash_cached \
-  data.dataset_name=m1_monthly
-```
-
-If successful, then submit the comprehensive SLURM job.
-
-## Important Notes and Known Issues
-
-### Critical Implementation Fixes (2025-11-17)
-
-**Two critical bugs were discovered and fixed on 2025-11-17:**
-
-1. **Bug: Incorrect Coefficient Extraction**
-   - **Problem**: Code extracted coefficients in Chebyshev/Legendre basis instead of power (monomial) basis
-   - **Impact**: For degree > 2, coefficients were completely wrong (e.g., `[0,0,0,0,1]` instead of `[0.3125, 0, -1.25, 0, 1]` for degree 5)
-   - **Fix**: Now properly converts to power basis and makes polynomial monic
-   - **Location**: `uni2ts/src/uni2ts/transform/precondition.py:93-147`
-
-2. **Bug: Wrong Sign in Convolution**
-   - **Problem**: Forward preconditioning used subtraction when Algorithm 1 specifies addition
-   - **Impact**: Transformation was opposite of paper specification
-   - **Fix**: Changed from `result = sequence - weighted_sum` to `result = sequence + weighted_sum`
-   - **Reverse also fixed**: Changed from addition to subtraction
-   - **Location**: `uni2ts/src/uni2ts/transform/precondition.py:226-276` and `uni2ts/cli/eval_precond_hybrid.py:98-128`
-
-**Verification:**
-- Differencing test: For n=2, c₁=-1: `y_t + (-1)·y_{t-1} = y_t - y_{t-1}` ✓
-- Coefficients match paper's monic polynomials in power basis ✓
-- Forward/reverse are proper inverses ✓
-- Satisfies Lemma 3.2 coefficient bound: max|cᵢ| ≤ 2^(0.3n) ✓
-
-**Action Required:**
-- **All models trained with preconditioning before 2025-11-17 must be retrained**
-- Previous experimental results are not valid
-- Baseline models (no preconditioning) are unaffected
-
-**Documentation:**
-- See `CRITICAL_FIXES_PRECONDITIONING.md` for detailed technical analysis
-- Test scripts: `test_fixed_coefficients.py`, `test_forward_reverse_correctness.py`
-
-### Reversal Context Bug Fix (2025-11-18)
-
-**Critical bug discovered and fixed in hybrid and GT context evaluation scripts:**
-
-**Bug: Incomplete Context for Reversal**
-- **Problem**: Both `eval_precond_hybrid.py` and `eval_precond_gt.py` only used the prediction window for reversal context
-- **Impact**: Missing input window context caused mathematically incorrect reversal
-  - Example: M3 Monthly GT context evaluation showed MSE of 9.28M instead of correct 2.08M (4.5x error!)
-  - GT context performed worse than precond space, which is impossible with perfect context
-- **Root Cause**: Reversal formula `y[t] = ỹ[t] - Σ cᵢ · y_context[t-i]` needs context from **before** prediction starts
-  - For t=0 with degree=5, needs positions [-5, -4, -3, -2, -1] from the **input window**
-  - Only using prediction window means these positions are missing!
-
-**Fix: Extract and Use Full Context**
-- `eval_precond_gt.py`: Now extracts input + label, passes `input_length` to reversal
-- `eval_precond_hybrid.py`: Now extracts input windows, concatenates with base predictions
-- Both use correct indexing: `context[input_len + t - i - 1]`
-
-**Additional Improvement (Hybrid Only)**:
-- `eval_precond_hybrid.py` now uses **median** of base model's stochastic samples as context
-- Previous: Paired each precond sample with different base sample (unstable stochastic pairing)
-- Current: Single median trajectory provides stable context for ALL preconditioned samples
-- Benefit: More stable reversal, reduced variance, uses "best estimate" from base model
-
-**Verification:**
-- GT context metrics now **exactly match** precond space metrics (mathematical equivalence confirmed)
-- M3 Monthly: MSE 2.08M (correct) vs previous 9.28M (wrong)
-
-**Action Required:**
-- **Re-run all hybrid and GT context evaluations** - previous results are invalid
-- Preconditioned space and standard evaluations are unaffected
-
-**Documentation:**
-- See `REVERSAL_CONTEXT_BUG_FIX.md` for complete technical details and code comparisons
-
-### Parallel Evaluation (NEW)
-
-To speed up comprehensive evaluations on GPU nodes:
-- Use `eval/comprehensive_evaluation_parallel.py` instead of sequential version
-- Supports multiprocessing with configurable worker count
-- Example: `--num-workers 8` for 8 parallel dataset evaluations
-- Expected speedup: 10-12x on GPU nodes with multiple cores
-- See `eval/PARALLEL_EVALUATION_README.md` for details
+- `eval/README.md`: Evaluation script details
+- `uni2ts/README.md`: Upstream Uni2TS documentation
