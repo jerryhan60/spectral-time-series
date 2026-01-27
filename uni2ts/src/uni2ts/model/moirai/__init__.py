@@ -15,15 +15,16 @@
 
 from .finetune import MoiraiFinetune
 from .forecast import MoiraiForecast
-from .forecast_precond import MoiraiForecastPrecond, create_precond_forecast_from_checkpoint
 from .module import MoiraiModule
 from .pretrain import MoiraiPretrain
+from .module_hybrid import MoiraiHybridModule
+from .pretrain_hybrid import MoiraiHybridPretrain
 
 __all__ = [
     "MoiraiFinetune",
     "MoiraiForecast",
-    "MoiraiForecastPrecond",
-    "create_precond_forecast_from_checkpoint",
     "MoiraiModule",
     "MoiraiPretrain",
+    "MoiraiHybridModule",
+    "MoiraiHybridPretrain",
 ]

@@ -1,4 +1,7 @@
-_target_: uni2ts.model.moirai.MoiraiPretrain
+# Hybrid STU-MOIRAI Small Configuration
+# Uses alternating STU and Attention layers for efficient pretraining
+
+_target_: uni2ts.model.moirai.pretrain_hybrid.MoiraiHybridPretrain
 module_kwargs:
   _target_: builtins.dict
   distr_output:
@@ -15,6 +18,12 @@ module_kwargs:
   attn_dropout_p: 0.0
   dropout_p: 0.0
   scaling: true
+  # STU-specific configuration
+  stu_layer_pattern: alternating  # alternating, first_half, last_half, stu_only
+  num_eigh: 24  # Number of spectral filters
+  use_hankel_L: false  # Use single-branch (faster) vs dual-branch
+  use_approx: true  # Use approximation mode (50x fewer params)
+  use_variate_aware_stu: false  # Add variate-aware gating
 min_patches: 2
 min_mask_ratio: 0.15
 max_mask_ratio: 0.5

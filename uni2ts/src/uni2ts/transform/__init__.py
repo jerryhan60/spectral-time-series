@@ -36,6 +36,7 @@ from .reshape import (
     Transpose,
 )
 from .task import EvalMaskedPrediction, ExtendMask, MaskedPrediction
+from .precondition import PolynomialPrecondition, ReversePrecondition
 
 __all__ = [
     "AddObservedMask",
@@ -73,4 +74,6 @@ __all__ = [
     "Transformation",
     "Transpose",
     "FinetunePatchCrop",
+    "PolynomialPrecondition",
+    "ReversePrecondition",
 ]

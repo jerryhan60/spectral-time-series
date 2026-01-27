@@ -1,7 +1,5 @@
+# Small test dataset for quick pretraining tests
+# Uses a subset of GluonTS datasets
 _target_: uni2ts.data.builder.lotsa_v1.GluonTSDatasetBuilder
 datasets:
-  - cif_2016_6
-  - cif_2016_12
-  - bitcoin_with_missing
-  - car_parts_with_missing
-  - australian_electricity_demand
+  - australian_electricity_demand  # Single dataset for quick testing

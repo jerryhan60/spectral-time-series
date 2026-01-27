@@ -2,6 +2,72 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## General behavioral guidelines
+Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
+
+**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+
+## 1. Think Before Coding
+
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
+
+Before implementing:
+- State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them - don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
+
+## 2. Simplicity First
+
+**Minimum code that solves the problem. Nothing speculative.**
+
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
+
+Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+## 3. Surgical Changes
+
+**Touch only what you must. Clean up only your own mess.**
+
+When editing existing code:
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it - don't delete it.
+
+When your changes create orphans:
+- Remove imports/variables/functions that YOUR changes made unused.
+- Don't remove pre-existing dead code unless asked.
+
+The test: Every changed line should trace directly to the user's request.
+
+## 4. Goal-Driven Execution
+
+**Define success criteria. Loop until verified.**
+
+Transform tasks into verifiable goals:
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- "Refactor X" → "Ensure tests pass before and after"
+
+For multi-step tasks, state a brief plan:
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
+```
+
+Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+
+---
+
+**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+
+
 ## Repository Overview
 
 Research repository for time series forecasting built on **Uni2TS** (Salesforce's universal time series forecasting library).
@@ -20,7 +86,10 @@ module load cudatoolkit/12.6
 source uni2ts/venv/bin/activate
 
 # Request GPU (interactive)
+Use either one of these depending on which is full / not
 salloc --nodes=1 --ntasks=1 --mem=128G --time=03:01:00 --gres=gpu:1 --partition=pli --account=eladgroup
+salloc --nodes=1 --ntasks=1 --mem=128G --time=03:01:00 --gres=gpu:1 --partition=della --account=ehazan
+salloc --nodes=1 --ntasks=1 --mem=128G --time=03:01:00 --gres=gpu:1 --partition=ailab --account=ehazan
 ```
 
 **Available accounts**: `eladgroup` (pli-low), `hazan_intern` (pli-low), `spectralssmtorch` (pli-low), `ehazan` (various gpu queues)
@@ -28,6 +97,7 @@ salloc --nodes=1 --ntasks=1 --mem=128G --time=03:01:00 --gres=gpu:1 --partition=
 **Environment variables** (in `uni2ts/.env`):
 - `LOTSA_V1_PATH`: Path to LOTSA dataset
 - `LSF_PATH`: Path to Long Sequence Forecasting benchmark datasets
+- `GIFT_EVAL`: Path to GIFT-Eval benchmark datasets
 
 ## Core Architecture
 
@@ -119,7 +189,159 @@ Based on the Moirai paper (Appendix B.1), patch sizes are **frequency-dependent*
 
 **Offline mode**: Evaluation scripts set `HF_HUB_OFFLINE=1`. Ensure datasets are cached locally.
 
+## Flash STU (Spectral Transform Units)
+
+Location: `/scratch/gpfs/EHAZAN/jh1161/flash-stu-2/`
+
+**Paper**: Flash STU: Fast Spectral Transform Units (arXiv:2409.10489)
+
+### Installation Status
+
+- **flash-stu**: Installed (editable mode)
+- **flash-attn**: Installed
+- **flash-fft-conv**: NOT installed (compilation issues on cluster)
+
+### Required Configuration
+
+Since Flash FFT Conv is not installed, always use these settings:
+
+```python
+from flash_stu import FlashSTU, FlashSTUConfig
+
+config = FlashSTUConfig(
+    n_embd=512,
+    n_layers=12,
+    n_heads=8,
+    seq_len=2048,
+    vocab_size=50257,
+    use_flash_fft=False,  # REQUIRED: Flash FFT Conv not installed
+    use_attn=True,        # Hybrid STU + Attention (flash-attn installed)
+)
+
+model = FlashSTU(config).cuda()
+```
+
+### STU-Only Mode (No Attention)
+
+```python
+config = FlashSTUConfig(
+    n_embd=512,
+    n_layers=12,
+    n_heads=8,
+    seq_len=2048,
+    vocab_size=50257,
+    use_flash_fft=False,
+    use_attn=False,       # Pure STU, no attention layers
+    use_cache=False,      # Disable KV cache for STU-only
+)
+```
+
+### Key Parameters
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `n_embd` | Hidden dimension | 1536 |
+| `n_layers` | Total layers (STU + Attention alternate) | 26 |
+| `num_eigh` | Number of spectral filters | 24 |
+| `use_flash_fft` | Use Flash FFT Conv (set False) | True |
+| `use_attn` | Include attention layers | True |
+| `use_approx` | Approx mode (~50x fewer STU params) | True |
+
+### Installing Flash FFT Conv (Future)
+
+Requires GPU node with internet access. Clone repo on login node first:
+```bash
+# Login node:
+git clone https://github.com/HazyResearch/flash-fft-conv.git /scratch/gpfs/EHAZAN/jh1161/flash-fft-conv
+
+# GPU node:
+MAX_JOBS=4 pip install /scratch/gpfs/EHAZAN/jh1161/flash-fft-conv/csrc/flashfftconv
+pip install /scratch/gpfs/EHAZAN/jh1161/flash-fft-conv
+```
+
+## GIFT-Eval Benchmark
+
+Location: `/scratch/gpfs/EHAZAN/jh1161/gifteval/`
+
+**Paper**: GIFT-Eval: A Benchmark For General Time Series Forecasting Model Evaluation (arXiv:2410.10393)
+
+### Initial Setup (run ONCE on login node)
+
+```bash
+bash /scratch/gpfs/EHAZAN/jh1161/gifteval/setup_gifteval.sh
+```
+
+### Quick Evaluation (~30 min, 8 datasets)
+
+```bash
+# Evaluate a checkpoint
+sbatch --export=CHECKPOINT=/path/to/ckpt.ckpt /scratch/gpfs/EHAZAN/jh1161/gifteval/eval_gifteval_quick.slurm
+
+# Or use HuggingFace model
+sbatch --export=MODEL=moirai-1.1-R-small /scratch/gpfs/EHAZAN/jh1161/gifteval/eval_gifteval_quick.slurm
+```
+
+### Full Benchmark (~8-12 hours, 98 configurations)
+
+```bash
+sbatch --export=CHECKPOINT=/path/to/ckpt.ckpt /scratch/gpfs/EHAZAN/jh1161/gifteval/eval_gifteval.slurm
+```
+
+### Interactive (from GPU node)
+
+```bash
+./gifteval/eval_interactive.sh /path/to/checkpoint.ckpt        # Quick
+./gifteval/eval_interactive.sh /path/to/checkpoint.ckpt --full # Full
+```
+
+### Output
+
+Results saved to `/scratch/gpfs/EHAZAN/jh1161/gifteval/results/`:
+- `gifteval_results_<model>_<timestamp>.csv` - All metrics
+- `all_results_<model>.csv` - Leaderboard format
+
 ## Documentation References
 
 - `eval/README.md`: Evaluation script details
 - `uni2ts/README.md`: Upstream Uni2TS documentation
+- `flash-stu-2/README.md`: Flash STU documentation
+- `gifteval/README.md`: GIFT-Eval benchmark setup and usage
+
+
+## For slurm jobs
+Maintain a log of inputs and outputs for every slurm job submitted.
+After submitting every slurm job, update this log so that it is loaded into context for the next conversation.
+This log should also store the paths of every model trained so far and their configs for easy reference.
+You might wish to store the file path here as well.
+
+---
+
+## SLURM Job Log
+
+### Trained Models
+
+| Model | Run Date | Epochs | Checkpoint Path | Config |
+|-------|----------|--------|-----------------|--------|
+| Baseline MOIRAI Small (prev) | 2026-01-25 | 100 | `uni2ts/outputs/pretrain/moirai_small/lotsa_v1_unweighted/moirai_small_baseline_20260125_164605/checkpoints/epoch_epoch_0099.ckpt` | moirai_small, lotsa_v1_unweighted |
+| STU-MOIRAI Small (prev) | 2026-01-25 | 100 | `uni2ts/outputs/pretrain/moirai_small_stu/lotsa_v1_unweighted/moirai_small_stu_20260125_164605/checkpoints/epoch_epoch_0099.ckpt` | moirai_small_stu, lotsa_v1_unweighted |
+| Baseline MOIRAI Small (new) | 2026-01-26 | 1000 | `uni2ts/outputs/pretrain/moirai_small/lotsa_v1_unweighted/moirai_small_baseline_20260126_163112/checkpoints/epoch_epoch_0999.ckpt` | moirai_small, lotsa_v1_unweighted, 100 batches/epoch, bs=128 |
+| STU-MOIRAI Small (new) | 2026-01-26 | 519+ (running) | `uni2ts/outputs/pretrain/moirai_small_stu/lotsa_v1_unweighted/moirai_small_stu_20260126_163112/checkpoints/epoch_epoch_0519.ckpt` | moirai_small_stu, lotsa_v1_unweighted, 100 batches/epoch, bs=128 |
+
+### Active/Recent Jobs
+
+| Job ID | Name | Type | Status | Submitted | Checkpoint/Input | Output Path |
+|--------|------|------|--------|-----------|------------------|-------------|
+| 4184963 | pretrain_stu | Pretraining | RUNNING | 2026-01-26 16:31 | moirai_small_stu config | `uni2ts/logs/pretrain_stu_4184963.out` |
+| 4184956 | pretrain_baseline | Pretraining | COMPLETED | 2026-01-26 16:31 | moirai_small config | `uni2ts/logs/pretrain_baseline_4184956.out` |
+| 4228811 | gifteval_baseline_e99 | GIFT-Eval Quick | PENDING (pli) | 2026-01-27 | epoch_epoch_0099.ckpt (baseline prev) | `logs/gifteval_quick_4228811.out` |
+| 4228812 | gifteval_stu_e99 | GIFT-Eval Quick | PENDING (pli) | 2026-01-27 | epoch_epoch_0099.ckpt (STU prev) | `logs/gifteval_quick_4228812.out` |
+| 4228813 | gifteval_baseline_e999 | GIFT-Eval Quick | PENDING (pli) | 2026-01-27 | epoch_epoch_0999.ckpt (baseline new) | `logs/gifteval_quick_4228813.out` |
+| 4228814 | gifteval_stu_e519 | GIFT-Eval Quick | PENDING (pli) | 2026-01-27 | epoch_epoch_0519.ckpt (STU new) | `logs/gifteval_quick_4228814.out` |
+| 4228872 | gifteval_baseline_e99 | GIFT-Eval Quick | PENDING (ailab) | 2026-01-27 | epoch_epoch_0099.ckpt (baseline prev) | `logs/gifteval_quick_4228872.out` |
+| 4228873 | gifteval_stu_e99 | GIFT-Eval Quick | PENDING (ailab) | 2026-01-27 | epoch_epoch_0099.ckpt (STU prev) | `logs/gifteval_quick_4228873.out` |
+| 4228875 | gifteval_baseline_e999 | GIFT-Eval Quick | PENDING (ailab) | 2026-01-27 | epoch_epoch_0999.ckpt (baseline new) | `logs/gifteval_quick_4228875.out` |
+| 4228876 | gifteval_stu_e519 | GIFT-Eval Quick | PENDING (ailab) | 2026-01-27 | epoch_epoch_0519.ckpt (STU new) | `logs/gifteval_quick_4228876.out` |
+
+### Results (to be updated)
+
+Results will be saved to `/scratch/gpfs/EHAZAN/jh1161/gifteval/results/`
