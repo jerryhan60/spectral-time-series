@@ -156,6 +156,131 @@ class STUEncoderLayer(nn.Module):
         return self.dropout(x)
 
 
+class SandwichedSTUEncoderLayer(nn.Module):
+    """
+    STU encoder layer with MLP sandwiching for increased expressiveness.
+
+    Based on Flash STU paper: wraps STU with up/down projections allowing
+    spectral convolution to operate in a higher-dimensional space.
+
+    Architecture:
+        Input -> Norm -> UpProject -> Activation -> STU -> DownProject -> Residual
+                      -> Norm -> FFN -> Residual -> Output
+
+    Args:
+        d_model: Model dimension
+        max_seq_len: Maximum sequence length for spectral filters
+        sandwich_hidden_dim: Hidden dimension for sandwich MLP (default: 4*d_model)
+        num_eigh: Number of spectral filters (default: 24)
+        use_hankel_L: Use single-branch Hankel-L formulation
+        use_approx: Use approximation mode (50x fewer params)
+        pre_norm: Use pre-normalization (default: True)
+        dropout_p: Dropout probability
+        norm_layer: Normalization layer class
+        activation: Activation function
+        use_glu: Use gated linear unit in FFN
+        d_ff: FFN hidden dimension
+
+    Example:
+        >>> layer = SandwichedSTUEncoderLayer(d_model=384, max_seq_len=512, sandwich_hidden_dim=1536)
+        >>> x = torch.randn(2, 256, 384)
+        >>> y = layer(x)
+    """
+
+    def __init__(
+        self,
+        d_model: int,
+        max_seq_len: int,
+        sandwich_hidden_dim: Optional[int] = None,
+        num_eigh: int = 24,
+        use_hankel_L: bool = False,
+        use_approx: bool = True,
+        pre_norm: bool = True,
+        dropout_p: float = 0.0,
+        norm_layer: Callable[[int], nn.Module] = RMSNorm,
+        activation: Callable[[torch.Tensor], torch.Tensor] = F.silu,
+        use_glu: bool = True,
+        d_ff: Optional[int] = None,
+    ):
+        super().__init__()
+        self.pre_norm = pre_norm
+        self.dropout_p = dropout_p
+        self.d_model = d_model
+
+        # Sandwich hidden dimension (default: 4x d_model like typical FFN)
+        self.sandwich_hidden_dim = sandwich_hidden_dim or (4 * d_model)
+
+        # Sandwich MLP: up-project
+        self.sandwich_up = nn.Linear(d_model, self.sandwich_hidden_dim, bias=False)
+        self.sandwich_act = nn.SiLU()
+
+        # STU operates in the higher-dimensional space
+        self.stu = PackedSTU(
+            d_model=self.sandwich_hidden_dim,  # STU in expanded space
+            max_seq_len=max_seq_len,
+            num_eigh=num_eigh,
+            use_hankel_L=use_hankel_L,
+            use_approx=use_approx,
+        )
+
+        # Sandwich MLP: down-project
+        self.sandwich_down = nn.Linear(self.sandwich_hidden_dim, d_model, bias=False)
+
+        # Feed-forward network
+        ffn_class = GatedLinearUnitFeedForward if use_glu else FeedForward
+        self.ffn = ffn_class(
+            in_dim=d_model,
+            hidden_dim=d_ff,
+            out_dim=None,
+            activation=activation,
+            bias=False,
+            ffn_dropout_p=dropout_p,
+        )
+
+        # Normalization layers
+        self.norm1 = norm_layer(d_model) if norm_layer else nn.Identity()
+        self.norm2 = norm_layer(d_model) if norm_layer else nn.Identity()
+
+        # Dropout
+        self.dropout = nn.Dropout(dropout_p)
+
+    def forward(
+        self,
+        x: Float[torch.Tensor, "*batch time_len dim"],
+        attn_mask: Optional[Bool[torch.Tensor, "*batch time_len time_len"]] = None,
+        var_id: Optional[Int[torch.Tensor, "*batch time_len"]] = None,
+        time_id: Optional[Int[torch.Tensor, "*batch time_len"]] = None,
+        sample_id: Optional[Int[torch.Tensor, "*batch time_len"]] = None,
+        centroid: Optional[Float[torch.Tensor, "expert dim"]] = None,
+    ) -> Float[torch.Tensor, "*batch time_len dim"]:
+        """Forward pass with sandwiched STU."""
+        if self.pre_norm:
+            x = x + self._sandwiched_stu_block(self.norm1(x), sample_id)
+            x = x + self.ffn(self.norm2(x), centroid=centroid)
+        else:
+            x = self.norm1(x + self._sandwiched_stu_block(x, sample_id))
+            x = self.norm2(x + self.ffn(x, centroid=centroid))
+        return x
+
+    def _sandwiched_stu_block(
+        self,
+        x: Float[torch.Tensor, "*batch time_len dim"],
+        sample_id: Optional[Int[torch.Tensor, "*batch time_len"]] = None,
+    ) -> Float[torch.Tensor, "*batch time_len dim"]:
+        """Apply sandwiched STU: up-project -> activate -> STU -> down-project."""
+        # Up-project to higher dimension
+        h = self.sandwich_up(x)
+        h = self.sandwich_act(h)
+
+        # Apply STU in higher-dimensional space
+        h = self.stu(h, sample_id=sample_id)
+
+        # Down-project back to d_model
+        h = self.sandwich_down(h)
+
+        return self.dropout(h)
+
+
 class VariateAwareSTUEncoderLayer(STUEncoderLayer):
     """
     STU encoder layer with variate-aware gating.

@@ -1,0 +1,2 @@
+dataset,prediction_length,baseline_mae,stu_mae
+monash_m3_monthly,18,766.9406032378229,753.1506036876556

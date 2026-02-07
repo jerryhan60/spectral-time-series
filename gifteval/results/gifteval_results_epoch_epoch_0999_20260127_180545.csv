@@ -1,0 +1,9 @@
+dataset,term,config_name,error
+m4_monthly,short,m4_monthly/?/short,tuple index out of range
+electricity/H,short,electricity/H/?/short,tuple index out of range
+hospital,short,hospital/?/short,tuple index out of range
+jena_weather/H,short,jena_weather/H/?/short,'MAE'
+ett1/H,short,ett1/H/?/short,'MAE'
+saugeenday/D,short,saugeenday/D/?/short,tuple index out of range
+covid_deaths,short,covid_deaths/?/short,tuple index out of range
+m4_hourly,short,m4_hourly/?/short,tuple index out of range

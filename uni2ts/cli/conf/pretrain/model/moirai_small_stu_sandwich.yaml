@@ -1,0 +1,41 @@
+# Hybrid STU-MOIRAI Small with MLP Sandwiching
+# Alternating STU/Attention layers with MLP sandwiching for increased expressiveness
+
+_target_: uni2ts.model.moirai.pretrain_hybrid.MoiraiHybridPretrain
+module_kwargs:
+  _target_: builtins.dict
+  distr_output:
+    _target_: uni2ts.distribution.MixtureOutput
+    components:
+      - _target_: uni2ts.distribution.StudentTOutput
+      - _target_: uni2ts.distribution.NormalFixedScaleOutput
+      - _target_: uni2ts.distribution.NegativeBinomialOutput
+      - _target_: uni2ts.distribution.LogNormalOutput
+  d_model: 384
+  num_layers: 6
+  patch_sizes: ${as_tuple:[8, 16, 32, 64, 128]}
+  max_seq_len: 512
+  attn_dropout_p: 0.0
+  dropout_p: 0.0
+  scaling: true
+  # Hybrid with sandwiching
+  stu_layer_pattern: alternating  # STU on even layers, attention on odd
+  num_eigh: 24
+  use_hankel_L: false
+  use_approx: true
+  use_variate_aware_stu: false
+  # MLP Sandwiching: up-project -> STU -> down-project (~15.7M params)
+  use_sandwiched_stu: true
+  sandwich_hidden_dim: 768  # 2 * d_model for higher-dim spectral conv
+min_patches: 2
+min_mask_ratio: 0.15
+max_mask_ratio: 0.5
+max_dim: 128
+loss_func:
+  _target_: uni2ts.loss.packed.PackedNLLLoss
+lr: 1e-3
+weight_decay: 1e-1
+beta1: 0.9
+beta2: 0.98
+num_training_steps: ${mul:${trainer.max_epochs},${train_dataloader.num_batches_per_epoch}}
+num_warmup_steps: 10_000

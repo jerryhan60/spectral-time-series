@@ -66,3 +66,11 @@ eval/outputs/
 
 # Archive
 archive/
+
+# External repos (cloned dependencies)
+flash-fft-conv/
+flash-stu-2/
+
+# GIFT-Eval data and external code
+gifteval/data/
+gifteval/gift-eval/

@@ -37,7 +37,7 @@ from .attention import GroupedQueryAttention
 from .ffn import FeedForward, GatedLinearUnitFeedForward
 from .norm import RMSNorm
 from .position import AttentionBias, QueryKeyProjection
-from .stu_layer import STUEncoderLayer, VariateAwareSTUEncoderLayer
+from .stu_layer import STUEncoderLayer, VariateAwareSTUEncoderLayer, SandwichedSTUEncoderLayer
 from .transformer import TransformerEncoderLayer
 
 
@@ -108,6 +108,8 @@ class HybridTransformerSTUEncoder(nn.Module):
         use_hankel_L: bool = False,
         use_approx: bool = True,
         use_variate_aware_stu: bool = False,
+        use_sandwiched_stu: bool = False,
+        sandwich_hidden_dim: Optional[int] = None,
         max_variates: int = 100,
         num_heads: Optional[int] = None,
         num_groups: Optional[int] = None,
@@ -185,8 +187,13 @@ class HybridTransformerSTUEncoder(nn.Module):
         # Factory for layer norm
         get_norm = partial(norm_layer, d_model) if norm_layer else lambda: nn.Identity()
 
-        # STU layer class
-        stu_layer_class = VariateAwareSTUEncoderLayer if use_variate_aware_stu else STUEncoderLayer
+        # STU layer class selection
+        if use_sandwiched_stu:
+            stu_layer_class = SandwichedSTUEncoderLayer
+        elif use_variate_aware_stu:
+            stu_layer_class = VariateAwareSTUEncoderLayer
+        else:
+            stu_layer_class = STUEncoderLayer
 
         # Build layers
         self.layers = nn.ModuleList()
@@ -213,6 +220,8 @@ class HybridTransformerSTUEncoder(nn.Module):
                 )
                 if use_variate_aware_stu:
                     stu_kwargs["max_variates"] = max_variates
+                if use_sandwiched_stu:
+                    stu_kwargs["sandwich_hidden_dim"] = sandwich_hidden_dim
                 self.layers.append(stu_layer_class(**stu_kwargs))
             else:
                 # Attention layer

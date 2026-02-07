@@ -107,6 +107,8 @@ class MoiraiHybridModule(
         use_hankel_L: bool = False,
         use_approx: bool = True,
         use_variate_aware_stu: bool = False,
+        use_sandwiched_stu: bool = False,
+        sandwich_hidden_dim: Optional[int] = None,
         max_variates: int = 100,
     ):
         super().__init__()
@@ -139,6 +141,8 @@ class MoiraiHybridModule(
             use_hankel_L=use_hankel_L,
             use_approx=use_approx,
             use_variate_aware_stu=use_variate_aware_stu,
+            use_sandwiched_stu=use_sandwiched_stu,
+            sandwich_hidden_dim=sandwich_hidden_dim,
             max_variates=max_variates,
             num_heads=None,  # Auto: d_model // 64
             pre_norm=True,

@@ -1,0 +1,9 @@
+dataset,term,config_name,error
+m4_monthly,short,m4_monthly/?/short,'MAE'
+electricity/H,short,electricity/H/?/short,'MAE'
+hospital,short,hospital/?/short,'MAE'
+jena_weather/H,short,jena_weather/H/?/short,'MAE'
+ett1/H,short,ett1/H/?/short,'MAE'
+saugeenday/D,short,saugeenday/D/?/short,'MAE'
+covid_deaths,short,covid_deaths/?/short,'MAE'
+m4_hourly,short,m4_hourly/?/short,'MAE'

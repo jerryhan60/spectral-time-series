@@ -124,8 +124,34 @@ salloc --nodes=1 --ntasks=1 --mem=128G --time=03:01:00 --gres=gpu:1 --partition=
 
 ### Pre-training
 
+**Best Practice**: Before submitting full training runs, always test on a small dataset first to catch configuration errors early:
+
 ```bash
-# Standard pretraining
+# Quick validation test (CPU, no GPU needed)
+python -m cli.train -cp conf/pretrain \
+  run_name=test_validation \
+  model=moirai_small_stu \
+  model.num_warmup_steps=1 \
+  data=test_small \
+  trainer.max_epochs=1 \
+  train_dataloader.num_batches_per_epoch=3 \
+  train_dataloader.batch_size=4 \
+  trainer.accelerator=cpu
+
+# Or interactive GPU test (faster, catches GPU-specific issues)
+salloc --partition=ailab --account=ehazan --gres=gpu:1 --time=00:30:00 --mem=32G
+python -m cli.train -cp conf/pretrain \
+  run_name=test_gpu \
+  model=moirai_small_stu \
+  model.num_warmup_steps=1 \
+  data=test_small \
+  trainer.max_epochs=2 \
+  train_dataloader.num_batches_per_epoch=5 \
+  train_dataloader.batch_size=8
+```
+
+```bash
+# Standard pretraining (after validation passes)
 sbatch pretraining/pretrain_moirai.slurm
 ```
 
@@ -308,40 +334,12 @@ Results saved to `/scratch/gpfs/EHAZAN/jh1161/gifteval/results/`:
 - `gifteval/README.md`: GIFT-Eval benchmark setup and usage
 
 
-## For slurm jobs
-Maintain a log of inputs and outputs for every slurm job submitted.
-After submitting every slurm job, update this log so that it is loaded into context for the next conversation.
-This log should also store the paths of every model trained so far and their configs for easy reference.
-You might wish to store the file path here as well.
-
----
-
 ## SLURM Job Log
 
-### Trained Models
+Job logs are maintained in a separate file: `/scratch/gpfs/EHAZAN/jh1161/slurm_job_log.md`
 
-| Model | Run Date | Epochs | Checkpoint Path | Config |
-|-------|----------|--------|-----------------|--------|
-| Baseline MOIRAI Small (prev) | 2026-01-25 | 100 | `uni2ts/outputs/pretrain/moirai_small/lotsa_v1_unweighted/moirai_small_baseline_20260125_164605/checkpoints/epoch_epoch_0099.ckpt` | moirai_small, lotsa_v1_unweighted |
-| STU-MOIRAI Small (prev) | 2026-01-25 | 100 | `uni2ts/outputs/pretrain/moirai_small_stu/lotsa_v1_unweighted/moirai_small_stu_20260125_164605/checkpoints/epoch_epoch_0099.ckpt` | moirai_small_stu, lotsa_v1_unweighted |
-| Baseline MOIRAI Small (new) | 2026-01-26 | 1000 | `uni2ts/outputs/pretrain/moirai_small/lotsa_v1_unweighted/moirai_small_baseline_20260126_163112/checkpoints/epoch_epoch_0999.ckpt` | moirai_small, lotsa_v1_unweighted, 100 batches/epoch, bs=128 |
-| STU-MOIRAI Small (new) | 2026-01-26 | 519+ (running) | `uni2ts/outputs/pretrain/moirai_small_stu/lotsa_v1_unweighted/moirai_small_stu_20260126_163112/checkpoints/epoch_epoch_0519.ckpt` | moirai_small_stu, lotsa_v1_unweighted, 100 batches/epoch, bs=128 |
-
-### Active/Recent Jobs
-
-| Job ID | Name | Type | Status | Submitted | Checkpoint/Input | Output Path |
-|--------|------|------|--------|-----------|------------------|-------------|
-| 4184963 | pretrain_stu | Pretraining | RUNNING | 2026-01-26 16:31 | moirai_small_stu config | `uni2ts/logs/pretrain_stu_4184963.out` |
-| 4184956 | pretrain_baseline | Pretraining | COMPLETED | 2026-01-26 16:31 | moirai_small config | `uni2ts/logs/pretrain_baseline_4184956.out` |
-| 4228811 | gifteval_baseline_e99 | GIFT-Eval Quick | PENDING (pli) | 2026-01-27 | epoch_epoch_0099.ckpt (baseline prev) | `logs/gifteval_quick_4228811.out` |
-| 4228812 | gifteval_stu_e99 | GIFT-Eval Quick | PENDING (pli) | 2026-01-27 | epoch_epoch_0099.ckpt (STU prev) | `logs/gifteval_quick_4228812.out` |
-| 4228813 | gifteval_baseline_e999 | GIFT-Eval Quick | PENDING (pli) | 2026-01-27 | epoch_epoch_0999.ckpt (baseline new) | `logs/gifteval_quick_4228813.out` |
-| 4228814 | gifteval_stu_e519 | GIFT-Eval Quick | PENDING (pli) | 2026-01-27 | epoch_epoch_0519.ckpt (STU new) | `logs/gifteval_quick_4228814.out` |
-| 4228872 | gifteval_baseline_e99 | GIFT-Eval Quick | PENDING (ailab) | 2026-01-27 | epoch_epoch_0099.ckpt (baseline prev) | `logs/gifteval_quick_4228872.out` |
-| 4228873 | gifteval_stu_e99 | GIFT-Eval Quick | PENDING (ailab) | 2026-01-27 | epoch_epoch_0099.ckpt (STU prev) | `logs/gifteval_quick_4228873.out` |
-| 4228875 | gifteval_baseline_e999 | GIFT-Eval Quick | PENDING (ailab) | 2026-01-27 | epoch_epoch_0999.ckpt (baseline new) | `logs/gifteval_quick_4228875.out` |
-| 4228876 | gifteval_stu_e519 | GIFT-Eval Quick | PENDING (ailab) | 2026-01-27 | epoch_epoch_0519.ckpt (STU new) | `logs/gifteval_quick_4228876.out` |
-
-### Results (to be updated)
-
-Results will be saved to `/scratch/gpfs/EHAZAN/jh1161/gifteval/results/`
+Update that file after submitting SLURM jobs to track:
+- Trained model checkpoints and configs
+- Active/recent jobs with status
+- Cancelled/failed jobs
+- Evaluation results
