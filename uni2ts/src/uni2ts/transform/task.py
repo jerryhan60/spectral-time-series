@@ -86,6 +86,63 @@ class MaskedPrediction(MapFuncMixin, CheckArrNDimMixin, Transformation):
 
 
 @dataclass
+class CausalPredictionMask(CheckArrNDimMixin, Transformation):
+    """
+    Create a prefix/suffix prediction mask for causal objectives.
+    """
+
+    prefix_ratio: float
+    target_field: str = "target"
+    prediction_mask_field: str = "prediction_mask"
+    expected_ndim: int = 2
+    min_prefix_tokens: int = 1
+    allow_short: bool = False
+
+    def __post_init__(self):
+        if not 0.0 < self.prefix_ratio < 1.0:
+            raise ValueError("prefix_ratio must be between 0 and 1")
+
+    def __call__(self, data_entry: dict[str, Any]) -> dict[str, Any]:
+        target = data_entry[self.target_field]
+        self.check_ndim(self.target_field, target, self.expected_ndim)
+        var, time = target.shape[:2]
+        if time < 2:
+            if not self.allow_short:
+                raise ValueError("sequence length must be at least 2")
+            data_entry[self.prediction_mask_field] = np.zeros(
+                (var, time), dtype=bool
+            )
+            return data_entry
+
+        prefix_len = max(self.min_prefix_tokens, int(np.floor(time * self.prefix_ratio)))
+        prefix_len = min(prefix_len, time - 1)
+        prediction_mask = np.zeros((var, time), dtype=bool)
+        prediction_mask[:, prefix_len:] = True
+        data_entry[self.prediction_mask_field] = prediction_mask
+        return data_entry
+
+
+@dataclass
+class ApplyRejectMask(Transformation):
+    reject_field: str = "reject"
+    prediction_mask_field: str = "prediction_mask"
+    reject_mask_field: str = "reject_mask"
+
+    def __call__(self, data_entry: dict[str, Any]) -> dict[str, Any]:
+        prediction_mask = data_entry[self.prediction_mask_field]
+        reject = bool(data_entry.get(self.reject_field, False))
+        if reject:
+            data_entry[self.reject_mask_field] = np.ones_like(
+                prediction_mask, dtype=bool
+            )
+        else:
+            data_entry[self.reject_mask_field] = np.zeros_like(
+                prediction_mask, dtype=bool
+            )
+        return data_entry
+
+
+@dataclass
 class ExtendMask(CheckArrNDimMixin, CollectFuncMixin, Transformation):
     fields: tuple[str, ...]
     mask_field: str

@@ -13,64 +13,94 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-"""
-Polynomial preconditioning transform (stub).
+from __future__ import annotations
 
-This module provides a placeholder PolynomialPrecondition transform.
-The actual implementation was removed in the spectral_non_precond branch.
-"""
-
+from dataclasses import dataclass
 from typing import Any
+
+import numpy as np
+
+from uni2ts.common.precondition import compute_polynomial_coefficients
+
 from ._base import Transformation
 
 
-class PolynomialPrecondition(Transformation):
+@dataclass
+class PatchPolynomialPrecondition(Transformation):
     """
-    Placeholder for polynomial preconditioning transform.
+    Apply polynomial preconditioning along the patch-token axis.
 
-    This is a stub implementation that acts as an identity transform.
-    The actual preconditioning logic was removed in the spectral_non_precond branch.
-
-    Args:
-        degree: Polynomial degree (unused in stub)
-        polynomial_type: Type of polynomial basis (unused in stub)
+    This operates on patchified targets with shape [var, time, patch] and
+    applies a causal polynomial convolution across the time axis for each
+    variate and patch element independently.
     """
 
-    def __init__(
-        self,
-        degree: int = 5,
-        polynomial_type: str = "chebyshev",
-        **kwargs,
-    ):
-        self.degree = degree
-        self.polynomial_type = polynomial_type
+    polynomial_type: str = "chebyshev"
+    degree: int = 5
+    target_field: str = "target"
+    lag_stride: int = 1
+    enabled: bool = True
 
-    def __call__(self, data: dict[str, Any]) -> dict[str, Any]:
-        """Identity transform - returns data unchanged."""
-        return data
+    def __post_init__(self):
+        if not self.enabled:
+            self.coeffs = None
+            return
+        if self.lag_stride < 1:
+            raise ValueError("lag_stride must be >= 1")
+        self.coeffs = compute_polynomial_coefficients(
+            self.polynomial_type, self.degree
+        ).astype(np.float32)
 
+    def __call__(self, data_entry: dict[str, Any]) -> dict[str, Any]:
+        if not self.enabled:
+            return data_entry
+        if self.target_field not in data_entry:
+            return data_entry
 
-class ReversePrecondition(Transformation):
-    """
-    Placeholder for reverse preconditioning transform.
+        target = data_entry[self.target_field]
+        data_entry[self.target_field] = self._apply(target)
+        return data_entry
 
-    This is a stub implementation that acts as an identity transform.
-    The actual preconditioning logic was removed in the spectral_non_precond branch.
+    def _apply(
+        self, target: np.ndarray | list[np.ndarray] | dict[str, np.ndarray]
+    ) -> np.ndarray | list[np.ndarray] | dict[str, np.ndarray]:
+        if isinstance(target, list):
+            return [self._apply(arr) for arr in target]
+        if isinstance(target, dict):
+            return {k: self._apply(v) for k, v in target.items()}
+        if not isinstance(target, np.ndarray):
+            target = np.asarray(target)
+        return self._apply_patch_convolution(target, self.coeffs, self.lag_stride)
 
-    Args:
-        degree: Polynomial degree (unused in stub)
-        polynomial_type: Type of polynomial basis (unused in stub)
-    """
+    @staticmethod
+    def _apply_patch_convolution(
+        target: np.ndarray, coeffs: np.ndarray, lag_stride: int
+    ) -> np.ndarray:
+        if target.ndim == 2:
+            target = target[None, ...]
+            squeeze = True
+        else:
+            squeeze = False
 
-    def __init__(
-        self,
-        degree: int = 5,
-        polynomial_type: str = "chebyshev",
-        **kwargs,
-    ):
-        self.degree = degree
-        self.polynomial_type = polynomial_type
+        if target.ndim != 3:
+            raise ValueError(
+                f"Patch precondition expects ndim=2 or 3, got shape {target.shape}"
+            )
 
-    def __call__(self, data: dict[str, Any]) -> dict[str, Any]:
-        """Identity transform - returns data unchanged."""
-        return data
+        var, time, patch = target.shape
+        result = target.copy()
+        n = len(coeffs)
+        stride = int(lag_stride)
+        if stride < 1:
+            raise ValueError("lag_stride must be >= 1")
+        if time <= n * stride:
+            return result.squeeze(0) if squeeze else result
+
+        weighted_sum = np.zeros((var, time - n * stride, patch), dtype=result.dtype)
+        for i in range(n):
+            start = (n - i - 1) * stride
+            end = time - (i + 1) * stride
+            weighted_sum += coeffs[i] * target[:, start:end, :]
+        result[:, n * stride :, :] = target[:, n * stride :, :] + weighted_sum
+
+        return result.squeeze(0) if squeeze else result

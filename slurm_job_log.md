@@ -24,6 +24,9 @@ This file tracks all SLURM jobs submitted for this project.
 | Current Hybrid | 3 STU + 3 attn (alt) | No | 12.53M | 50% attention replaced with STU |
 | STU-Only Sandwich | 6 STU layers | Yes (512 hidden) | 14.29M | All STU layers with MLP sandwich |
 | Hybrid Sandwich | 3 STU + 3 attn (alt) | Yes (768 hidden) | 15.65M | Alternating with MLP sandwich on STU |
+| **Multi-Head STU** | 3 MH-STU + 3 attn (alt) | No | 13.83M | H=6 heads, wider FFN (d_ff=1379) |
+| **Non-Approx STU** | 3 full-STU + 3 attn (alt) | No | 13.83M | K=2, full M_phi[K,d,d] (590K mixing params) |
+| **Parallel STU+Attn** | 6 parallel layers | No | 13.83M | Both STU+Attn per layer, d_ff=888, learned gate |
 
 **MLP Sandwiching** (from Flash STU paper): Wraps STU with up/down projections:
 - `Input -> UpProject -> Activate -> STU -> DownProject -> Output`
@@ -35,10 +38,18 @@ This file tracks all SLURM jobs submitted for this project.
 
 | Job ID | Name | Type | Status | Submitted | Checkpoint/Input | Output Path |
 |--------|------|------|--------|-----------|------------------|-------------|
-| 4235319 | pretrain_stu_only | Pretraining | PENDING (ailab) | 2026-01-27 21:50 | STU-only + sandwiching (14.3M params) | `uni2ts/logs/pretrain_stu_only_4235319.out` |
-| 4235320 | pretrain_stu_sandwich | Pretraining | PENDING (ailab) | 2026-01-27 21:50 | Hybrid + sandwiching (15.7M params) | `uni2ts/logs/pretrain_stu_sandwich_4235320.out` |
-| 4229720 | pretrain_stu_fast | Pretraining | RUNNING (ailab) | 2026-01-27 18:18 | moirai_small_stu + forward_batched (2x faster) | `uni2ts/logs/pretrain_stu_fast_4229720.out` |
-| 4184963 | pretrain_stu | Pretraining | RUNNING (pli) | 2026-01-26 16:31 | moirai_small_stu config (slow _forward_packed) | `uni2ts/logs/pretrain_stu_4184963.out` |
+| 4583019 | m2_quick_base | Quick Test | PENDING (ailab) | 2026-02-08 | Moirai2 baseline quick test: 200 steps (20ep x 10bat), test_small, bs=32 | `slurm-m2-quick-base-4583019.out` |
+| 4583020 | m2_quick_precond | Quick Test | PENDING (ailab) | 2026-02-08 | Moirai2 precond quick test: 200 steps, Chebyshev deg5, FIR inv len64, λ=0.1 | `slurm-m2-quick-precond-4583020.out` |
+| 4576542 | gifteval_moirai2 | GIFT-Eval Full | PENDING (ailab) | 2026-02-08 | Moirai2 Small 10K-step checkpoint (11.39M params), full 97 configs, 12h time limit. Fixed QuantileForecastGenerator unpack bug. | `logs/gifteval_moirai2_4576542.out` |
+| 4576438 | gifteval_moirai2 | GIFT-Eval Full | FAILED (ailab) | 2026-02-08 | All 97 evals failed: Moirai2Forecast.forward() returned tensor, QuantileForecastGenerator expected ((preds,), loc, scale) tuple | `logs/gifteval_moirai2_4576438.out` |
+| 4576433 | moirai2_full | Pretraining | RUNNING (pli) | 2026-02-08 | Moirai2 Small full paper specs: 100K steps (1000ep x 100bat), bs=256, 10K warmup, lr=1e-3, bf16-mixed, 11.39M params | `uni2ts/logs/moirai2_small_full_4576433.out` |
+| 4558185 | pretrain_multihead_stu | Pretraining | RUNNING (ailab) | 2026-02-07 | Multi-Head STU (H=6, d_ff=1379, 13.83M params) | `uni2ts/logs/pretrain_multihead_stu_4558185.out` |
+| 4558186 | pretrain_nonapprox_stu | Pretraining | RUNNING (ailab) | 2026-02-07 | Non-Approx STU (K=2, full M_phi, 13.83M params) | `uni2ts/logs/pretrain_nonapprox_stu_4558186.out` |
+| 4558187 | pretrain_parallel_stu | Pretraining | RUNNING (ailab) | 2026-02-07 | Parallel STU+Attn (d_ff=888, gate, 13.83M params) | `uni2ts/logs/pretrain_parallel_stu_4558187.out` |
+| 4235319 | pretrain_stu_only | Pretraining | COMPLETED | 2026-01-27 21:50 | STU-only + sandwiching (14.3M params) | `uni2ts/logs/pretrain_stu_only_4235319.out` |
+| 4235320 | pretrain_stu_sandwich | Pretraining | COMPLETED | 2026-01-27 21:50 | Hybrid + sandwiching (15.7M params) | `uni2ts/logs/pretrain_stu_sandwich_4235320.out` |
+| 4229720 | pretrain_stu_fast | Pretraining | COMPLETED | 2026-01-27 18:18 | moirai_small_stu + forward_batched (2x faster) | `uni2ts/logs/pretrain_stu_fast_4229720.out` |
+| 4184963 | pretrain_stu | Pretraining | COMPLETED (pli) | 2026-01-26 16:31 | moirai_small_stu config (slow _forward_packed) | `uni2ts/logs/pretrain_stu_4184963.out` |
 | 4184956 | pretrain_baseline | Pretraining | COMPLETED | 2026-01-26 16:31 | moirai_small config | `uni2ts/logs/pretrain_baseline_4184956.out` |
 
 ### Full GIFT-Eval Jobs (97 configs) - With Markdown Reports

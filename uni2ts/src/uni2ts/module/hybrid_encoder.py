@@ -40,6 +40,19 @@ from .position import AttentionBias, QueryKeyProjection
 from .stu_layer import STUEncoderLayer, VariateAwareSTUEncoderLayer, SandwichedSTUEncoderLayer
 from .transformer import TransformerEncoderLayer
 
+# Lazy imports for new variants (avoids circular imports if not used)
+def _get_multihead_stu_class():
+    from .stu_multihead import MultiHeadSTUEncoderLayer
+    return MultiHeadSTUEncoderLayer
+
+def _get_nonapprox_stu_class():
+    from .stu_nonapprox import NonApproxSTUEncoderLayer
+    return NonApproxSTUEncoderLayer
+
+def _get_parallel_stu_class():
+    from .stu_parallel import ParallelSTUAttentionEncoderLayer
+    return ParallelSTUAttentionEncoderLayer
+
 
 class HybridTransformerSTUEncoder(nn.Module):
     """
@@ -110,6 +123,12 @@ class HybridTransformerSTUEncoder(nn.Module):
         use_variate_aware_stu: bool = False,
         use_sandwiched_stu: bool = False,
         sandwich_hidden_dim: Optional[int] = None,
+        use_multihead_stu: bool = False,
+        stu_num_heads: int = 6,
+        stu_d_ff: Optional[int] = None,
+        use_nonapprox_stu: bool = False,
+        use_parallel_stu: bool = False,
+        parallel_d_ff: Optional[int] = None,
         max_variates: int = 100,
         num_heads: Optional[int] = None,
         num_groups: Optional[int] = None,
@@ -187,54 +206,90 @@ class HybridTransformerSTUEncoder(nn.Module):
         # Factory for layer norm
         get_norm = partial(norm_layer, d_model) if norm_layer else lambda: nn.Identity()
 
-        # STU layer class selection
-        if use_sandwiched_stu:
-            stu_layer_class = SandwichedSTUEncoderLayer
-        elif use_variate_aware_stu:
-            stu_layer_class = VariateAwareSTUEncoderLayer
-        else:
-            stu_layer_class = STUEncoderLayer
-
-        # Build layers
-        self.layers = nn.ModuleList()
-        self.layer_types = []  # Track which layers are STU vs attention
-
-        for i in range(num_layers):
-            use_stu = self._should_use_stu(i, num_layers, stu_layer_pattern)
-            self.layer_types.append("stu" if use_stu else "attn")
-
-            if use_stu:
-                # STU layer
-                stu_kwargs = dict(
-                    d_model=d_model,
-                    max_seq_len=max_seq_len,
-                    num_eigh=num_eigh,
-                    use_hankel_L=use_hankel_L,
-                    use_approx=use_approx,
-                    pre_norm=pre_norm,
-                    dropout_p=dropout_p,
-                    norm_layer=norm_layer,
-                    activation=activation,
-                    use_glu=use_glu,
-                    d_ff=d_ff,
-                )
-                if use_variate_aware_stu:
-                    stu_kwargs["max_variates"] = max_variates
-                if use_sandwiched_stu:
-                    stu_kwargs["sandwich_hidden_dim"] = sandwich_hidden_dim
-                self.layers.append(stu_layer_class(**stu_kwargs))
-            else:
-                # Attention layer
+        # Handle parallel STU+Attention mode (all layers have both)
+        if use_parallel_stu:
+            ParallelClass = _get_parallel_stu_class()
+            self.layers = nn.ModuleList()
+            self.layer_types = []
+            p_d_ff = parallel_d_ff or d_ff
+            for i in range(num_layers):
+                self.layer_types.append("parallel")
                 self.layers.append(
-                    TransformerEncoderLayer(
+                    ParallelClass(
+                        d_model=d_model,
+                        max_seq_len=max_seq_len,
                         self_attn=get_self_attn(),
-                        ffn=get_ffn(),
-                        norm1=get_norm(),
-                        norm2=get_norm(),
+                        num_eigh=num_eigh,
+                        use_hankel_L=use_hankel_L,
+                        use_approx=use_approx,
                         pre_norm=pre_norm,
-                        post_attn_dropout_p=dropout_p,
+                        dropout_p=dropout_p,
+                        norm_layer=norm_layer,
+                        activation=activation,
+                        use_glu=use_glu,
+                        d_ff=p_d_ff,
                     )
                 )
+        else:
+            # STU layer class selection
+            if use_multihead_stu:
+                stu_layer_class = _get_multihead_stu_class()
+            elif use_nonapprox_stu:
+                stu_layer_class = _get_nonapprox_stu_class()
+            elif use_sandwiched_stu:
+                stu_layer_class = SandwichedSTUEncoderLayer
+            elif use_variate_aware_stu:
+                stu_layer_class = VariateAwareSTUEncoderLayer
+            else:
+                stu_layer_class = STUEncoderLayer
+
+            # Build layers
+            self.layers = nn.ModuleList()
+            self.layer_types = []
+
+            for i in range(num_layers):
+                use_stu = self._should_use_stu(i, num_layers, stu_layer_pattern)
+                self.layer_types.append("stu" if use_stu else "attn")
+
+                if use_stu:
+                    # STU layer
+                    stu_kwargs = dict(
+                        d_model=d_model,
+                        max_seq_len=max_seq_len,
+                        num_eigh=num_eigh,
+                        use_hankel_L=use_hankel_L,
+                        use_approx=use_approx,
+                        pre_norm=pre_norm,
+                        dropout_p=dropout_p,
+                        norm_layer=norm_layer,
+                        activation=activation,
+                        use_glu=use_glu,
+                        d_ff=stu_d_ff if use_multihead_stu else d_ff,
+                    )
+                    if use_variate_aware_stu:
+                        stu_kwargs["max_variates"] = max_variates
+                    if use_sandwiched_stu:
+                        stu_kwargs["sandwich_hidden_dim"] = sandwich_hidden_dim
+                    if use_multihead_stu:
+                        stu_kwargs["num_heads"] = stu_num_heads
+                        # Remove params not used by MultiHeadSTUEncoderLayer
+                        stu_kwargs.pop("use_approx", None)
+                    if use_nonapprox_stu:
+                        # NonApproxSTUEncoderLayer hardcodes use_approx=False
+                        stu_kwargs.pop("use_approx", None)
+                    self.layers.append(stu_layer_class(**stu_kwargs))
+                else:
+                    # Attention layer
+                    self.layers.append(
+                        TransformerEncoderLayer(
+                            self_attn=get_self_attn(),
+                            ffn=get_ffn(),
+                            norm1=get_norm(),
+                            norm2=get_norm(),
+                            pre_norm=pre_norm,
+                            post_attn_dropout_p=dropout_p,
+                        )
+                    )
 
         # Final normalization
         self.norm = norm_layer(d_model) if norm_layer else nn.Identity()
@@ -297,7 +352,11 @@ class HybridTransformerSTUEncoder(nn.Module):
             Output tensor [*batch, time_len, dim]
         """
         for i, (layer, layer_type) in enumerate(zip(self.layers, self.layer_types)):
-            if layer_type == "stu":
+            if layer_type == "parallel":
+                # Parallel STU+Attention: needs both attention and STU inputs
+                x = layer(x, attn_mask=attn_mask, var_id=var_id,
+                          time_id=time_id, sample_id=sample_id)
+            elif layer_type == "stu":
                 # STU layer: pass sample_id for packed sequence handling
                 x = layer(x, var_id=var_id, sample_id=sample_id)
             else:

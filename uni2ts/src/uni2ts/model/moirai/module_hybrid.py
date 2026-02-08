@@ -109,6 +109,12 @@ class MoiraiHybridModule(
         use_variate_aware_stu: bool = False,
         use_sandwiched_stu: bool = False,
         sandwich_hidden_dim: Optional[int] = None,
+        use_multihead_stu: bool = False,
+        stu_num_heads: int = 6,
+        stu_d_ff: Optional[int] = None,
+        use_nonapprox_stu: bool = False,
+        use_parallel_stu: bool = False,
+        parallel_d_ff: Optional[int] = None,
         max_variates: int = 100,
     ):
         super().__init__()
@@ -143,6 +149,12 @@ class MoiraiHybridModule(
             use_variate_aware_stu=use_variate_aware_stu,
             use_sandwiched_stu=use_sandwiched_stu,
             sandwich_hidden_dim=sandwich_hidden_dim,
+            use_multihead_stu=use_multihead_stu,
+            stu_num_heads=stu_num_heads,
+            stu_d_ff=stu_d_ff,
+            use_nonapprox_stu=use_nonapprox_stu,
+            use_parallel_stu=use_parallel_stu,
+            parallel_d_ff=parallel_d_ff,
             max_variates=max_variates,
             num_heads=None,  # Auto: d_model // 64
             pre_norm=True,

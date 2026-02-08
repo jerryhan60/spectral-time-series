@@ -14,9 +14,15 @@
 #  limitations under the License.
 
 from ._base import Chain, Identity, Transformation
-from .crop import EvalCrop, FinetunePatchCrop, PatchCrop
+from .crop import (
+    EvalCrop,
+    FinetunePatchCrop,
+    FixedPatchCrop,
+    PatchCrop,
+    ResampleZScorePatchCrop,
+)
 from .feature import AddObservedMask, AddSampleIndex, AddTimeIndex, AddVariateIndex
-from .field import LambdaSetFieldIfNotPresent, RemoveFields, SelectFields, SetValue
+from .field import CopyField, LambdaSetFieldIfNotPresent, RemoveFields, SelectFields, SetValue
 from .imputation import DummyValueImputation, ImputeTimeSeries, LastValueImputation
 from .pad import EvalPad, Pad, PadFreq
 from .patch import (
@@ -26,6 +32,7 @@ from .patch import (
     Patchify,
     PatchSizeConstraints,
 )
+from .precondition import PatchPolynomialPrecondition
 from .resample import SampleDimension
 from .reshape import (
     FlatPackCollection,
@@ -35,8 +42,13 @@ from .reshape import (
     SequencifyField,
     Transpose,
 )
-from .task import EvalMaskedPrediction, ExtendMask, MaskedPrediction
-from .precondition import PolynomialPrecondition, ReversePrecondition
+from .task import (
+    ApplyRejectMask,
+    CausalPredictionMask,
+    EvalMaskedPrediction,
+    ExtendMask,
+    MaskedPrediction,
+)
 
 __all__ = [
     "AddObservedMask",
@@ -46,10 +58,13 @@ __all__ = [
     "Chain",
     "DefaultPatchSizeConstraints",
     "DummyValueImputation",
+    "FixedPatchCrop",
+    "ResampleZScorePatchCrop",
     "EvalCrop",
     "EvalMaskedPrediction",
     "EvalPad",
     "ExtendMask",
+    "ApplyRejectMask",
     "FixedPatchSizeConstraints",
     "FlatPackCollection",
     "FlatPackFields",
@@ -59,6 +74,8 @@ __all__ = [
     "LambdaSetFieldIfNotPresent",
     "LastValueImputation",
     "MaskedPrediction",
+    "CausalPredictionMask",
+    "CopyField",
     "PackCollection",
     "PackFields",
     "Pad",
@@ -66,6 +83,7 @@ __all__ = [
     "PatchCrop",
     "PatchSizeConstraints",
     "Patchify",
+    "PatchPolynomialPrecondition",
     "RemoveFields",
     "SampleDimension",
     "SelectFields",
@@ -74,6 +92,4 @@ __all__ = [
     "Transformation",
     "Transpose",
     "FinetunePatchCrop",
-    "PolynomialPrecondition",
-    "ReversePrecondition",
 ]

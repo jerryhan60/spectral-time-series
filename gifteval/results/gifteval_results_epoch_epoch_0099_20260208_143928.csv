@@ -1,0 +1,9 @@
+dataset,term,frequency,config_name,error
+m4_monthly,short,?,m4_monthly/?/short,"The forecast_array (shape=(18, 9) should have the same length as the forecast_keys (len=9)."
+electricity/H,short,?,electricity/H/?/short,"The forecast_array (shape=(48, 9) should have the same length as the forecast_keys (len=9)."
+hospital,short,?,hospital/?/short,"The forecast_array (shape=(12, 9) should have the same length as the forecast_keys (len=9)."
+jena_weather/H,short,?,jena_weather/H/?/short,"The forecast_array (shape=(48, 9) should have the same length as the forecast_keys (len=9)."
+ett1/H,short,?,ett1/H/?/short,"The forecast_array (shape=(48, 9) should have the same length as the forecast_keys (len=9)."
+saugeenday/D,short,?,saugeenday/D/?/short,"The forecast_array (shape=(30, 9) should have the same length as the forecast_keys (len=9)."
+covid_deaths,short,?,covid_deaths/?/short,"The forecast_array (shape=(30, 9) should have the same length as the forecast_keys (len=9)."
+m4_hourly,short,?,m4_hourly/?/short,"The forecast_array (shape=(48, 9) should have the same length as the forecast_keys (len=9)."

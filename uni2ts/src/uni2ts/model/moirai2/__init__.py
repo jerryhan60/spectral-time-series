@@ -15,8 +15,10 @@
 
 from .forecast import Moirai2Forecast
 from .module import Moirai2Module
+from .pretrain import Moirai2Pretrain
 
 __all__ = [
     "Moirai2Forecast",
     "Moirai2Module",
+    "Moirai2Pretrain",
 ]

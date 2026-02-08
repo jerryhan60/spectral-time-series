@@ -307,12 +307,13 @@ class Moirai2Forecast(L.LightningModule):
                 preds,
             )
             quantile_prediction[..., adjusted_assign_index, :, :] = preds
-            return self._format_preds(
+            preds = self._format_preds(
                 self.module.num_quantiles,
                 self.module.patch_size,
                 quantile_prediction,
                 self.hparams.target_dim,
             )
+            return (preds,), None, None
         else:
             # expand batch_size to batch_size, num_quantiles for recursive quantile forecast
             expand_target = repeat(
@@ -427,12 +428,13 @@ class Moirai2Forecast(L.LightningModule):
 
                 remain_step -= self.module.num_predict_token
 
-            return self._format_preds(
+            preds = self._format_preds(
                 self.module.num_quantiles,
                 self.module.patch_size,
                 quantile_prediction,
                 self.hparams.target_dim,
             )
+            return (preds,), None, None
 
     def predict(
         self,
@@ -528,7 +530,8 @@ class Moirai2Forecast(L.LightningModule):
                 )
 
         with torch.no_grad():
-            predictions = self(**data_entry).detach().cpu().numpy()
+            (predictions,), _, _ = self(**data_entry)
+            predictions = predictions.detach().cpu().numpy()
         return predictions
 
     @staticmethod

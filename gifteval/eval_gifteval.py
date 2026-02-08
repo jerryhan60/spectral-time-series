@@ -320,6 +320,25 @@ def load_checkpoint_model(checkpoint_path: str, prediction_length: int,
     except Exception as e:
         print(f"Standard load failed: {e}")
 
+    # Try loading as Moirai2 checkpoint
+    try:
+        from uni2ts.model.moirai2 import Moirai2Forecast, Moirai2Pretrain
+
+        pretrain = Moirai2Pretrain.load_from_checkpoint(checkpoint_path)
+        module = pretrain.module
+
+        forecast = Moirai2Forecast(
+            prediction_length=prediction_length,
+            target_dim=1,
+            feat_dynamic_real_dim=0,
+            past_feat_dynamic_real_dim=0,
+            context_length=context_length,
+            module=module,
+        )
+        return forecast
+    except Exception as e:
+        print(f"Moirai2 load failed: {e}")
+
     # Try loading as hybrid STU checkpoint
     try:
         from uni2ts.model.moirai import MoiraiHybridPretrain
