@@ -1,0 +1,9 @@
+{
+  "model_name": "epoch_19-step_200",
+  "model_type": "fine-tuned",
+  "is_zero_shot": true,
+  "data_leakage": false,
+  "code_available": true,
+  "organization": "Princeton",
+  "evaluation_date": "20260208_211438"
+}

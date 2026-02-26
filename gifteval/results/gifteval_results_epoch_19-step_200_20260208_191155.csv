@@ -1,0 +1,9 @@
+dataset,term,frequency,config_name,error
+m4_monthly,short,?,m4_monthly/?/short,cannot import name 'PolynomialPrecondition' from 'uni2ts.transform' (/scratch/gpfs/EHAZAN/jh1161/uni2ts/src/uni2ts/transform/__init__.py)
+electricity/H,short,?,electricity/H/?/short,cannot import name 'PolynomialPrecondition' from 'uni2ts.transform' (/scratch/gpfs/EHAZAN/jh1161/uni2ts/src/uni2ts/transform/__init__.py)
+hospital,short,?,hospital/?/short,cannot import name 'PolynomialPrecondition' from 'uni2ts.transform' (/scratch/gpfs/EHAZAN/jh1161/uni2ts/src/uni2ts/transform/__init__.py)
+jena_weather/H,short,?,jena_weather/H/?/short,cannot import name 'PolynomialPrecondition' from 'uni2ts.transform' (/scratch/gpfs/EHAZAN/jh1161/uni2ts/src/uni2ts/transform/__init__.py)
+ett1/H,short,?,ett1/H/?/short,cannot import name 'PolynomialPrecondition' from 'uni2ts.transform' (/scratch/gpfs/EHAZAN/jh1161/uni2ts/src/uni2ts/transform/__init__.py)
+saugeenday/D,short,?,saugeenday/D/?/short,cannot import name 'PolynomialPrecondition' from 'uni2ts.transform' (/scratch/gpfs/EHAZAN/jh1161/uni2ts/src/uni2ts/transform/__init__.py)
+covid_deaths,short,?,covid_deaths/?/short,cannot import name 'PolynomialPrecondition' from 'uni2ts.transform' (/scratch/gpfs/EHAZAN/jh1161/uni2ts/src/uni2ts/transform/__init__.py)
+m4_hourly,short,?,m4_hourly/?/short,cannot import name 'PolynomialPrecondition' from 'uni2ts.transform' (/scratch/gpfs/EHAZAN/jh1161/uni2ts/src/uni2ts/transform/__init__.py)
