@@ -93,6 +93,9 @@ class Moirai2Pretrain(L.LightningModule):
         patch_precondition_reverse_in_loss: bool = False,
         time_precondition_reverse_in_loss: bool = False,
         time_precondition_inverse_lambda: float = 0.1,
+        time_precondition_coeffs_lambda: float = 0.0,
+        time_precondition_dual_head_lambda: float = 1.0,
+        ps_loss_lambda: float = 0.0,
         module_kwargs: Optional[dict[str, Any]] = None,
         module: Optional[Moirai2Module] = None,
         loss_func: Optional[PackedQuantileLoss] = None,
@@ -181,8 +184,8 @@ class Moirai2Pretrain(L.LightningModule):
         variate_id: Int[torch.Tensor, "*batch seq_len"],
         prediction_mask: Bool[torch.Tensor, "*batch seq_len"],
         input_mask: Optional[Bool[torch.Tensor, "*batch seq_len"]] = None,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        preds, scaled_target = self.module(
+    ):
+        result = self.module(
             target=target,
             observed_mask=observed_mask,
             sample_id=sample_id,
@@ -192,13 +195,13 @@ class Moirai2Pretrain(L.LightningModule):
             training_mode=True,
             input_mask=input_mask,
         )
-        return preds, scaled_target
+        return result
 
     def training_step(
         self, batch: dict[str, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
         input_mask = self.sample_patch_mask(batch["sample_id"])
-        preds, scaled_target = self(
+        result = self(
             target=batch["target"],
             observed_mask=batch["observed_mask"],
             sample_id=batch["sample_id"],
@@ -207,21 +210,34 @@ class Moirai2Pretrain(L.LightningModule):
             prediction_mask=batch["prediction_mask"],
             input_mask=input_mask,
         )
+        # Unpack based on mode
+        _dual_head = (
+            self.module.time_precondition_dual_head
+            and self.module.time_precondition_enabled
+        )
+        if _dual_head:
+            preds, preds_raw, scaled_target, scaled_target_raw = result
+        else:
+            preds, scaled_target = result
+            preds_raw = None
+
         loc = None
         scale = None
-        scaled_target_raw = scaled_target
+        if not _dual_head:
+            scaled_target_raw = scaled_target
         if (
             self.module.time_precondition_enabled
             or self.hparams.time_precondition_reverse_in_loss
             or self.hparams.patch_precondition_reverse_in_loss
         ):
-            loc, scale = self.module.scaler(
-                batch["target"],
-                batch["observed_mask"] * ~batch["prediction_mask"].unsqueeze(-1),
-                batch["sample_id"],
-                batch["variate_id"],
-            )
-            scaled_target_raw = (batch["target"] - loc) / scale
+            if not _dual_head:
+                loc, scale = self.module.scaler(
+                    batch["target"],
+                    batch["observed_mask"] * ~batch["prediction_mask"].unsqueeze(-1),
+                    batch["sample_id"],
+                    batch["variate_id"],
+                )
+                scaled_target_raw = (batch["target"] - loc) / scale
         prefilter_mask = batch.get(
             "reject_mask",
             torch.zeros_like(batch["sample_id"], dtype=torch.bool),
@@ -234,7 +250,26 @@ class Moirai2Pretrain(L.LightningModule):
         )
         combined_reject_mask = prefilter_mask | postfilter_mask
         loss_prediction_mask = batch["prediction_mask"] & ~combined_reject_mask
-        if self.hparams.time_precondition_reverse_in_loss:
+        if _dual_head:
+            # Dual-head: precond head loss + raw head loss
+            precond_loss = self.multi_token_loss(
+                preds=preds,
+                target=scaled_target,
+                observed_mask=batch["observed_mask"],
+                prediction_mask=loss_prediction_mask,
+                sample_id=batch["sample_id"],
+                variate_id=batch["variate_id"],
+            )
+            raw_loss = self.multi_token_loss(
+                preds=preds_raw,
+                target=scaled_target_raw,
+                observed_mask=batch["observed_mask"],
+                prediction_mask=loss_prediction_mask,
+                sample_id=batch["sample_id"],
+                variate_id=batch["variate_id"],
+            )
+            base_loss = raw_loss + self.hparams.time_precondition_dual_head_lambda * precond_loss
+        elif self.hparams.time_precondition_reverse_in_loss:
             base_loss = self.multi_token_loss_time_precondition_reverse(
                 preds=preds,
                 target_raw=scaled_target_raw,
@@ -267,7 +302,40 @@ class Moirai2Pretrain(L.LightningModule):
                 variate_id=batch["variate_id"],
             )
         loss = base_loss
+        # Patch-wise Structural Loss (PS-Loss)
+        if self.hparams.ps_loss_lambda > 0:
+            ps_loss = self._compute_ps_loss(
+                preds=preds,
+                target=scaled_target,
+                observed_mask=batch["observed_mask"],
+                prediction_mask=loss_prediction_mask,
+                sample_id=batch["sample_id"],
+            )
+            loss = loss + self.hparams.ps_loss_lambda * ps_loss
         batch_size = batch["sample_id"].max(dim=1).values.sum()
+        if _dual_head:
+            self.log(
+                "train/raw_loss",
+                raw_loss,
+                on_step=self.hparams.log_on_step,
+                on_epoch=True,
+                prog_bar=False,
+                logger=True,
+                sync_dist=True,
+                batch_size=batch_size,
+                rank_zero_only=True,
+            )
+            self.log(
+                "train/precond_loss",
+                precond_loss,
+                on_step=self.hparams.log_on_step,
+                on_epoch=True,
+                prog_bar=False,
+                logger=True,
+                sync_dist=True,
+                batch_size=batch_size,
+                rank_zero_only=True,
+            )
         self.log(
             "train/quantile_loss",
             base_loss,
@@ -298,6 +366,66 @@ class Moirai2Pretrain(L.LightningModule):
             self.log(
                 "train/time_precondition_inverse_loss",
                 aux_loss,
+                on_step=self.hparams.log_on_step,
+                on_epoch=True,
+                prog_bar=False,
+                logger=True,
+                sync_dist=True,
+                batch_size=batch_size,
+                rank_zero_only=True,
+            )
+        if (
+            self.module.time_precondition_coeffs.numel() > 0
+            and self.hparams.time_precondition_coeffs_lambda > 0
+        ):
+            coeffs_l2 = (self.module.time_precondition_coeffs ** 2).sum()
+            loss = loss + self.hparams.time_precondition_coeffs_lambda * coeffs_l2
+            self.log(
+                "train/precond_coeffs_l2",
+                coeffs_l2,
+                on_step=self.hparams.log_on_step,
+                on_epoch=True,
+                prog_bar=False,
+                logger=True,
+                sync_dist=True,
+                batch_size=batch_size,
+                rank_zero_only=True,
+            )
+        if self.module.time_precondition_coeffs.numel() > 0:
+            self.log(
+                "train/precond_coeffs_norm",
+                self.module.time_precondition_coeffs.norm(),
+                on_step=self.hparams.log_on_step,
+                on_epoch=True,
+                prog_bar=False,
+                logger=True,
+                sync_dist=True,
+                batch_size=batch_size,
+                rank_zero_only=True,
+            )
+        if (
+            self.module.attn_l1_lambda > 0
+            and self.module._last_attn_weights is not None
+        ):
+            attn_l1 = torch.stack(
+                [w.abs().mean() for w in self.module._last_attn_weights]
+            ).mean()
+            loss = loss + self.module.attn_l1_lambda * attn_l1
+            self.log(
+                "train/attn_l1",
+                attn_l1,
+                on_step=self.hparams.log_on_step,
+                on_epoch=True,
+                prog_bar=False,
+                logger=True,
+                sync_dist=True,
+                batch_size=batch_size,
+                rank_zero_only=True,
+            )
+        if self.hparams.ps_loss_lambda > 0:
+            self.log(
+                "train/ps_loss",
+                ps_loss,
                 on_step=self.hparams.log_on_step,
                 on_epoch=True,
                 prog_bar=False,
@@ -375,9 +503,13 @@ class Moirai2Pretrain(L.LightningModule):
                     no_decay.add(fpn)
 
         param_dict = {pn: p for pn, p in self.named_parameters()}
-        # Ensure parameters without a standard weight/bias suffix (e.g. inverse coeffs)
-        # are still optimized.
+        # STU projection matrices should have weight decay
         missing = set(param_dict.keys()) - decay - no_decay
+        for fpn in list(missing):
+            if "M_inputs" in fpn or "M_filters" in fpn:
+                decay.add(fpn)
+                missing.discard(fpn)
+        # Remaining missing params (e.g. gate, inverse coeffs) go to no_decay
         if missing:
             no_decay.update(missing)
         optim_groups = [
@@ -688,20 +820,25 @@ class Moirai2Pretrain(L.LightningModule):
         raw_flat = rearrange(target_raw, "b t p -> b (t p)")
         pred_mask_flat = prediction_mask.repeat_interleave(patch_size, dim=1)
         raw_expanded = raw_flat.unsqueeze(-1).expand_as(precond_flat)
-        output = torch.where(pred_mask_flat.unsqueeze(-1), precond_flat, raw_expanded)
-        output_median = raw_flat.clone()
+        output_init = torch.where(
+            pred_mask_flat.unsqueeze(-1), precond_flat, raw_expanded
+        )
 
         seq_len = precond_flat.shape[1]
         min_time = n * stride
         if seq_len <= min_time:
             return rearrange(
-                output, "b (t p) q -> b t q p", p=patch_size
+                output_init, "b (t p) q -> b t q p", p=patch_size
             )
 
         if not pred_mask_flat[:, min_time:].any():
             return rearrange(
-                output, "b (t p) q -> b t q p", p=patch_size
+                output_init, "b (t p) q -> b t q p", p=patch_size
             )
+
+        # Split into per-timestep lists to avoid in-place ops (autograd safe)
+        output_slices = list(output_init.unbind(dim=1))
+        median_slices = list(raw_flat.unbind(dim=1))
 
         fast_unpacked = (
             (sample_id.max(dim=1).values <= 1).all()
@@ -716,20 +853,21 @@ class Moirai2Pretrain(L.LightningModule):
                 mask = pred_mask_flat[:, t]
                 if not mask.any():
                     continue
-                weighted_sum = torch.zeros_like(output_median[:, t])
+                weighted_sum = torch.zeros_like(median_slices[t])
                 for i in range(n):
                     shift = (i + 1) * stride
-                    weighted_sum = weighted_sum + coeffs[i] * output_median[:, t - shift]
-                output_median[:, t] = torch.where(
+                    weighted_sum = weighted_sum + coeffs[i] * median_slices[t - shift]
+                median_slices[t] = torch.where(
                     mask,
                     precond_flat[:, t, median_idx] - weighted_sum,
-                    output_median[:, t],
+                    median_slices[t],
                 )
-                output[:, t, :] = torch.where(
+                output_slices[t] = torch.where(
                     mask.unsqueeze(-1),
                     precond_flat[:, t, :] - weighted_sum.unsqueeze(-1),
-                    output[:, t, :],
+                    output_slices[t],
                 )
+            output = torch.stack(output_slices, dim=1)
             return rearrange(
                 output, "b (t p) q -> b t q p", p=patch_size
             )
@@ -770,21 +908,22 @@ class Moirai2Pretrain(L.LightningModule):
             mask = valid_all[:, t - min_time] & pred_mask_flat[:, t]
             if not mask.any():
                 continue
-            weighted_sum = torch.zeros_like(output_median[:, t])
+            weighted_sum = torch.zeros_like(median_slices[t])
             for i in range(n):
                 shift = (i + 1) * stride
-                weighted_sum = weighted_sum + coeffs[i] * output_median[:, t - shift]
-            output_median[:, t] = torch.where(
+                weighted_sum = weighted_sum + coeffs[i] * median_slices[t - shift]
+            median_slices[t] = torch.where(
                 mask,
                 precond_flat[:, t, median_idx] - weighted_sum,
-                output_median[:, t],
+                median_slices[t],
             )
-            output[:, t, :] = torch.where(
+            output_slices[t] = torch.where(
                 mask.unsqueeze(-1),
                 precond_flat[:, t, :] - weighted_sum.unsqueeze(-1),
-                output[:, t, :],
+                output_slices[t],
             )
 
+        output = torch.stack(output_slices, dim=1)
         return rearrange(
             output, "b (t p) q -> b t q p", p=patch_size
         )
@@ -915,6 +1054,90 @@ class Moirai2Pretrain(L.LightningModule):
         if len(losses) == 0:
             return torch.zeros((), device=preds.device)
         return torch.stack(losses).mean()
+
+    def _compute_ps_loss(
+        self,
+        preds: Float[torch.Tensor, "*batch seq_len pred"],
+        target: Float[torch.Tensor, "*batch seq_len patch"],
+        observed_mask: Bool[torch.Tensor, "*batch seq_len patch"],
+        prediction_mask: Bool[torch.Tensor, "*batch seq_len"],
+        sample_id: Int[torch.Tensor, "*batch seq_len"],
+    ) -> torch.Tensor:
+        """Patch-wise Structural Loss: correlation + variance + mean components."""
+        npt = self.module.num_predict_token
+        nq = self.module.num_quantiles
+        ps = self.module.patch_size
+        median_idx = self._median_quantile_idx
+
+        # Reshape preds: (B, S, npt, nq, ps)
+        preds_reshaped = rearrange(
+            preds,
+            "... (predict_token num_quantiles patch_size) -> ... predict_token num_quantiles patch_size",
+            predict_token=npt,
+            num_quantiles=nq,
+            patch_size=ps,
+        )
+
+        all_losses = []
+        for horizon in range(1, npt + 1):
+            if target.shape[1] <= horizon:
+                continue
+            horizon_mask = self.build_horizon_mask(
+                sample_id, prediction_mask, horizon
+            )
+            if not horizon_mask.any():
+                continue
+
+            # Median quantile prediction for this horizon: (B, S-h, ps)
+            pred_h = preds_reshaped[:, :-horizon, horizon - 1, median_idx, :]
+            target_h = target[:, horizon:]
+            observed_h = observed_mask[:, horizon:]
+
+            # Combined mask: horizon valid AND all elements in patch observed
+            # horizon_mask: (B, S-h), observed_h: (B, S-h, ps)
+            patch_fully_observed = observed_h.all(dim=-1)  # (B, S-h)
+            valid = horizon_mask & patch_fully_observed  # (B, S-h)
+
+            if not valid.any():
+                continue
+
+            # Select valid patches: flatten and gather
+            pred_patches = pred_h[valid]   # (N, ps)
+            tgt_patches = target_h[valid]  # (N, ps)
+
+            if pred_patches.shape[0] == 0 or ps < 2:
+                continue
+
+            # --- Mean loss: |mean(y) - mean(yhat)| ---
+            mean_loss = (tgt_patches.mean(dim=-1) - pred_patches.mean(dim=-1)).abs().mean()
+
+            # --- Correlation loss: 1 - pearson_corr ---
+            tgt_centered = tgt_patches - tgt_patches.mean(dim=-1, keepdim=True)
+            pred_centered = pred_patches - pred_patches.mean(dim=-1, keepdim=True)
+            tgt_std = tgt_centered.norm(dim=-1)    # (N,)
+            pred_std = pred_centered.norm(dim=-1)   # (N,)
+            # Avoid division by zero for constant patches
+            valid_corr = (tgt_std > 1e-8) & (pred_std > 1e-8)
+            if valid_corr.any():
+                dot = (tgt_centered[valid_corr] * pred_centered[valid_corr]).sum(dim=-1)
+                corr = dot / (tgt_std[valid_corr] * pred_std[valid_corr])
+                corr_loss = (1.0 - corr).mean()
+            else:
+                corr_loss = torch.zeros((), device=preds.device)
+
+            # --- Variance loss: KL(softmax(y), softmax(yhat)) ---
+            tgt_logprob = torch.log_softmax(tgt_patches, dim=-1)
+            pred_logprob = torch.log_softmax(pred_patches, dim=-1)
+            tgt_prob = tgt_logprob.exp()
+            # KL(p||q) = sum p * (log p - log q)
+            kl = (tgt_prob * (tgt_logprob - pred_logprob)).sum(dim=-1)  # (N,)
+            var_loss = kl.mean()
+
+            all_losses.append(corr_loss + var_loss + mean_loss)
+
+        if len(all_losses) == 0:
+            return torch.zeros((), device=preds.device)
+        return torch.stack(all_losses).mean()
 
     def compute_rejection_mask(
         self,

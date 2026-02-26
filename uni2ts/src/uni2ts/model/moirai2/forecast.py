@@ -1014,9 +1014,9 @@ class Moirai2Forecast(L.LightningModule):
         preds = preds[..., start:end, :num_quantiles, :patch_size]
         preds = rearrange(
             preds,
-            "... (dim seq) num_quantiles patch -> ... num_quantiles (seq patch) dim",
+            "... (dim seq) num_quantiles patch -> ... (seq patch) num_quantiles dim",
             dim=target_dim,
-        )[..., : self.hparams.prediction_length, :]
+        )[..., : self.hparams.prediction_length, :, :]
         return preds.squeeze(-1)
 
     def get_default_transform(self) -> Transformation:

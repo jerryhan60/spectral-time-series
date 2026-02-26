@@ -89,8 +89,10 @@ source uni2ts/venv/bin/activate
 Use either one of these depending on which is full / not
 salloc --nodes=1 --ntasks=1 --mem=128G --time=03:01:00 --gres=gpu:1 --partition=pli --account=eladgroup
 salloc --nodes=1 --ntasks=1 --mem=128G --time=03:01:00 --gres=gpu:1 --partition=della --account=ehazan
-salloc --nodes=1 --ntasks=1 --mem=128G --time=03:01:00 --gres=gpu:1 --partition=ailab --account=ehazan
+salloc --nodes=1 --ntasks=1 --mem=128G --time=03:01:00 --gres=gpu:1 --cpus-per-task=8 --partition=ailab --account=ehazan
 ```
+
+**SLURM CPU-cores-per-GPU policy**: Della (ailab) has 64 CPU-cores and 8 GPUs per node. **Use at most 8 CPU-cores per GPU** (`--cpus-per-task=8` for single-GPU jobs) to avoid starving other jobs of CPU cores. Always include `--cpus-per-task=8` (or fewer) in SLURM scripts and `salloc` commands for ailab.
 
 **Available accounts**: `eladgroup` (pli-low), `hazan_intern` (pli-low), `spectralssmtorch` (pli-low), `ehazan` (various gpu queues)
 
@@ -139,7 +141,7 @@ python -m cli.train -cp conf/pretrain \
   trainer.accelerator=cpu
 
 # Or interactive GPU test (faster, catches GPU-specific issues)
-salloc --partition=ailab --account=ehazan --gres=gpu:1 --time=00:30:00 --mem=32G
+salloc --partition=ailab --account=ehazan --gres=gpu:1 --cpus-per-task=8 --time=00:30:00 --mem=32G
 python -m cli.train -cp conf/pretrain \
   run_name=test_gpu \
   model=moirai_small_stu \
@@ -297,7 +299,7 @@ Location: `/scratch/gpfs/EHAZAN/jh1161/gifteval/`
 bash /scratch/gpfs/EHAZAN/jh1161/gifteval/setup_gifteval.sh
 ```
 
-### Quick Evaluation (~30 min, 8 datasets)
+### Quick Evaluation (~5 min, 8 datasets)
 
 ```bash
 # Evaluate a checkpoint
@@ -307,7 +309,7 @@ sbatch --export=CHECKPOINT=/path/to/ckpt.ckpt /scratch/gpfs/EHAZAN/jh1161/giftev
 sbatch --export=MODEL=moirai-1.1-R-small /scratch/gpfs/EHAZAN/jh1161/gifteval/eval_gifteval_quick.slurm
 ```
 
-### Full Benchmark (~8-12 hours, 98 configurations)
+### Full Benchmark (~20-25 min on H200, 97 configurations)
 
 ```bash
 sbatch --export=CHECKPOINT=/path/to/ckpt.ckpt /scratch/gpfs/EHAZAN/jh1161/gifteval/eval_gifteval.slurm
@@ -333,6 +335,52 @@ Results saved to `/scratch/gpfs/EHAZAN/jh1161/gifteval/results/`:
 - `flash-stu-2/README.md`: Flash STU documentation
 - `gifteval/README.md`: GIFT-Eval benchmark setup and usage
 
+
+## Current Best Results (Preconditioning)
+
+Our best model uses **multi-scale hint mode** preconditioning: causal FIR filter residuals at two polynomial degrees (d=4 and d=6) fed as extra input channels alongside target and mask. No reversal needed at inference. The FIR filter is strictly causal (backward-looking only), and hint channels are zeroed in the prediction window.
+
+```
+Inference pipeline:
+  Raw series → z-score → [target, mask, hint_d4, hint_d6] → in_proj → causal transformer → out_proj
+                              ↑                                          (predicts in raw z-scored space,
+                    FIR residual from past                                no reversal needed)
+                    values only (causal)
+                    Zeroed in prediction window
+```
+
+### Baselines
+
+| Model | Params | Steps | MASE (Geo Mean) |
+|-------|--------|-------|-----------------|
+| Our 10K baseline | 11.4M | 10K | 1.2421 |
+| Our 25K baseline | 11.4M | 25K | 1.2422 |
+| Our 100K baseline | 11.4M | 100K | 1.2878 |
+
+### Best Results (vs own baseline at matched training steps)
+
+| Model | Steps | MASE | vs Baseline |
+|-------|-------|------|-------------|
+| **Multi-scale Cheb d=4+d=6 hint** | **10K** | **1.1675** | **-6.01%** |
+| L2-optimized d=6 | 10K | 1.1784 | -5.13% |
+| Hint d=4 + 10% dropout | 10K | 1.1802 | -4.98% |
+| Hint d=6 s=16 | 10K | 1.1836 | -4.71% |
+| Hint d=6 25K | 25K | 1.1889 | -4.28% |
+| **Hint d=4 + 10% drop 100K** | **100K** | **1.1918** | **-7.45%** |
+
+- Multi-scale d=4+d=6 is **uniquely optimal** — d=4+d=5, d=4+d=8, d=4+d=6+d=8 all significantly worse
+- **d=4 as primary degree is critical**: ms d=4+d=6 (1.1675) vs d=6+d=4 (1.2365) — swap costs 5.6%
+- Hint benefit **decays with training**: ms d=4+d=6 drops from -6.01% at 10K to -1.69% at 25K
+- **Dropout is essential at 100K**: d=4 without dropout (-5.77%) vs with 10% dropout (-7.45%)
+- Chebyshev dominates multi-scale; L2-opt/Legendre worse for multi-scale despite L2-opt d=6 being best single-scale
+- 50+ experiments across 4 polynomial families, 7 degrees, 5 dropout rates, 4 strides, multi-scale combos
+- Full results and 11 lessons learned: `docs/experiment_summary.md`
+
+## Experiment Log (Preconditioning)
+
+The preconditioning experiment log is at: `/scratch/gpfs/EHAZAN/jh1161/docs/experiment_log_preconditioning.md`
+
+Contains all experiment definitions, hyperparameter settings, results, and planned runs for time-domain polynomial preconditioning and FIR inverse filters on Moirai2. Update this file when experiments complete or new ones are planned.
 
 ## SLURM Job Log
 

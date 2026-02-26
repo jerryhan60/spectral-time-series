@@ -44,16 +44,17 @@ echo ""
 # Determine checkpoint or model
 if [ -n "$CHECKPOINT" ]; then
     echo "Checkpoint: $CHECKPOINT"
-    python eval_gifteval.py --checkpoint "$CHECKPOINT" --batch-size 32
+    echo "Context Length: ${CONTEXT_LENGTH:-4000}"
+    python eval_gifteval.py --checkpoint "$CHECKPOINT" --context-length ${CONTEXT_LENGTH:-4000} --batch-size ${BATCH_SIZE:-64}
 elif [ -n "$MODEL" ]; then
     echo "Model: $MODEL"
-    python eval_gifteval.py --model "$MODEL" --batch-size 32
+    python eval_gifteval.py --model "$MODEL" --context-length ${CONTEXT_LENGTH:-4000} --batch-size ${BATCH_SIZE:-64}
 else
     # Default: use latest checkpoint from training
     DEFAULT_CKPT=$(ls -t /scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/*/checkpoints/*.ckpt 2>/dev/null | head -n1)
     if [ -n "$DEFAULT_CKPT" ]; then
         echo "Using latest checkpoint: $DEFAULT_CKPT"
-        python eval_gifteval.py --checkpoint "$DEFAULT_CKPT" --batch-size 32
+        python eval_gifteval.py --checkpoint "$DEFAULT_CKPT" --context-length ${CONTEXT_LENGTH:-4000} --batch-size ${BATCH_SIZE:-64}
     else
         echo "No checkpoint specified and no default found."
         echo "Usage: sbatch --export=CHECKPOINT=/path/to/ckpt.ckpt eval_gifteval.slurm"

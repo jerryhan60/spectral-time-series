@@ -36,6 +36,8 @@ class TransformerEncoderLayer(nn.Module):
         norm2: Optional[nn.Module],
         post_attn_dropout_p: float = 0.0,
         pre_norm: bool = True,
+        stu_layer: Optional[nn.Module] = None,
+        stu_norm: Optional[nn.Module] = None,
     ):
         super().__init__()
         self.pre_norm = pre_norm
@@ -46,6 +48,8 @@ class TransformerEncoderLayer(nn.Module):
         self.norm1 = norm1 or nn.Identity()
         self.norm2 = norm2 or nn.Identity()
         self.dropout = nn.Dropout(post_attn_dropout_p)
+        self.stu_layer = stu_layer
+        self.stu_norm = stu_norm
 
     def forward(
         self,
@@ -54,18 +58,39 @@ class TransformerEncoderLayer(nn.Module):
         var_id: Optional[Int[torch.Tensor, "*batch time_len"]] = None,
         time_id: Optional[Int[torch.Tensor, "*batch time_len"]] = None,
         centroid: Optional[Float[torch.Tensor, "expert dim"]] = None,
-    ) -> Float[torch.Tensor, "*batch time_len dim"]:
+        return_attn_weights: bool = False,
+    ):
         if self.pre_norm:
-            x = x + self._sa_block(
-                self.norm1(x), attn_mask, var_id=var_id, time_id=time_id
+            normed = self.norm1(x)
+            sa_result = self._sa_block(
+                normed, attn_mask, var_id=var_id, time_id=time_id,
+                return_attn_weights=return_attn_weights,
             )
+            if return_attn_weights:
+                sa_out, attn_weights = sa_result
+            else:
+                sa_out = sa_result
+                attn_weights = None
+            x = x + sa_out
+            if self.stu_layer is not None:
+                stu_input = self.stu_norm(x) if self.stu_norm is not None else normed
+                x = x + self.stu_layer(stu_input)
             x = x + self.ffn(self.norm2(x), centroid=centroid)
         else:
-            x = self.norm1(
-                x + self._sa_block(x, attn_mask, var_id=var_id, time_id=time_id)
+            sa_result = self._sa_block(
+                x, attn_mask, var_id=var_id, time_id=time_id,
+                return_attn_weights=return_attn_weights,
             )
+            if return_attn_weights:
+                sa_out, attn_weights = sa_result
+            else:
+                sa_out = sa_result
+                attn_weights = None
+            x = self.norm1(x + sa_out)
             x = self.norm2(x + self.ffn(x, centroid=centroid))
 
+        if return_attn_weights:
+            return x, attn_weights
         return x
 
     def _sa_block(
@@ -74,8 +99,9 @@ class TransformerEncoderLayer(nn.Module):
         attn_mask: Optional[Bool[torch.Tensor, "*batch time_len time_len"]],
         var_id: Optional[Int[torch.Tensor, "*batch time_len"]] = None,
         time_id: Optional[Int[torch.Tensor, "*batch time_len"]] = None,
-    ) -> Float[torch.Tensor, "*batch time_len dim"]:
-        x = self.self_attn(
+        return_attn_weights: bool = False,
+    ):
+        result = self.self_attn(
             x,
             x,
             x,
@@ -84,8 +110,12 @@ class TransformerEncoderLayer(nn.Module):
             kv_var_id=var_id,
             query_time_id=time_id,
             kv_time_id=time_id,
+            return_attn_weights=return_attn_weights,
         )
-        return self.dropout(x)
+        if return_attn_weights:
+            out, attn_weights = result
+            return self.dropout(out), attn_weights
+        return self.dropout(result)
 
 
 class TransformerEncoder(nn.Module):
@@ -116,6 +146,9 @@ class TransformerEncoder(nn.Module):
         shared_var_qk_proj: bool = False,
         shared_time_qk_proj: bool = False,
         d_ff: Optional[int] = None,
+        stu_enabled: bool = False,
+        stu_num_filters: int = 24,
+        stu_max_seq_len: int = 512,
     ):
         super().__init__()
         self.use_moe = use_moe
@@ -184,8 +217,19 @@ class TransformerEncoder(nn.Module):
             )
         get_encoder_layer_norm = partial(norm_layer, d_model)
 
-        self.layers = nn.ModuleList(
-            [
+        # Optional STU branch per layer
+        if stu_enabled:
+            from .stu_layer import STULayer
+
+        layers = []
+        for _ in range(num_layers):
+            stu_layer = STULayer(
+                d_model=d_model,
+                num_filters=stu_num_filters,
+                max_seq_len=stu_max_seq_len,
+            ) if stu_enabled else None
+            stu_norm = get_encoder_layer_norm() if stu_enabled else None
+            layers.append(
                 TransformerEncoderLayer(
                     self_attn=get_self_attn(),
                     ffn=get_ffn(),
@@ -193,10 +237,11 @@ class TransformerEncoder(nn.Module):
                     norm2=get_encoder_layer_norm(),
                     pre_norm=pre_norm,
                     post_attn_dropout_p=dropout_p,
+                    stu_layer=stu_layer,
+                    stu_norm=stu_norm,
                 )
-                for _ in range(num_layers)
-            ]
-        )
+            )
+        self.layers = nn.ModuleList(layers)
         self.norm = norm_layer(d_model)
 
     @staticmethod
@@ -220,17 +265,35 @@ class TransformerEncoder(nn.Module):
         attn_mask: Optional[Bool[torch.Tensor, "*batch time_len time_len"]] = None,
         var_id: Optional[Int[torch.Tensor, "*batch time_len"]] = None,
         time_id: Optional[Int[torch.Tensor, "*batch time_len"]] = None,
-    ) -> Float[torch.Tensor, "*batch time_len dim"]:
+        return_attn_weights: bool = False,
+    ):
+        all_attn_weights = [] if return_attn_weights else None
         if self.use_moe:
             for idx, layer in enumerate(self.layers):
-                x = layer(
+                result = layer(
                     x,
                     attn_mask,
                     var_id=var_id,
                     time_id=time_id,
                     centroid=self.centroid[idx],
+                    return_attn_weights=return_attn_weights,
                 )
+                if return_attn_weights:
+                    x, attn_w = result
+                    all_attn_weights.append(attn_w)
+                else:
+                    x = result
         else:
             for layer in self.layers:
-                x = layer(x, attn_mask, var_id=var_id, time_id=time_id)
+                result = layer(
+                    x, attn_mask, var_id=var_id, time_id=time_id,
+                    return_attn_weights=return_attn_weights,
+                )
+                if return_attn_weights:
+                    x, attn_w = result
+                    all_attn_weights.append(attn_w)
+                else:
+                    x = result
+        if return_attn_weights:
+            return self.norm(x), all_attn_weights
         return self.norm(x)

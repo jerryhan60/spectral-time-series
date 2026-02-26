@@ -122,6 +122,98 @@ class PackedStdScaler(PackedScaler):
         return loc, scale
 
 
+class PackedRobustScaler(PackedScaler):
+    """Robust scaler using median/MAD instead of mean/std.
+
+    Based on R2-IN (Robust Reversible Instance Normalization).
+    loc = median(observed values in group)
+    scale = 1.4826 * MAD(observed values in group)
+    where MAD = median(|x - median(x)|).
+
+    The factor 1.4826 makes MAD consistent with std for normal data.
+    Falls back to PackedStdScaler statistics if MAD is zero (constant series).
+    """
+
+    MAD_CONSISTENCY_FACTOR = 1.4826
+
+    def __init__(self, minimum_scale: float = 1e-5):
+        super().__init__()
+        self.minimum_scale = minimum_scale
+
+    def _get_loc_scale(
+        self,
+        target: Float[torch.Tensor, "*batch seq_len #dim"],
+        observed_mask: Bool[torch.Tensor, "*batch seq_len #dim"],
+        sample_id: Int[torch.Tensor, "*batch seq_len"],
+        variate_id: Int[torch.Tensor, "*batch seq_len"],
+    ) -> tuple[
+        Float[torch.Tensor, "*batch 1 #dim"], Float[torch.Tensor, "*batch 1 #dim"]
+    ]:
+        # Flatten leading batch dims to 2D: (B, seq_len)
+        batch_shape = target.shape[:-2]
+        seq_len = target.shape[-2]
+        dim = target.shape[-1]
+        B = 1
+        for s in batch_shape:
+            B *= s
+
+        target_2d = target.reshape(B, seq_len, dim)
+        observed_2d = observed_mask.reshape(B, seq_len, dim)
+        sample_id_2d = sample_id.reshape(B, seq_len)
+        variate_id_2d = variate_id.reshape(B, seq_len)
+
+        loc = torch.zeros(B, seq_len, 1, dtype=target.dtype, device=target.device)
+        scale = torch.ones(B, seq_len, 1, dtype=target.dtype, device=target.device)
+
+        # Encode group keys: unique (sample_id, variate_id) pairs
+        max_variate = int(variate_id_2d.max().item()) + 1 if variate_id_2d.numel() > 0 else 1
+        group_key = sample_id_2d * max_variate + variate_id_2d  # (B, seq_len)
+
+        for b in range(B):
+            keys_b = group_key[b]  # (seq_len,)
+            unique_keys = keys_b.unique()
+
+            for key in unique_keys:
+                # Mask for positions belonging to this group
+                group_mask = keys_b == key  # (seq_len,)
+
+                # Skip padding groups (sample_id==0)
+                if (sample_id_2d[b, group_mask] == 0).all():
+                    continue
+
+                # Gather observed values across all dims for this group
+                # target_2d[b, group_mask] has shape (group_len, dim)
+                # observed_2d[b, group_mask] has shape (group_len, dim)
+                group_target = target_2d[b, group_mask]  # (G, dim)
+                group_obs = observed_2d[b, group_mask]    # (G, dim)
+
+                # Collect all observed scalar values
+                observed_vals = group_target[group_obs]  # 1D tensor of observed values
+                if observed_vals.numel() == 0:
+                    continue
+
+                med = observed_vals.median()
+                mad = (observed_vals - med).abs().median()
+                robust_scale = self.MAD_CONSISTENCY_FACTOR * mad
+
+                if robust_scale < self.minimum_scale:
+                    # MAD is ~0 (constant or near-constant series): fall back to std
+                    obs_std = observed_vals.std()
+                    robust_scale = torch.sqrt(obs_std ** 2 + self.minimum_scale)
+
+                loc[b, group_mask, 0] = med
+                scale[b, group_mask, 0] = robust_scale
+
+        # Enforce padding convention
+        padding = (sample_id_2d == 0).reshape(B, seq_len)
+        loc[padding] = 0
+        scale[padding] = 1
+
+        loc = loc.reshape(*batch_shape, seq_len, 1)
+        scale = scale.reshape(*batch_shape, seq_len, 1)
+        return loc, scale
+
+
 class PackedAbsMeanScaler(PackedScaler):
     def _get_loc_scale(
         self,

@@ -2,7 +2,7 @@
 #SBATCH --job-name=moirai2_small
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=12
+#SBATCH --cpus-per-task=8
 #SBATCH --mem=128G
 #SBATCH --time=06:00:00
 #SBATCH --gres=gpu:1

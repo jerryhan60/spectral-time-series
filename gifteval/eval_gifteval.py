@@ -296,17 +296,40 @@ QUICK_CONFIGS = [
 ]
 
 
-def load_checkpoint_model(checkpoint_path: str, prediction_length: int,
-                          context_length: int = 1000, patch_size: int = 32):
-    """Load model from a checkpoint file."""
+def _load_module_from_checkpoint(checkpoint_path: str):
+    """Load model module from checkpoint once. Returns (module, model_type)."""
     from uni2ts.model.moirai import MoiraiForecast, MoiraiPretrain
 
-    # Try loading as standard Moirai checkpoint
     try:
         pretrain = MoiraiPretrain.load_from_checkpoint(checkpoint_path)
-        module = pretrain.module
+        return (pretrain.module, "moirai")
+    except Exception as e:
+        print(f"Standard load failed: {e}")
 
-        forecast = MoiraiForecast(
+    try:
+        from uni2ts.model.moirai2 import Moirai2Forecast, Moirai2Pretrain
+        pretrain = Moirai2Pretrain.load_from_checkpoint(checkpoint_path)
+        return (pretrain.module, "moirai2")
+    except Exception as e:
+        print(f"Moirai2 load failed: {e}")
+
+    try:
+        from uni2ts.model.moirai import MoiraiHybridPretrain
+        pretrain = MoiraiHybridPretrain.load_from_checkpoint(checkpoint_path)
+        return (pretrain.module, "hybrid")
+    except Exception as e:
+        raise RuntimeError(f"Failed to load checkpoint: {e}")
+
+
+def _build_forecast_from_module(cached_module_tuple, checkpoint_path: str,
+                                prediction_length: int, context_length: int = 1000,
+                                patch_size: int = 32):
+    """Build forecast wrapper from a cached module (no disk I/O)."""
+    module, model_type = cached_module_tuple
+
+    if model_type == "moirai":
+        from uni2ts.model.moirai import MoiraiForecast
+        return MoiraiForecast(
             prediction_length=prediction_length,
             target_dim=1,
             feat_dynamic_real_dim=0,
@@ -316,18 +339,9 @@ def load_checkpoint_model(checkpoint_path: str, prediction_length: int,
             patch_size=patch_size,
             num_samples=100,
         )
-        return forecast
-    except Exception as e:
-        print(f"Standard load failed: {e}")
-
-    # Try loading as Moirai2 checkpoint
-    try:
-        from uni2ts.model.moirai2 import Moirai2Forecast, Moirai2Pretrain
-
-        pretrain = Moirai2Pretrain.load_from_checkpoint(checkpoint_path)
-        module = pretrain.module
-
-        forecast = Moirai2Forecast(
+    elif model_type == "moirai2":
+        from uni2ts.model.moirai2 import Moirai2Forecast
+        return Moirai2Forecast(
             prediction_length=prediction_length,
             target_dim=1,
             feat_dynamic_real_dim=0,
@@ -335,17 +349,8 @@ def load_checkpoint_model(checkpoint_path: str, prediction_length: int,
             context_length=context_length,
             module=module,
         )
-        return forecast
-    except Exception as e:
-        print(f"Moirai2 load failed: {e}")
-
-    # Try loading as hybrid STU checkpoint
-    try:
-        from uni2ts.model.moirai import MoiraiHybridPretrain
-
-        pretrain = MoiraiHybridPretrain.load_from_checkpoint(checkpoint_path)
-        module = pretrain.module
-
+    elif model_type == "hybrid":
+        from uni2ts.model.moirai import MoiraiForecast
         class HybridForecast(MoiraiForecast):
             def __init__(self, *args, module=None, **kwargs):
                 super(MoiraiForecast, self).__init__()
@@ -353,8 +358,7 @@ def load_checkpoint_model(checkpoint_path: str, prediction_length: int,
                 self.module = module
                 from uni2ts.model.moirai.forecast import SampleNLLLoss
                 self.per_sample_loss_func = SampleNLLLoss()
-
-        forecast = HybridForecast(
+        return HybridForecast(
             prediction_length=prediction_length,
             target_dim=1,
             feat_dynamic_real_dim=0,
@@ -364,9 +368,14 @@ def load_checkpoint_model(checkpoint_path: str, prediction_length: int,
             patch_size=patch_size,
             num_samples=100,
         )
-        return forecast
-    except Exception as e:
-        raise RuntimeError(f"Failed to load checkpoint: {e}")
+
+
+def load_checkpoint_model(checkpoint_path: str, prediction_length: int,
+                          context_length: int = 1000, patch_size: int = 32):
+    """Load model from a checkpoint file (legacy, reloads each time)."""
+    cached = _load_module_from_checkpoint(checkpoint_path)
+    return _build_forecast_from_module(cached, checkpoint_path, prediction_length,
+                                       context_length, patch_size)
 
 
 def load_pretrained_model(model_name: str, prediction_length: int,
@@ -738,14 +747,16 @@ def main():
     print(f"Using device: {device}")
 
     # Create model loader function
+    # Cache the module to avoid reloading the checkpoint for each config
     if args.checkpoint:
         model_name = Path(args.checkpoint).stem
+        print(f"Loading from checkpoint: {args.checkpoint}")
+        _cached_module = _load_module_from_checkpoint(args.checkpoint)
         def model_loader(prediction_length):
-            return load_checkpoint_model(
-                args.checkpoint, prediction_length,
+            return _build_forecast_from_module(
+                _cached_module, args.checkpoint, prediction_length,
                 args.context_length, args.patch_size
             )
-        print(f"Loading from checkpoint: {args.checkpoint}")
     else:
         model_name = args.model
         def model_loader(prediction_length):

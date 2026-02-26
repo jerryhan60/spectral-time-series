@@ -9,11 +9,14 @@ module_kwargs:
   attn_dropout_p: 0.0
   dropout_p: 0.0
   scaling: true
+  scaler_type: std
   time_precondition_enabled: false
   time_precondition_type: chebyshev
   time_precondition_degree: 5
   time_precondition_stride: 1
+  time_precondition_reg_lambda: 1.0
   time_precondition_coeffs_init: null
+  time_precondition_learnable: false
   time_precondition_inverse_enabled: false
   time_precondition_inverse_length: 64
   time_precondition_inverse_stride: 1
@@ -21,6 +24,13 @@ module_kwargs:
   latent_precondition_type: chebyshev
   latent_precondition_degree: 5
   latent_precondition_stride: 1
+  time_precondition_hint_mode: false
+  time_precondition_dual_head: false
+  attn_l1_lambda: 0.0
+  patch_mask_ratio: 0.0
+  hint_dropout: 0.0
+  hint_embed_mode: concat
+  hint_normalize: false
   num_predict_token: 4
 prefix_ratio: 0.3
 mask_ratio: 0.5
@@ -34,6 +44,9 @@ patch_precondition_degree: 5
 patch_precondition_stride: 1
 time_precondition_reverse_in_loss: false
 time_precondition_inverse_lambda: 0.1
+time_precondition_coeffs_lambda: 0.0
+time_precondition_dual_head_lambda: 1.0
+ps_loss_lambda: 0.0
 log_on_step: true
 max_dim: 1
 lr: 1e-3

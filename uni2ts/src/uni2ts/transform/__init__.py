@@ -33,6 +33,10 @@ from .patch import (
     PatchSizeConstraints,
 )
 from .precondition import PatchPolynomialPrecondition
+
+# Aliases for backward compatibility (used by moirai/finetune.py)
+PolynomialPrecondition = PatchPolynomialPrecondition
+ReversePrecondition = Identity
 from .resample import SampleDimension
 from .reshape import (
     FlatPackCollection,
@@ -84,6 +88,8 @@ __all__ = [
     "PatchSizeConstraints",
     "Patchify",
     "PatchPolynomialPrecondition",
+    "PolynomialPrecondition",
+    "ReversePrecondition",
     "RemoveFields",
     "SampleDimension",
     "SelectFields",

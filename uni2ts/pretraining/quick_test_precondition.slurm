@@ -2,7 +2,7 @@
 #SBATCH --job-name=m2_quick_precond
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=12
+#SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
 #SBATCH --time=01:00:00
 #SBATCH --gres=gpu:1

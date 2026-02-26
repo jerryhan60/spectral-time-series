@@ -367,3 +367,177 @@ class VariateAwareSTUEncoderLayer(STUEncoderLayer):
             x = self.norm2(x + self.ffn(x, centroid=centroid))
 
         return x
+
+
+# ---------------------------------------------------------------------------
+# Standalone STULayer: approx-mode spectral filtering + projection.
+# Used as a parallel branch to attention in hybrid transformer blocks.
+# Adapted from flash-stu-2 for integration into Moirai2's transformer.
+#
+# Approx mode (project-then-convolve): ~50x fewer params than standard mode.
+#   M_inputs:  [d_model, d_model] = d^2  params (input projection)
+#   M_filters: [K, d_model]       = K*d  params (spectral filter mixing)
+#   Total per layer: d^2 + K*d = 147,456 + 9,216 = 156,672  (at d=384, K=24)
+# ---------------------------------------------------------------------------
+
+import math
+
+
+def _nearest_power_of_two(x: int) -> int:
+    return 1 << math.ceil(math.log2(x))
+
+
+def _get_hankel(seq_len: int, use_hankel_L: bool = False) -> torch.Tensor:
+    entries = torch.arange(1, seq_len + 1, dtype=torch.float64)
+    i_plus_j = entries[:, None] + entries[None, :]
+    if use_hankel_L:
+        sgn = (-1.0) ** (i_plus_j - 2.0) + 1.0
+        denom = (i_plus_j + 3.0) * (i_plus_j - 1.0) * (i_plus_j + 1.0)
+        Z = sgn * (8.0 / denom)
+    else:
+        Z = 2.0 / (i_plus_j**3 - i_plus_j)
+    return Z
+
+
+def compute_spectral_filters(
+    seq_len: int,
+    K: int,
+    use_hankel_L: bool = False,
+    dtype: torch.dtype = torch.float32,
+) -> torch.Tensor:
+    Z = _get_hankel(seq_len, use_hankel_L)
+    sigma, phi = torch.linalg.eigh(Z)
+    sigma_k, phi_k = sigma[-K:], phi[:, -K:]
+    phi_k = phi_k * sigma_k ** 0.25
+    return phi_k.to(dtype=dtype)
+
+
+def _approx_convolve(
+    u: torch.Tensor,
+    v_fft: torch.Tensor,
+    n: int,
+    seq_len: int,
+    sgn: torch.Tensor,
+    use_hankel_L: bool,
+) -> tuple[torch.Tensor, Optional[torch.Tensor]]:
+    """FFT-based convolution for approx mode.
+
+    Args:
+        u: [B, L, d_model] (projected input)
+        v_fft: pre-computed FFT of projected filters [1, n//2+1, d_model, 1]
+        n: FFT length
+        seq_len: actual sequence length (for truncation)
+        sgn: sign alternation tensor [1, L, 1]
+        use_hankel_L: if True, skip negative branch
+
+    Returns:
+        (U_plus, U_minus) each [B, L, d_model]. U_minus is None if use_hankel_L.
+    """
+    dtype = u.dtype
+    if use_hankel_L:
+        U = u.to(torch.float32)
+        U = torch.fft.rfft(U, n=n, dim=1)
+        U_plus = torch.fft.irfft(v_fft * U, n=n, dim=1)[:, :seq_len]
+        return U_plus.to(dtype), None
+    else:
+        U = torch.stack([u, u * sgn], dim=-1).to(torch.float32).contiguous()
+        U = torch.fft.rfft(U, n=n, dim=1)
+        U_conv = torch.fft.irfft(v_fft * U, n=n, dim=1)[:, :seq_len]
+        U_plus, U_minus = torch.unbind(U_conv, dim=-1)
+        U_minus = U_minus * sgn
+        return U_plus.to(dtype), U_minus.to(dtype)
+
+
+class STULayer(nn.Module):
+    """Spectral Transform Unit layer (approx mode) for use inside a transformer.
+
+    Uses project-then-convolve approach: first project input and mix spectral
+    filters, then convolve in d_model space. ~50x fewer params than standard mode.
+
+    Args:
+        d_model: Model hidden dimension (input and output).
+        num_filters: Number of spectral filters K (default 24).
+        max_seq_len: Maximum sequence length for precomputing filters.
+        use_hankel_L: Use single-branch Hankel-L (default False = two-branch).
+        gate_init: Initial value for the gating scalar (default 0.0 for zero-init).
+    """
+
+    def __init__(
+        self,
+        d_model: int,
+        num_filters: int = 24,
+        max_seq_len: int = 512,
+        use_hankel_L: bool = False,
+        gate_init: float = 0.0,
+    ):
+        super().__init__()
+        self.d_model = d_model
+        self.num_filters = num_filters
+        self.max_seq_len = max_seq_len
+        self.use_hankel_L = use_hankel_L
+
+        # Precompute spectral filters [max_seq_len, K] (not learned)
+        phi = compute_spectral_filters(
+            max_seq_len, num_filters, use_hankel_L, dtype=torch.float32
+        )
+        self.register_buffer("phi", phi, persistent=False)
+
+        # FFT length (next power of 2 >= 2*seq_len - 1)
+        self.n = _nearest_power_of_two(max_seq_len * 2 - 1)
+
+        # Sign alternation tensor for negative branch [1, max_seq_len, 1]
+        sgn = torch.ones(1, max_seq_len, 1)
+        sgn[:, 1::2] *= -1
+        self.register_buffer("sgn", sgn, persistent=False)
+
+        # Approx mode learned parameters:
+        # M_inputs: projects input features [d_model, d_model]
+        nn.init.xavier_normal_(
+            (m_inputs := torch.empty(d_model, d_model))
+        )
+        self.M_inputs = nn.Parameter(m_inputs)
+        # M_filters: mixes K spectral filters [K, d_model]
+        nn.init.xavier_normal_(
+            (m_filters := torch.empty(num_filters, d_model))
+        )
+        self.M_filters = nn.Parameter(m_filters)
+
+        # Gating scalar (zero-init so training starts from baseline)
+        self.gate = nn.Parameter(torch.tensor(gate_init))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            x: [B, T, d_model]
+        Returns:
+            gated STU output: [B, T, d_model]
+        """
+        B, T, D = x.shape
+
+        # 1. Project input: [B, T, d] @ [d, d] -> [B, T, d]
+        x_proj = x @ self.M_inputs
+
+        # 2. Mix spectral filters: [T, K] @ [K, d] -> [T, d]
+        phi = self.phi[:T]
+        phi_proj = phi @ self.M_filters
+
+        # 3. Compute FFT of projected filters: [1, n//2+1, d, 1]
+        phi_proj_fft = torch.fft.rfft(
+            phi_proj.unsqueeze(0).unsqueeze(-1).to(torch.float32).contiguous(),
+            n=self.n,
+            dim=1,
+        )
+
+        # 4. Convolve projected input with projected filters
+        sgn = self.sgn[:, :T]
+        spectral_plus, spectral_minus = _approx_convolve(
+            x_proj, phi_proj_fft, self.n, T, sgn, self.use_hankel_L
+        )
+
+        # 5. Combine branches
+        if self.use_hankel_L:
+            out = spectral_plus
+        else:
+            out = spectral_plus + spectral_minus
+
+        return torch.tanh(self.gate) * out
