@@ -1,9 +1,9 @@
 {
-  "model_name": "epoch_99-step_10000",
-  "model_type": "fine-tuned",
+  "model_name": "moirai-2.0-R-small",
+  "model_type": "pretrained",
   "is_zero_shot": true,
   "data_leakage": false,
   "code_available": true,
   "organization": "Princeton",
-  "evaluation_date": "20260226_035333"
+  "evaluation_date": "20260225_220910"
 }

@@ -149,6 +149,7 @@ class TransformerEncoder(nn.Module):
         stu_enabled: bool = False,
         stu_num_filters: int = 24,
         stu_max_seq_len: int = 512,
+        stu_gate_init: float = 0.0,
     ):
         super().__init__()
         self.use_moe = use_moe
@@ -227,6 +228,7 @@ class TransformerEncoder(nn.Module):
                 d_model=d_model,
                 num_filters=stu_num_filters,
                 max_seq_len=stu_max_seq_len,
+                gate_init=stu_gate_init,
             ) if stu_enabled else None
             stu_norm = get_encoder_layer_norm() if stu_enabled else None
             layers.append(

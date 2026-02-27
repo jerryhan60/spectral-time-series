@@ -38,6 +38,16 @@ This file tracks all SLURM jobs submitted for this project.
 
 | Job ID | Name | Type | Status | Submitted | Checkpoint/Input | Output Path |
 |--------|------|------|--------|-----------|------------------|-------------|
+| 5087530 | hd10_10kw | Pretraining | **PENDING** | 2026-02-25 | hint d=4 s=16 + 10% dropout, **10K warmup** (baseline-matched LR schedule), 100K steps | `logs/hd10_10kw_5087530.out` |
+| 5087878 | ge_hd10_10kw | GIFT-Eval | **PENDING** (afterok:5087530) | 2026-02-25 | Eval of hd10_10kw checkpoint, ctx=4000, patch=32 | `logs/ge_hd10_10kw_5087878.out` |
+| 5089146 | ge_m2_hf | GIFT-Eval | **PENDING** | 2026-02-25 | **Official Salesforce/moirai-2.0-R-small** from HuggingFace, ctx=4000, patch=32 | `logs/ge_m2_hf_5089146.out` |
+| 5091690 | m2_wt_base | Pretraining | **PENDING** | 2026-02-25 | Moirai2 baseline on **weighted LOTSA** (proportional sampling), 10K steps, bs=256, warmup=10K | `logs/m2_wt_base_5091690.out` |
+| 5091691 | m2_wt_hint | Pretraining | **PENDING** | 2026-02-25 | Moirai2 **hint ms d=4+d=6** on **weighted LOTSA**, 10K steps, bs=256, warmup=10K | `logs/m2_wt_hint_5091691.out` |
+| 5091692 | ge_eval | GIFT-Eval | **PENDING** (afterok:5091690) | 2026-02-25 | Eval of weighted baseline checkpoint | `logs/ge_eval_5091692.out` |
+| 5091700 | ge_eval | GIFT-Eval | **PENDING** (afterok:5091691) | 2026-02-25 | Eval of weighted hint checkpoint | `logs/ge_eval_5091700.out` |
+
+### Previous Jobs
+|--------|------|------|--------|-----------|------------------|-------------|
 | Job ID | Name | Type | Status | Submitted | Checkpoint/Input | Output Path |
 |--------|------|------|--------|-----------|------------------|-------------|
 | **EXP-1: Chebyshev Degree Sweep** | | | | | | |
@@ -235,13 +245,31 @@ Based on research into the [GIFT-Eval leaderboard](https://huggingface.co/spaces
 | 1.2452 | +0.46% | m2_hint_s16_25k | 25K | hint d=5 s=16 |
 | 1.2878 | +3.90% | m2_baseline | 100K | baseline (no anomaly filter) |
 
-### Active/Pending Jobs (2026-02-25)
+### Completed Evals (2026-02-25)
+
+| Job ID | Name | Result | Notes |
+|--------|------|--------|-------|
+| 5082176 | ge_d6_100k | MASE 1.2220 | Hint d=6, 100K steps, -5.11% vs 100K baseline |
+| 5089146 | ge_m2_hf | MASE 1.0236 | Official Moirai 2.0-R-small (57/97 < 1.0) |
+| 5085830 | ge_stu_hybrid | MASE 1.3044 | STU v2 hybrid, 10K steps, +5.01% vs baseline |
+
+### Active/Pending Jobs (2026-02-26)
 
 | Job ID | Name | Partition | Status | Notes |
 |--------|------|-----------|--------|-------|
-| 5082176 | ge_eval | ailab | RUNNING | d6_100k eval (GIFT-Eval 97 configs) |
-
-All preconditioning training (10K, 25K, 100K) and most evaluations are complete. Only d6_100k eval remains.
+| 5087530 | hd10_10kw | ailab | PENDING | Hint d=4+10%drop, 100K steps, 10K warmup (baseline-matched LR) |
+| 5087878 | ge_hd10_10kw | ailab | PENDING (dep) | GIFT-Eval of above (afterok:5087530) |
+| 5091638 | stu_hint_d4d6_2k | ailab | PENDING | STU + Hint d=4+d=6, 2K steps quick test |
+| 5091639 | stu_fulldff_k8_2k | ailab | PENDING | STU d_ff=1024, K=8, gate=0.5, 2K steps |
+| 5091640 | stu_hint_fulldff_2k | ailab | PENDING | STU + Hint + full d_ff + warm gate, 2K steps |
+| 5091644 | fev_ms_d4d6 | ailab | PENDING | FEV-Bench eval: ms d=4+d=6 10K |
+| 5091645 | fev_hd10_100k | ailab | PENDING | FEV-Bench eval: hd10 100K |
+| 5091647 | fev_moirai2_hf | ailab | PENDING | FEV-Bench eval: official Moirai 2.0-R-small |
+| 5091690 | m2_wt_base | ailab | PENDING | Weighted LOTSA baseline, 10K steps |
+| 5091691 | m2_wt_hint | ailab | PENDING | Weighted LOTSA hint ms d=4+d=6, 10K steps |
+| 5091692 | ge_wt_base | ailab | PENDING (dep) | GIFT-Eval of weighted baseline (afterok:5091690) |
+| 5091700 | ge_wt_hint | ailab | PENDING (dep) | GIFT-Eval of weighted hint (afterok:5091691) |
+| 5091677 | notify_hd10 | cpu | RUNNING | Email watcher for hd10_10kw eval completion |
 
 ### Cancelled Jobs
 | Job ID | Name | Reason |

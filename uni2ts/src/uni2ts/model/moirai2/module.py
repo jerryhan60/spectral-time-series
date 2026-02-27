@@ -85,6 +85,7 @@ class Moirai2Module(
         time_precondition_extra_hints: str | None = None,
         stu_enabled: bool = False,
         stu_num_filters: int = 24,
+        stu_gate_init: float = 0.0,
     ):
         """
         :param d_model: model hidden dimensions
@@ -275,6 +276,7 @@ class Moirai2Module(
             stu_enabled=stu_enabled,
             stu_num_filters=stu_num_filters,
             stu_max_seq_len=max_seq_len,
+            stu_gate_init=stu_gate_init,
         )
         self.out_proj = ResidualBlock(
             input_dims=d_model,

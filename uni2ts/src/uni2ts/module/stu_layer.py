@@ -508,11 +508,15 @@ class STULayer(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Args:
-            x: [B, T, d_model]
+            x: [*batch, T, d_model]
         Returns:
-            gated STU output: [B, T, d_model]
+            gated STU output: [*batch, T, d_model]
         """
-        B, T, D = x.shape
+        # Flatten leading batch dims to handle *batch
+        leading_shape = x.shape[:-2]
+        T, D = x.shape[-2], x.shape[-1]
+        x = x.reshape(-1, T, D)
+        B = x.shape[0]
 
         # 1. Project input: [B, T, d] @ [d, d] -> [B, T, d]
         x_proj = x @ self.M_inputs
@@ -540,4 +544,5 @@ class STULayer(nn.Module):
         else:
             out = spectral_plus + spectral_minus
 
-        return torch.tanh(self.gate) * out
+        out = torch.tanh(self.gate) * out
+        return out.reshape(*leading_shape, T, D)

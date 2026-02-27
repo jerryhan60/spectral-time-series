@@ -336,45 +336,11 @@ Results saved to `/scratch/gpfs/EHAZAN/jh1161/gifteval/results/`:
 - `gifteval/README.md`: GIFT-Eval benchmark setup and usage
 
 
-## Current Best Results (Preconditioning)
+## Experiment Results
 
-Our best model uses **multi-scale hint mode** preconditioning: causal FIR filter residuals at two polynomial degrees (d=4 and d=6) fed as extra input channels alongside target and mask. No reversal needed at inference. The FIR filter is strictly causal (backward-looking only), and hint channels are zeroed in the prediction window.
+**Baseline**: MOIRAI 2.0 Small (11.4M params) retrained on LOTSA. When we refer to "baseline", assume MOIRAI 2.0 unless otherwise specified. All results compared at matched training steps using GIFT-Eval geometric mean MASE (97 configs).
 
-```
-Inference pipeline:
-  Raw series → z-score → [target, mask, hint_d4, hint_d6] → in_proj → causal transformer → out_proj
-                              ↑                                          (predicts in raw z-scored space,
-                    FIR residual from past                                no reversal needed)
-                    values only (causal)
-                    Zeroed in prediction window
-```
-
-### Baselines
-
-| Model | Params | Steps | MASE (Geo Mean) |
-|-------|--------|-------|-----------------|
-| Our 10K baseline | 11.4M | 10K | 1.2421 |
-| Our 25K baseline | 11.4M | 25K | 1.2422 |
-| Our 100K baseline | 11.4M | 100K | 1.2878 |
-
-### Best Results (vs own baseline at matched training steps)
-
-| Model | Steps | MASE | vs Baseline |
-|-------|-------|------|-------------|
-| **Multi-scale Cheb d=4+d=6 hint** | **10K** | **1.1675** | **-6.01%** |
-| L2-optimized d=6 | 10K | 1.1784 | -5.13% |
-| Hint d=4 + 10% dropout | 10K | 1.1802 | -4.98% |
-| Hint d=6 s=16 | 10K | 1.1836 | -4.71% |
-| Hint d=6 25K | 25K | 1.1889 | -4.28% |
-| **Hint d=4 + 10% drop 100K** | **100K** | **1.1918** | **-7.45%** |
-
-- Multi-scale d=4+d=6 is **uniquely optimal** — d=4+d=5, d=4+d=8, d=4+d=6+d=8 all significantly worse
-- **d=4 as primary degree is critical**: ms d=4+d=6 (1.1675) vs d=6+d=4 (1.2365) — swap costs 5.6%
-- Hint benefit **decays with training**: ms d=4+d=6 drops from -6.01% at 10K to -1.69% at 25K
-- **Dropout is essential at 100K**: d=4 without dropout (-5.77%) vs with 10% dropout (-7.45%)
-- Chebyshev dominates multi-scale; L2-opt/Legendre worse for multi-scale despite L2-opt d=6 being best single-scale
-- 50+ experiments across 4 polynomial families, 7 degrees, 5 dropout rates, 4 strides, multi-scale combos
-- Full results and 11 lessons learned: `docs/experiment_summary.md`
+**Detailed results**: `docs/experiment_summary.md` (primary reference with all numbers, 11 lessons learned, 50+ experiments)
 
 ## Experiment Log (Preconditioning)
 

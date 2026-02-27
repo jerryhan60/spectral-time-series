@@ -34,6 +34,17 @@ All experiments compare against **our own Moirai2 Small baseline** trained from 
 | **Key setting** | `anomaly_zscore_threshold=8.0` (filters outlier sequences) |
 | **Baseline MASE** | **1.2421** (10K) / **1.2422** (25K) / **1.2878** (100K) |
 
+### Official Moirai 2.0-R-small Reference
+
+The official `Salesforce/moirai-2.0-R-small` (from HuggingFace) achieves **MASE 1.0236** (57/97 < 1.0) on GIFT-Eval.
+
+**IMPORTANT**: The official model was trained on a completely different, ~10x larger corpus (arXiv:2511.11698):
+- ~36M series, ~295B observations from 5 sources (GIFT-Eval Pretrain, Chronos-Mixup, KernelSynth synthetic, internal CloudOps, GIFT-Eval TrainTest)
+- 100K steps, bs=256, AdamW (lr=1e-3), 10K warmup + cosine annealing, bf16
+- We do NOT have access to this training corpus
+
+Our experiments use LOTSA v1 (27 datasets, ~10x less data). The gap (1.1675 vs 1.0236 = 14%) is primarily due to training data differences, not architecture. All comparisons in this document are **matched-compute, matched-data** against our own LOTSA-trained baselines.
+
 ---
 
 ## Complete Results Table
@@ -112,6 +123,7 @@ All experiments compare against **our own Moirai2 Small baseline** trained from 
 | **hd10_100k (d=4 + 10% drop)** | **1.1918** | **-7.45%** |
 | d4_100k (d=4 hint, no dropout) | 1.2135 | -5.77% |
 | hint100k (d=4, prev run) | 1.2038 | -6.52% |
+| d6_100k (d=6 hint, no dropout) | 1.2220 | -5.11% |
 | 100K baseline (no precond) | 1.2878 | — |
 
 Note: The 100K baseline (1.2878) is worse than the 10K baseline (1.2421) due to overfitting. Hint preconditioning provides even larger relative gains at 100K: hd10_100k achieves -7.45%, the strongest relative improvement of any experiment. **Hint dropout is critical at 100K** — without dropout, d=4 gives -5.77%; with 10% dropout, it gives -7.45%. The dropout acts as a regularizer that prevents the model from over-relying on the hint signal during extended training.
@@ -388,6 +400,21 @@ The following directions have been fully explored and resolved:
 5. **Per-dataset preconditioning curriculum**: Train with a mixture of hint configurations (varying degree, stride, dropout) across mini-batches. This could help the model generalize across frequency domains.
 
 6. **Scale to larger models**: All experiments use Moirai2 Small (11.4M). The hint mechanism adds negligible parameters (only changes the input projection dimension). Testing on Moirai2 Base (~90M) would show if the benefit persists or is subsumed by increased model capacity.
+
+---
+
+## Flash-STU Hybrid Results
+
+Parallel STU+Attention architecture integrated into Moirai2 Small. STU branch uses approx mode (project-then-convolve), K=24 Hankel spectral filters, zero-init tanh gate, d_ff reduced 1024→940 to fit extra params.
+
+| Model | Params | Steps | MASE (Geo Mean) | vs 10K Baseline |
+|-------|--------|-------|-----------------|-----------------|
+| Flash-STU v2 (parallel, approx) | 11.75M | 10K | 1.3044 | +5.01% |
+| STU v1 (alternating, Moirai v1) | 13.83M | 100K | 1.3359 | N/A (different base model) |
+
+**Conclusion**: STU hybrid v2 underperforms the baseline at 10K steps. Possible causes: zero-init gates may need longer training to open; d_ff reduction (1024→940) reduces attention layer capacity. Not a priority for further investigation unless longer training shows improvement.
+
+**Bug fix note**: Initial eval (job 5082318) had 42/97 failures on medium/long horizons. Root cause: `STULayer.forward()` hardcoded `B, T, D = x.shape` but recursive prediction passes 4D tensors. Fixed by flattening leading batch dims. Re-eval (job 5085830) succeeded on all 97/97 configs.
 
 ---
 

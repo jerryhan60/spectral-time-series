@@ -381,18 +381,28 @@ def load_checkpoint_model(checkpoint_path: str, prediction_length: int,
 def load_pretrained_model(model_name: str, prediction_length: int,
                           context_length: int = 1000, patch_size: int = 32):
     """Load pretrained model from HuggingFace."""
-    from uni2ts.model.moirai import MoiraiForecast, MoiraiModule
-
-    model = MoiraiForecast(
-        module=MoiraiModule.from_pretrained(f"Salesforce/{model_name}"),
-        prediction_length=prediction_length,
-        context_length=context_length,
-        patch_size=patch_size,
-        num_samples=100,
-        target_dim=1,
-        feat_dynamic_real_dim=0,
-        past_feat_dynamic_real_dim=0,
-    )
+    if "2.0" in model_name or "moirai2" in model_name.lower():
+        from uni2ts.model.moirai2 import Moirai2Forecast, Moirai2Module
+        model = Moirai2Forecast(
+            module=Moirai2Module.from_pretrained(f"Salesforce/{model_name}"),
+            prediction_length=prediction_length,
+            context_length=context_length,
+            target_dim=1,
+            feat_dynamic_real_dim=0,
+            past_feat_dynamic_real_dim=0,
+        )
+    else:
+        from uni2ts.model.moirai import MoiraiForecast, MoiraiModule
+        model = MoiraiForecast(
+            module=MoiraiModule.from_pretrained(f"Salesforce/{model_name}"),
+            prediction_length=prediction_length,
+            context_length=context_length,
+            patch_size=patch_size,
+            num_samples=100,
+            target_dim=1,
+            feat_dynamic_real_dim=0,
+            past_feat_dynamic_real_dim=0,
+        )
     return model
 
 
