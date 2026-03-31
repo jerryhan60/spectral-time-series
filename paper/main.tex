@@ -85,6 +85,13 @@ PatchTST~\citep{nie2023patchtst} introduced channel-independent patching for tim
 RevIN~\citep{kim2022reversible} applies reversible instance normalization to address distribution shift. Moirai-2 uses a similar per-series standardization. Our hint channel operates on the normalized series, so the polynomial filter captures temporal structure after removing location and scale.
 
 %==============================================================================
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/fig_architecture.pdf}
+\caption{Overview of \method{}. (a) Standard patch transformer: each patch is embedded independently. (b) Our method adds a Chebyshev FIR-filtered hint channel (orange) that is concatenated with the target before the input projection. Only the input projection layer is wider; the transformer encoder and output projection are identical. The total overhead is 12K parameters (0.11\%).}
+\label{fig:arch}
+\end{figure}
+
 \section{Method}
 %==============================================================================
 
