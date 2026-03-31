@@ -1195,6 +1195,67 @@ d=3, d=5, c=-0.8 all degrade significantly. Even-degree polynomials appear more 
 3. **d=4 s=16**: 1.1936 (-3.91%)
 4. d=2 c=-0.8: 1.2062 (-2.89%)
 
+---
+
+## Legendre Polynomial Investigation (2026-02-28)
+
+**Motivation**: Marsden & Hazan (2025), "Universal Sequence Preconditioning" (arXiv:2502.06545), provide the theoretical foundation for our FIR preconditioning approach. They prove sublinear regret bounds using monic Chebyshev/Legendre convolutions and find the two families yield "nearly identical gains" empirically in a lag-1 reversal setting. We test whether this equivalence holds in our strided hint-mode setting (stride=16, FIR residual as auxiliary input, no reversal).
+
+### Existing Legendre Results (single-scale, 10K, stride=16)
+
+| Degree | Chebyshev MASE | Legendre MASE | Cheb Advantage | ||c||₁ Cheb / Leg |
+|--------|:--------------:|:-------------:|:--------------:|:-----------------:|
+| d=4 | 1.1944 | 1.2363 | +3.4% | 1.13 / 0.94 |
+| d=6 | 1.1836 | 1.2099 | +2.1% | 2.09 / 1.84 |
+| d=8 | 1.2216 | 1.2225 | +0.07% | 3.51 / 3.14 |
+
+**Gap narrows with degree**: Chebyshev dominates at d=4 but the families converge at d=8, consistent with growing ||c||₁ being the limiting factor at high degree for both.
+
+### Theoretical Properties (computed)
+
+| Degree | max|p(z)| Cheb | max|p(z)| Leg | ||c||₁ Cheb | ||c||₁ Leg |
+|:------:|:--------------:|:-------------:|:-----------:|:----------:|
+| 4 | 0.1250 | 0.2286 | 1.1250 | 0.9429 |
+| 5 | 0.0625 | 0.1270 | 1.5625 | 1.3492 |
+| 6 | 0.0312 | 0.0693 | 2.0938 | 1.8398 |
+
+Chebyshev has 2× better minimax residual (more aggressive whitening) but 12-15% higher ||c||₁ (more noise amplification). In hint mode, the tradeoff may differ from reversal mode.
+
+### Missing Experiments
+
+**Never tested**: Legendre in multi-scale mode, Legendre d=5, cross-family multi-scale, Legendre at 100K.
+
+### Planned Runs
+
+| ID | Name | Description | Steps | Warmup | Expected Time |
+|----|------|-------------|:-----:|:------:|:-------------:|
+| L1 | **leg_ms46** | Legendre d=4+d=6 multi-scale hint | 10K | 1K | ~1.5h |
+| L2 | **leg_d5** | Legendre d=5 single-scale hint | 10K | 1K | ~1.5h |
+| L3 | **leg_ms56** | Legendre d=5+d=6 multi-scale hint | 10K | 1K | ~1.5h |
+| L4 | **cross_c4l6** | Chebyshev d=4 + Legendre d=6 cross-family | 10K | 1K | ~1.5h |
+| L5 | **leg_ms46_100k** | Legendre d=4+d=6 + 10% dropout, 100K | 1K | ~22h |
+
+**Key questions**:
+1. Does Legendre multi-scale (L1) match Chebyshev multi-scale (1.1675)? If yes, the minimax property doesn't matter in hint mode.
+2. Is Legendre d=5 (L2) better than Legendre d=4/d=6? The Hazan-Marsden paper recommends degree 5-10.
+3. Is d=5+d=6 (L3) better than d=4+d=6 for Legendre? (d=5 may be a better anchor for Legendre since Leg d=4 is weak)
+4. Does cross-family (L4: Cheb d=4 primary + Leg d=6 extra) outperform pure Chebyshev? Leg d=6 has milder coefficients (||c||₁=1.84 vs 2.09), and L2-opt d=6 (even milder) beat Cheb d=6 in single-scale.
+5. Does Legendre's milder coefficients interact differently with dropout at 100K (L5)?
+
+All 10K runs include integrated GIFT-Eval (97 configs) in the same SLURM job. Each script trains, then evaluates the final checkpoint.
+
+### Results (to be filled)
+
+| ID | Name | MASE | vs Baseline | vs Cheb equiv. | Notes |
+|----|------|:----:|:-----------:|:--------------:|-------|
+| L1 | leg_ms46 | — | — | vs 1.1675 | |
+| L2 | leg_d5 | — | — | vs 1.2084 (Cheb d=5) | |
+| L3 | leg_ms56 | — | — | — | |
+| L4 | cross_c4l6 | — | — | vs 1.1675 | |
+| L5 | leg_ms46_100k | — | — | vs ms46_100k | |
+
+---
+
 ### Per-Dataset Analysis (hdrop10 vs baseline, by frequency)
 
 | Freq | Configs | Win/Loss | Mean Change | Best Model |

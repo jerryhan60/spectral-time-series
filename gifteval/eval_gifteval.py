@@ -20,6 +20,7 @@ import argparse
 import glob
 import json
 import os
+import signal
 import sys
 import warnings
 from pathlib import Path
@@ -47,11 +48,106 @@ from gluonts.ev.metrics import MAE, MSE, MASE, SMAPE, MAPE
 from gluonts.time_feature import get_seasonality
 from scipy.stats import gmean
 
+
+def robust_aggregation(mase_values, n_bootstrap=1000, ci_level=0.95, seed=42):
+    """
+    Compute robust aggregation metrics following fev-bench methodology.
+
+    Returns dict with:
+      - clipped_geomean: geomean of MASE clipped to [0.01, 100]
+      - geomean: standard geometric mean
+      - trimmed5_geomean: 5% trimmed geometric mean
+      - bootstrap_ci: (lower, upper) 95% CI on geomean via bootstrap
+      - win_rate: fraction of configs with MASE < 1.0
+      - median: median MASE
+    """
+    arr = np.asarray(mase_values, dtype=np.float64)
+    arr = arr[(arr > 0) & np.isfinite(arr)]
+    if len(arr) == 0:
+        return {}
+
+    result = {
+        "n_configs": len(arr),
+        "geomean": float(gmean(arr)),
+        "median": float(np.median(arr)),
+        "win_rate": float((arr < 1.0).mean()),
+        "win_count": int((arr < 1.0).sum()),
+    }
+
+    # Clipped geomean (fev-bench: clip ratios to [1e-2, 100])
+    clipped = np.clip(arr, 0.01, 100.0)
+    result["clipped_geomean"] = float(gmean(clipped))
+
+    # 5% trimmed geomean
+    if len(arr) >= 20:
+        sorted_arr = np.sort(arr)
+        trim_n = max(1, int(len(sorted_arr) * 0.05))
+        result["trimmed5_geomean"] = float(gmean(sorted_arr[trim_n:-trim_n]))
+    else:
+        result["trimmed5_geomean"] = result["geomean"]
+
+    # Bootstrap CI on geomean
+    rng = np.random.RandomState(seed)
+    boot_geomeans = np.empty(n_bootstrap)
+    for b in range(n_bootstrap):
+        sample = arr[rng.randint(0, len(arr), size=len(arr))]
+        boot_geomeans[b] = gmean(sample)
+    alpha = (1 - ci_level) / 2
+    result["bootstrap_ci_lo"] = float(np.percentile(boot_geomeans, 100 * alpha))
+    result["bootstrap_ci_hi"] = float(np.percentile(boot_geomeans, 100 * (1 - alpha)))
+    result["bootstrap_std"] = float(np.std(boot_geomeans))
+
+    return result
+
 # Import gift_eval after path setup
 from gift_eval.data import Dataset
 
 # Import uni2ts evaluation utilities
 from uni2ts.eval_util.evaluation import evaluate_model
+
+
+def paired_bootstrap_test(mase_a, mase_b, n_bootstrap=10000, seed=42):
+    """
+    Paired bootstrap test: is model A significantly better than model B?
+
+    Args:
+        mase_a: array of MASE values for model A (aligned by config)
+        mase_b: array of MASE values for model B (aligned by config)
+
+    Returns dict with:
+        - delta_geomean: geomean(B) - geomean(A), positive means A is better
+        - p_value: probability that A is NOT better than B (one-sided)
+        - ci_lo, ci_hi: 95% CI on the geomean difference
+        - win_rate_a: fraction of configs where A < B
+    """
+    a = np.asarray(mase_a, dtype=np.float64)
+    b = np.asarray(mase_b, dtype=np.float64)
+    mask = np.isfinite(a) & np.isfinite(b) & (a > 0) & (b > 0)
+    a, b = a[mask], b[mask]
+    n = len(a)
+    if n == 0:
+        return {}
+
+    observed_diff = gmean(b) - gmean(a)  # positive = A better
+
+    rng = np.random.RandomState(seed)
+    boot_diffs = np.empty(n_bootstrap)
+    for i in range(n_bootstrap):
+        idx = rng.randint(0, n, size=n)
+        boot_diffs[i] = gmean(b[idx]) - gmean(a[idx])
+
+    p_value = float((boot_diffs <= 0).mean())  # fraction where A is NOT better
+
+    return {
+        "n_paired": n,
+        "delta_geomean": float(observed_diff),
+        "pct_improvement": float(observed_diff / gmean(b) * 100),
+        "p_value": p_value,
+        "ci_lo": float(np.percentile(boot_diffs, 2.5)),
+        "ci_hi": float(np.percentile(boot_diffs, 97.5)),
+        "win_rate_a": float((a < b).mean()),
+        "tie_rate": float((a == b).mean()),
+    }
 
 
 def compare_models(result_files: list, output_path: str = None):
@@ -607,12 +703,30 @@ def generate_markdown_report(
     valid_mase = success_df['MASE'].dropna()
     valid_mase = valid_mase[(valid_mase > 0) & (valid_mase < 100)]  # Filter outliers
 
+    # Robustness: exclude high-variance outlier datasets
+    OUTLIER_DATASETS = {'bizitobs_application', 'bizitobs_service'}
+    trimmed_df = success_df[~success_df['dataset'].isin(OUTLIER_DATASETS)]
+    trimmed_mase = trimmed_df['MASE'].dropna()
+    trimmed_mase = trimmed_mase[(trimmed_mase > 0) & (trimmed_mase < 100)]
+
+    # Robust aggregation (fev-bench style)
+    agg = robust_aggregation(valid_mase.values) if len(valid_mase) > 0 else {}
+    agg_excl = robust_aggregation(trimmed_mase.values) if len(trimmed_mase) > 0 else {}
+
     metrics = {
         "num_configs": len(success_df),
         "num_successful": len(valid_mase),
         "mase_arithmetic_mean": valid_mase.mean() if len(valid_mase) > 0 else np.nan,
-        "mase_geometric_mean": gmean(valid_mase) if len(valid_mase) > 0 else np.nan,
-        "mase_median": valid_mase.median() if len(valid_mase) > 0 else np.nan,
+        "mase_geometric_mean": agg.get("geomean", np.nan),
+        "mase_clipped_geomean": agg.get("clipped_geomean", np.nan),
+        "mase_median": agg.get("median", np.nan),
+        "mase_geomean_trimmed5": agg.get("trimmed5_geomean", np.nan),
+        "mase_geomean_excl_outliers": agg_excl.get("geomean", np.nan),
+        "num_excl_outliers": len(trimmed_mase),
+        "bootstrap_ci_lo": agg.get("bootstrap_ci_lo", np.nan),
+        "bootstrap_ci_hi": agg.get("bootstrap_ci_hi", np.nan),
+        "win_rate": agg.get("win_rate", np.nan),
+        "win_count": agg.get("win_count", 0),
         "mase_min": valid_mase.min() if len(valid_mase) > 0 else np.nan,
         "mase_max": valid_mase.max() if len(valid_mase) > 0 else np.nan,
         "mase_below_1": (valid_mase < 1.0).sum() if len(valid_mase) > 0 else 0,
@@ -662,9 +776,13 @@ def generate_markdown_report(
 | Metric | Value | Description |
 |--------|-------|-------------|
 | **Geometric Mean MASE** | **{metrics['mase_geometric_mean']:.4f}** | Primary leaderboard metric (scale-invariant) |
+| 95% Bootstrap CI | [{metrics['bootstrap_ci_lo']:.4f}, {metrics['bootstrap_ci_hi']:.4f}] | 1000 bootstrap resamples |
+| Clipped Geomean | {metrics['mase_clipped_geomean']:.4f} | fev-bench style (MASE clipped to [0.01, 100]) |
+| Geomean (5% trimmed) | {metrics['mase_geomean_trimmed5']:.4f} | Robust: removes top/bottom 5% outliers |
+| Geomean (excl. outliers) | {metrics['mase_geomean_excl_outliers']:.4f} | Excluding {metrics['num_configs'] - metrics['num_excl_outliers']} high-variance configs |
 | Arithmetic Mean MASE | {metrics['mase_arithmetic_mean']:.4f} | Simple average |
 | Median MASE | {metrics['mase_median']:.4f} | Robust central tendency |
-| MASE < 1.0 | {metrics['mase_below_1']}/{metrics['num_successful']} | Configs beating naive baseline |
+| Win Rate (MASE < 1.0) | {metrics['win_count']}/{metrics['num_successful']} ({metrics['win_rate']:.1%}) | Configs beating naive baseline |
 | Min MASE | {metrics['mase_min']:.4f} | Best single config |
 | Max MASE | {metrics['mase_max']:.4f} | Worst single config |
 
@@ -736,6 +854,16 @@ def main():
     parser.add_argument("--output-dir", type=str, default="/scratch/gpfs/EHAZAN/jh1161/gifteval/results",
                        help="Output directory for results")
     parser.add_argument("--compare", nargs="+", help="Compare multiple result CSV files")
+    parser.add_argument("--compare-paired", nargs=2, metavar=("MODEL_A", "MODEL_B"),
+                       help="Paired bootstrap significance test between two result CSVs")
+    parser.add_argument("--dataset-timeout", type=int, default=900,
+                       help="Per-dataset timeout in seconds (default: 900 = 15 min)")
+    parser.add_argument("--zero-hints", action="store_true",
+                       help="Zero out hint channels at inference (mechanistic ablation)")
+    parser.add_argument("--random-hints", action="store_true",
+                       help="Replace hint channels with random noise at inference")
+    parser.add_argument("--duplicate-hints", action="store_true",
+                       help="Replace hint channels with duplicate of input at inference")
     args = parser.parse_args()
 
     # Handle comparison mode
@@ -750,6 +878,46 @@ def main():
         compare_models(result_files, str(output_path))
         return
 
+    # Handle paired comparison mode
+    if args.compare_paired:
+        fa, fb = args.compare_paired
+        da = pd.read_csv(fa)
+        db = pd.read_csv(fb)
+        na = Path(fa).stem.replace("gifteval_results_", "").rsplit("_", 2)[0]
+        nb = Path(fb).stem.replace("gifteval_results_", "").rsplit("_", 2)[0]
+
+        # Align by config key
+        da["key"] = da["dataset"] + "/" + da["term"]
+        db["key"] = db["dataset"] + "/" + db["term"]
+        merged = da.merge(db, on="key", suffixes=("_a", "_b"))
+
+        test = paired_bootstrap_test(merged["MASE_a"].values, merged["MASE_b"].values)
+        agg_a = robust_aggregation(merged["MASE_a"].dropna().values)
+        agg_b = robust_aggregation(merged["MASE_b"].dropna().values)
+
+        print("=" * 80)
+        print("PAIRED BOOTSTRAP SIGNIFICANCE TEST")
+        print("=" * 80)
+        print(f"Model A: {na}  (geomean {agg_a['geomean']:.4f} [{agg_a['bootstrap_ci_lo']:.4f}, {agg_a['bootstrap_ci_hi']:.4f}])")
+        print(f"Model B: {nb}  (geomean {agg_b['geomean']:.4f} [{agg_b['bootstrap_ci_lo']:.4f}, {agg_b['bootstrap_ci_hi']:.4f}])")
+        print(f"Paired configs: {test['n_paired']}")
+        print(f"\nDelta (B-A):       {test['delta_geomean']:+.4f}  ({test['pct_improvement']:+.1f}%)")
+        print(f"95% CI on delta:   [{test['ci_lo']:+.4f}, {test['ci_hi']:+.4f}]")
+        sig = "YES" if test["p_value"] < 0.05 else "NO"
+        print(f"p-value (A < B):   {test['p_value']:.4f}  (significant at 0.05? {sig})")
+        print(f"Win rate A:        {test['win_rate_a']:.1%}")
+
+        # Per-config breakdown: biggest wins and losses for A
+        merged["delta"] = merged["MASE_b"] - merged["MASE_a"]
+        merged = merged.sort_values("delta", ascending=False)
+        print(f"\nTop 10 configs where A wins (positive = A better):")
+        for _, r in merged.head(10).iterrows():
+            print(f"  {r['key']:40s}  A={r['MASE_a']:.4f}  B={r['MASE_b']:.4f}  delta={r['delta']:+.4f}")
+        print(f"\nTop 10 configs where B wins:")
+        for _, r in merged.tail(10).iterrows():
+            print(f"  {r['key']:40s}  A={r['MASE_a']:.4f}  B={r['MASE_b']:.4f}  delta={r['delta']:+.4f}")
+        return
+
     if not args.checkpoint and not args.model:
         parser.error("Must specify either --checkpoint or --model")
 
@@ -762,6 +930,15 @@ def main():
         model_name = Path(args.checkpoint).stem
         print(f"Loading from checkpoint: {args.checkpoint}")
         _cached_module = _load_module_from_checkpoint(args.checkpoint)
+        if args.zero_hints and hasattr(_cached_module[0], 'hint_ablation'):
+            _cached_module[0].hint_ablation = "zero"
+            print("  [--zero-hints] Hint channels will be zeroed at inference")
+        if args.random_hints and hasattr(_cached_module[0], 'hint_ablation'):
+            _cached_module[0].hint_ablation = "random"
+            print("  [--random-hints] Hint channels will be random noise at inference")
+        if args.duplicate_hints and hasattr(_cached_module[0], 'hint_ablation'):
+            _cached_module[0].hint_ablation = "duplicate"
+            print("  [--duplicate-hints] Hint channels will duplicate input at inference")
         def model_loader(prediction_length):
             return _build_forecast_from_module(
                 _cached_module, args.checkpoint, prediction_length,
@@ -780,22 +957,55 @@ def main():
     configs = QUICK_CONFIGS if args.quick else GIFTEVAL_CONFIGS
     print(f"Evaluating on {len(configs)} dataset configurations")
 
+    # Per-dataset timeout handler
+    class DatasetTimeout(Exception):
+        pass
+
+    def _timeout_handler(signum, frame):
+        raise DatasetTimeout()
+
     # Run evaluation
     results = []
+    skipped = 0
     for i, (dataset_name, term) in enumerate(configs):
         print(f"\n[{i+1}/{len(configs)}] Evaluating {dataset_name}/{term}...")
 
-        result = evaluate_single_dataset(
-            model_loader, dataset_name, term,
-            batch_size=args.batch_size, device=device
-        )
+        # Set per-dataset timeout
+        if args.dataset_timeout > 0:
+            signal.signal(signal.SIGALRM, _timeout_handler)
+            signal.alarm(args.dataset_timeout)
+
+        try:
+            result = evaluate_single_dataset(
+                model_loader, dataset_name, term,
+                batch_size=args.batch_size, device=device
+            )
+        except DatasetTimeout:
+            print(f"  TIMEOUT after {args.dataset_timeout}s - skipping")
+            result = {
+                "dataset": dataset_name,
+                "term": term,
+                "frequency": "?",
+                "config_name": f"{dataset_name}/?/{term}",
+                "error": f"timeout_{args.dataset_timeout}s",
+                "MAE": np.nan, "MSE": np.nan, "MASE": np.nan, "SMAPE": np.nan,
+            }
+            skipped += 1
+        finally:
+            if args.dataset_timeout > 0:
+                signal.alarm(0)  # Cancel alarm
 
         if result:
             results.append(result)
             if "error" not in result:
                 print(f"  MAE: {result['MAE']:.4f}, MSE: {result['MSE']:.4f}, MASE: {result['MASE']:.4f}")
+            elif "timeout" in str(result.get("error", "")):
+                pass  # Already printed timeout message
             else:
                 print(f"  Error: {result['error']}")
+
+    if skipped > 0:
+        print(f"\n  ({skipped} configs skipped due to timeout)")
 
     # Create output directory
     output_dir = Path(args.output_dir)
@@ -905,13 +1115,29 @@ def main():
         valid_mase = success_df['MASE'].dropna()
         valid_mase = valid_mase[(valid_mase > 0) & (valid_mase < 100)]
         if len(valid_mase) > 0:
+            # Robustness metrics
+            OUTLIER_DATASETS = {'bizitobs_application', 'bizitobs_service'}
+            trimmed_df = success_df[~success_df['dataset'].isin(OUTLIER_DATASETS)]
+            trimmed_mase = trimmed_df['MASE'].dropna()
+            trimmed_mase = trimmed_mase[(trimmed_mase > 0) & (trimmed_mase < 100)]
+            sorted_mase = np.sort(valid_mase.values)
+            trim_n = max(1, int(len(sorted_mase) * 0.05))
+            trimmed5_mase = sorted_mase[trim_n:-trim_n]
+
+            # Robust aggregation (fev-bench style)
+            agg = robust_aggregation(valid_mase.values)
+            agg_excl = robust_aggregation(trimmed_mase.values)
+
             print(f"Model: {model_name}")
             print(f"Params: {model_info.get('param_count_str', 'N/A')}")
             print(f"Architecture: {model_info.get('architecture', 'N/A')}")
-            print(f"MASE (Geo Mean): {gmean(valid_mase):.4f}")
-            print(f"MASE (Arith Mean): {valid_mase.mean():.4f}")
-            print(f"MASE (Median): {valid_mase.median():.4f}")
-            print(f"MASE < 1.0: {(valid_mase < 1.0).sum()}/{len(valid_mase)}")
+            print(f"MASE (Geo Mean):       {agg['geomean']:.4f}  [{agg['bootstrap_ci_lo']:.4f}, {agg['bootstrap_ci_hi']:.4f}] 95% CI")
+            print(f"MASE (Clipped GM):     {agg['clipped_geomean']:.4f}  (fev-bench style, clipped [0.01,100])")
+            print(f"MASE (5% Trimmed GM):  {agg['trimmed5_geomean']:.4f}")
+            print(f"MASE (Excl Outliers):  {agg_excl['geomean']:.4f}  [{agg_excl['bootstrap_ci_lo']:.4f}, {agg_excl['bootstrap_ci_hi']:.4f}] ({len(valid_mase)-len(trimmed_mase)} configs excluded)")
+            print(f"MASE (Arith Mean):     {valid_mase.mean():.4f}")
+            print(f"MASE (Median):         {agg['median']:.4f}")
+            print(f"Win Rate (MASE<1):     {agg['win_count']}/{agg['n_configs']} ({agg['win_rate']:.1%})")
 
 
 if __name__ == "__main__":

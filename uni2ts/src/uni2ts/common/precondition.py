@@ -19,7 +19,7 @@ import warnings
 
 import numpy as np
 
-VALID_POLYNOMIAL_TYPES = ("chebyshev", "legendre", "lyapunov", "l2_optimized")
+VALID_POLYNOMIAL_TYPES = ("chebyshev", "legendre", "lyapunov", "l2_optimized", "ema", "differencing")
 
 
 def compute_polynomial_coefficients(
@@ -57,6 +57,10 @@ def compute_polynomial_coefficients(
         return _legendre_coefficients(degree)
     elif polynomial_type == "lyapunov":
         return _optimized_coefficients(degree, reg_type="lyapunov", reg_lambda=reg_lambda)
+    elif polynomial_type == "ema":
+        return _ema_coefficients(degree)
+    elif polynomial_type == "differencing":
+        return _differencing_coefficients(degree)
     else:  # l2_optimized
         return _optimized_coefficients(degree, reg_type="l2", reg_lambda=reg_lambda)
 
@@ -91,6 +95,28 @@ def _legendre_coefficients(n: int) -> np.ndarray:
     leading_coeff = power_coeffs[-1]
     monic_coeffs = power_coeffs / leading_coeff
     return monic_coeffs[:-1][::-1].copy()
+
+
+def _ema_coefficients(n: int) -> np.ndarray:
+    """
+    Exponential moving average coefficients: alpha * (1-alpha)^i for i=0..n-1.
+    Alpha is set to 2/(n+1) following standard EMA convention.
+    This produces a low-pass filter (captures trend).
+    """
+    alpha = 2.0 / (n + 1)
+    return np.array([alpha * (1 - alpha) ** i for i in range(n)])
+
+
+def _differencing_coefficients(n: int) -> np.ndarray:
+    """
+    n-th order differencing coefficients using binomial expansion.
+    Degree 1: [-1] (first difference)
+    Degree 2: [-2, 1] (second difference)
+    Degree n: binomial(-1)^k * C(n,k) for k=1..n
+    This produces a high-pass filter.
+    """
+    from math import comb
+    return np.array([(-1) ** k * comb(n, k) for k in range(1, n + 1)], dtype=np.float64)
 
 
 def _solve_lyapunov_doubling(M, Q, max_iter=25):

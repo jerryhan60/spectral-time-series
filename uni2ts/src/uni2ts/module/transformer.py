@@ -23,7 +23,7 @@ from jaxtyping import Bool, Float, Int
 from torch import nn
 
 from .attention import GroupedQueryAttention
-from .ffn import FeedForward, GatedLinearUnitFeedForward, MoEFeedForward
+from .ffn import FeedForward, GatedLinearUnitFeedForward, LinearRouterMoEFeedForward, MoEFeedForward
 from .position import AttentionBias, QueryKeyProjection
 
 
@@ -150,9 +150,12 @@ class TransformerEncoder(nn.Module):
         stu_num_filters: int = 24,
         stu_max_seq_len: int = 512,
         stu_gate_init: float = 0.0,
+        moe_num_experts: int = 0,
+        moe_top_k: int = 2,
     ):
         super().__init__()
         self.use_moe = use_moe
+        self.moe_num_experts = moe_num_experts
         num_heads = num_heads or d_model // 64
         num_groups = num_groups or num_heads  # defaults to mha
 
@@ -191,7 +194,20 @@ class TransformerEncoder(nn.Module):
             var_qk_proj=var_qk_proj,
             time_qk_proj=time_qk_proj,
         )
-        if not use_moe:
+        if moe_num_experts > 0:
+            # Linear-router MoE (trains from scratch, no centroids needed)
+            get_ffn = partial(
+                LinearRouterMoEFeedForward,
+                num_experts=moe_num_experts,
+                num_experts_per_token=moe_top_k,
+                in_dim=d_model,
+                hidden_dim=d_ff,
+                out_dim=None,
+                activation=activation,
+                bias=False,
+                ffn_dropout_p=dropout_p,
+            )
+        elif not use_moe:
             get_ffn = partial(
                 GatedLinearUnitFeedForward if use_glu else FeedForward,
                 in_dim=d_model,

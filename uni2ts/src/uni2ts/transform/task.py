@@ -97,6 +97,7 @@ class CausalPredictionMask(CheckArrNDimMixin, Transformation):
     expected_ndim: int = 2
     min_prefix_tokens: int = 1
     allow_short: bool = False
+    prefix_ratio_jitter: float = 0.0
 
     def __post_init__(self):
         if not 0.0 < self.prefix_ratio < 1.0:
@@ -114,7 +115,11 @@ class CausalPredictionMask(CheckArrNDimMixin, Transformation):
             )
             return data_entry
 
-        prefix_len = max(self.min_prefix_tokens, int(np.floor(time * self.prefix_ratio)))
+        ratio = self.prefix_ratio
+        if self.prefix_ratio_jitter > 0:
+            ratio += np.random.uniform(-self.prefix_ratio_jitter, self.prefix_ratio_jitter)
+            ratio = np.clip(ratio, 0.05, 0.95)
+        prefix_len = max(self.min_prefix_tokens, int(np.floor(time * ratio)))
         prefix_len = min(prefix_len, time - 1)
         prediction_mask = np.zeros((var, time), dtype=bool)
         prediction_mask[:, prefix_len:] = True

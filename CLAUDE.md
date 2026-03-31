@@ -67,6 +67,72 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
 
+## 5. Act Immediately, Gather Context Minimally
+
+**When asked to run experiments, submit jobs, or launch agents — DO IT FIRST.**
+
+- Limit upfront context gathering to 2-3 file reads max before starting the requested action.
+- Do NOT spend time "understanding the codebase" when the user has given a specific instruction.
+- If you need more context mid-task, gather it then — not upfront.
+- The user will redirect if you're headed the wrong way. Trust that.
+
+## 6. SLURM & Hydra Conventions (CRITICAL — bugs here waste GPU hours)
+
+**Partition rules:**
+- `--partition=pli --account=eladgroup --qos=pli-low` — preferred (less congested)
+- `--partition=ailab --account=ehazan` — backup
+- `--partition=della --account=ehazan` — also valid
+- **NEVER** use `--partition=gpu` (not allowed) or `--partition=grace` (ARM nodes)
+- **ALWAYS** `--cpus-per-task=8` for ailab (max 8 CPUs per GPU)
+
+**Hydra override syntax:**
+- Existing keys (in the YAML config): `model.lr=2e-3`
+- **NEW keys not in YAML**: `+model.scheduler_type=wsd` (MUST use `+` prefix)
+- Nested module_kwargs: `model.module_kwargs.hint_dropout=0.1`
+- Check `uni2ts/cli/conf/pretrain/model/moirai2_small.yaml` if unsure whether a key exists
+- **Common mistake**: forgetting `+` for `min_lr_ratio`, `scheduler_type`, `wsd_stable_ratio`
+
+**`--export` syntax**: Use `--export=ALL,VAR=value` format. No commas in values.
+
+## 7. Job Monitoring (don't waste tokens polling)
+
+- Check job status **ONCE** per user request: `squeue -u jh1161`
+- Report findings and **STOP**. Do not re-check in a loop.
+- If jobs are pending/running, say so and wait for user to ask again.
+- Never `sleep` and poll repeatedly — the user will re-invoke when ready.
+
+## 8. Experiment Scope Control
+
+- When proposing new experiments, start with **3-5 max** per batch.
+- Get user approval before submitting more than 5 jobs.
+- Never generate 50+ variants without explicit permission.
+- Always state the hypothesis for each experiment in 1 sentence.
+
+## 9. Smoke-Test Before Batch Submission
+
+Before submitting SLURM jobs for new configs (new architecture, new Hydra keys):
+- Verify the Hydra overrides parse correctly (check for `+` prefix on new keys)
+- Verify the checkpoint output path will be correct
+- If possible, test with `trainer.max_epochs=1 train_dataloader.num_batches_per_epoch=3` first
+
+## Prompt Files for Common Workflows
+
+Reusable prompt files in `/scratch/gpfs/EHAZAN/jh1161/prompts/`:
+
+| File | When to use |
+|------|------------|
+| `moirai-autoresearch.md` | Full autonomous research loop: check → analyze → propose → submit |
+| `moirai-monitor.md` | Quick status check of running experiments |
+| `moirai-analyze.md` | Deep statistical analysis of all results |
+| `moirai-submit-experiment.md` | Submit a specific experiment with pre-flight checks |
+| `olmo-autoresearch.md` | OLMo USP autonomous research loop |
+
+**Usage**: Point Claude to a prompt file:
+```
+Read prompts/moirai-autoresearch.md and follow the instructions
+```
+
+---
 
 ## Repository Overview
 
@@ -94,7 +160,9 @@ salloc --nodes=1 --ntasks=1 --mem=128G --time=03:01:00 --gres=gpu:1 --cpus-per-t
 
 **SLURM CPU-cores-per-GPU policy**: Della (ailab) has 64 CPU-cores and 8 GPUs per node. **Use at most 8 CPU-cores per GPU** (`--cpus-per-task=8` for single-GPU jobs) to avoid starving other jobs of CPU cores. Always include `--cpus-per-task=8` (or fewer) in SLURM scripts and `salloc` commands for ailab.
 
-**Available accounts**: `eladgroup` (pli-low), `hazan_intern` (pli-low), `spectralssmtorch` (pli-low), `ehazan` (various gpu queues)
+**Available accounts**: `eladgroup` (pli-low), `hazan_intern` (pli-low), `spectralssmtorch` (pli-low), `ehazan` (ailab)
+
+**SLURM partition strategy**: `pli` (with pli-low QOS) is usually much less congested than `ailab`. Submit on `pli` first with `eladgroup` or `hazan_intern`, and optionally submit a backup on `ailab` with `ehazan`. Cancel the duplicate once one starts. Note: `--partition=gpu` is NOT allowed directly.
 
 **Environment variables** (in `uni2ts/.env`):
 - `LOTSA_V1_PATH`: Path to LOTSA dataset
@@ -157,6 +225,20 @@ python -m cli.train -cp conf/pretrain \
 sbatch pretraining/pretrain_moirai.slurm
 ```
 
+### Standardized Training Protocol (MUST follow for all new experiments)
+
+See `uni2ts/pretraining/TEMPLATE.md` for full details. Key requirements:
+
+```bash
+# Required settings for ALL new runs:
+data=lotsa_v1_moirai2                          # Official Moirai 2 data (NOT lotsa_v1_unweighted)
+model.anomaly_variance_ratio_threshold=0.0     # Consistent across hint + baseline
+model.num_warmup_steps=1000                    # Same warmup for all
+# NO compile=reduce-overhead
+# Always run seeds 0,1,2 (minimum 3 seeds)
+# Always eval with --context-length 4000
+```
+
 ### Evaluation
 
 ```bash
@@ -173,7 +255,7 @@ sbatch --export=MODEL_PATH=/path/to/checkpoint.ckpt eval/eval_comprehensive.slur
 cd /scratch/gpfs/EHAZAN/jh1161/uni2ts
 
 # Training
-python -m cli.train -cp conf/pretrain run_name=my_run model=moirai_small data=lotsa_v1_unweighted
+python -m cli.train -cp conf/pretrain run_name=my_run model=moirai2_small data=lotsa_v1_moirai2
 
 # Evaluation
 python -m cli.eval run_name=eval model=moirai_1.0_R_small model.patch_size=32 model.context_length=1000 data=lsf_test data.dataset_name=ETTh1 data.prediction_length=96
@@ -328,6 +410,46 @@ Results saved to `/scratch/gpfs/EHAZAN/jh1161/gifteval/results/`:
 - `gifteval_results_<model>_<timestamp>.csv` - All metrics
 - `all_results_<model>.csv` - Leaderboard format
 
+## OLMo USP (Universal Sequence Preconditioning)
+
+Location: `/scratch/gpfs/EHAZAN/jh1161/olmo-usp/`
+
+**Model**: OLMo3-190M (768 dim, 12 layers, 12 heads), trained on pes2o 1B tokens.
+
+### Training with Evaluation
+
+```bash
+cd /scratch/gpfs/EHAZAN/jh1161/olmo-usp
+
+# Standard training with downstream eval every 1000 steps (default)
+torchrun --nproc-per-node=1 train_usp_v4.py \
+    --save-folder checkpoints/my_run --run-name my_run \
+    --usp-mode sel_dx2_bx --lr 1e-3
+
+# Custom eval interval and tasks
+torchrun --nproc-per-node=1 train_usp_v4.py \
+    --save-folder checkpoints/my_run --run-name my_run \
+    --eval-interval 500 \
+    --eval-tasks "hellaswag_rc_5shot,arc_easy_test_rc_5shot,piqa_val_rc_5shot"
+
+# Disable eval (faster, training-loss-only)
+torchrun --nproc-per-node=1 train_usp_v4.py \
+    --save-folder checkpoints/my_run --run-name my_run \
+    --eval-interval 0
+```
+
+**Eval tasks**: Uses `olmo_eval` (ai2-olmo-eval). Default: `hellaswag_rc_5shot,arc_easy_test_rc_5shot`. Metrics logged as `eval/downstream/{task}` in JSONL.
+
+**Key args**: `--usp-mode` (architecture), `--lr` (learning rate), `--warmup-steps`, `--eval-interval`, `--eval-tasks`
+
+### Faithful USP (Marsden-Hazan polynomial preconditioning)
+```bash
+# True polynomial preconditioning (fixed Chebyshev kernel, scalar gate only)
+torchrun --nproc-per-node=1 train_usp_v4.py \
+    --save-folder checkpoints/faithful --run-name faithful \
+    --usp-mode usp_perlayer --usp-kernel-type chebyshev --usp-degree 5
+```
+
 ## Documentation References
 
 - `eval/README.md`: Evaluation script details
@@ -339,6 +461,11 @@ Results saved to `/scratch/gpfs/EHAZAN/jh1161/gifteval/results/`:
 ## Experiment Results
 
 **Baseline**: MOIRAI 2.0 Small (11.4M params) retrained on LOTSA. When we refer to "baseline", assume MOIRAI 2.0 unless otherwise specified. All results compared at matched training steps using GIFT-Eval geometric mean MASE (97 configs).
+
+**IMPORTANT — Training data config**: Always use `data=lotsa_v1_moirai2` for all new runs. This matches the official Moirai 2 training setup with proper dataset weighting and `variate_proportional` sampling. Previous runs used `lotsa_v1_unweighted` (uniform sampling, different dataset list) which is a confound. The key differences:
+- `lotsa_v1_moirai2`: weighted sampling, `variate_proportional`, includes extra datasets (solar_10min/5min, wind_10min/5min, energy_storage, etc.)
+- `lotsa_v1_unweighted`: uniform sampling, no weights, smaller dataset list
+- `lotsa_v1_weighted`: same weights as moirai2 but uses `proportional` instead of `variate_proportional`
 
 **Detailed results**: `docs/experiment_summary.md` (primary reference with all numbers, 11 lessons learned, 50+ experiments)
 

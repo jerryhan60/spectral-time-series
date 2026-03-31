@@ -96,6 +96,7 @@ class Moirai2Pretrain(L.LightningModule):
         time_precondition_coeffs_lambda: float = 0.0,
         time_precondition_dual_head_lambda: float = 1.0,
         ps_loss_lambda: float = 0.0,
+        prefix_ratio_jitter: float = 0.0,
         module_kwargs: Optional[dict[str, Any]] = None,
         module: Optional[Moirai2Module] = None,
         loss_func: Optional[PackedQuantileLoss] = None,
@@ -104,6 +105,16 @@ class Moirai2Pretrain(L.LightningModule):
         lr: float = 1e-3,
         weight_decay: float = 1e-2,
         log_on_step: bool = False,
+        scheduler_type: str = "cosine",
+        scheduler_num_cycles: int = 1,
+        min_lr_ratio: float = 0.0,
+        wsd_stable_ratio: float = 0.7,
+        sign_flip_prob: float = 0.0,
+        freq_noise_sigma: float = 0.0,
+        tsmixup_prob: float = 0.0,
+        dominant_shuffle_k: int = 0,
+        freq_mask_rate: float = 0.0,
+        init_from_pretrained: str = "",
     ):
         assert (module is not None) or (
             module_kwargs is not None
@@ -113,6 +124,9 @@ class Moirai2Pretrain(L.LightningModule):
         ), f"num_warmup_steps ({num_warmup_steps}) should be <= num_training_steps ({num_training_steps})."
         super().__init__()
         self.module = Moirai2Module(**module_kwargs) if module is None else module
+        # Optionally initialize from a pretrained HuggingFace model
+        if init_from_pretrained:
+            self._load_pretrained_weights(init_from_pretrained)
         if loss_func is None:
             loss_func = PackedQuantileMAELoss(self.module.quantile_levels)
         self.save_hyperparameters(ignore=["module"])
@@ -175,6 +189,60 @@ class Moirai2Pretrain(L.LightningModule):
             self.module.quantile_levels
         )
 
+    def _load_pretrained_weights(self, model_name: str):
+        """Load weights from a pretrained model, expanding in_proj if needed.
+
+        Supports both HuggingFace model names and local checkpoint files (.ckpt).
+        """
+        import logging
+        log = logging.getLogger(__name__)
+        log.info(f"Loading pretrained weights from {model_name}")
+
+        if model_name.endswith(".ckpt"):
+            # Load from Lightning checkpoint file
+            ckpt = torch.load(model_name, map_location="cpu")
+            raw_state = ckpt.get("state_dict", ckpt)
+            # Strip "module." prefix from Lightning state dict keys
+            pre_state = {}
+            for k, v in raw_state.items():
+                key = k.replace("module.", "", 1) if k.startswith("module.") else k
+                pre_state[key] = v
+            del ckpt
+        else:
+            # Load from HuggingFace
+            pretrained = Moirai2Module.from_pretrained(model_name)
+            pre_state = pretrained.state_dict()
+
+        our_state = self.module.state_dict()
+        loaded, skipped, expanded = 0, 0, 0
+        for key in pre_state:
+            if key not in our_state:
+                skipped += 1
+                continue
+            if our_state[key].shape == pre_state[key].shape:
+                our_state[key] = pre_state[key]
+                loaded += 1
+            elif pre_state[key].dim() == 2 and our_state[key].dim() == 2:
+                # Weight matrix with different input dims (e.g. in_proj expansion)
+                pre_w = pre_state[key]
+                our_w = our_state[key]
+                if our_w.shape[0] == pre_w.shape[0] and our_w.shape[1] > pre_w.shape[1]:
+                    padded = torch.zeros_like(our_w)
+                    padded[:, :pre_w.shape[1]] = pre_w
+                    our_state[key] = padded
+                    expanded += 1
+                    log.info(f"  Expanded {key}: {pre_w.shape} -> {our_w.shape}")
+                else:
+                    skipped += 1
+                    log.warning(f"  Skipped {key}: incompatible shapes {pre_w.shape} vs {our_w.shape}")
+            else:
+                skipped += 1
+                log.warning(f"  Skipped {key}: shape mismatch {pre_state[key].shape} vs {our_state[key].shape}")
+        self.module.load_state_dict(our_state)
+        if not model_name.endswith(".ckpt"):
+            del pretrained
+        log.info(f"Pretrained init: {loaded} loaded, {expanded} expanded, {skipped} skipped")
+
     def forward(
         self,
         target: Float[torch.Tensor, "*batch seq_len patch"],
@@ -194,12 +262,86 @@ class Moirai2Pretrain(L.LightningModule):
             prediction_mask=prediction_mask,
             training_mode=True,
             input_mask=input_mask,
+            global_step=self.global_step,
         )
         return result
 
     def training_step(
         self, batch: dict[str, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
+        # Sign flip augmentation: negate target with probability p
+        target = batch["target"]
+        if self.hparams.sign_flip_prob > 0:
+            B = target.shape[0]
+            flip = torch.rand(B, device=target.device) < self.hparams.sign_flip_prob
+            target = torch.where(flip[:, None, None], -target, target)
+            batch = {**batch, "target": target}
+        # TSMixup augmentation: mix K=3 series within the batch
+        if self.hparams.tsmixup_prob > 0:
+            target = batch["target"]
+            B = target.shape[0]
+            n_mix = int(B * self.hparams.tsmixup_prob)
+            if n_mix > 0 and B >= 3:
+                mix_idx = torch.randperm(B, device=target.device)[:n_mix]
+                # Normalize each series to zero-mean, unit-std
+                means = target.mean(dim=1, keepdim=True)
+                stds = target.std(dim=1, keepdim=True).clamp(min=1e-8)
+                normalized = (target - means) / stds
+                # For each mixed sample, average K=3 random series
+                K = 3
+                weights = torch.distributions.Dirichlet(
+                    torch.ones(K, device=target.device)
+                ).sample((n_mix,))
+                src_idx = torch.stack([
+                    torch.randint(B, (n_mix,), device=target.device) for _ in range(K)
+                ], dim=1)
+                mixed = sum(
+                    weights[:, k, None, None] * normalized[src_idx[:, k]]
+                    for k in range(K)
+                )
+                target = target.clone()
+                target[mix_idx] = mixed
+                batch = {**batch, "target": target}
+        # Frequency noise augmentation: perturb frequency magnitudes
+        if self.hparams.freq_noise_sigma > 0:
+            target = batch["target"]
+            X = torch.fft.rfft(target, dim=1)
+            noise = 1.0 + self.hparams.freq_noise_sigma * torch.randn(
+                X.shape[0], X.shape[1], 1, device=X.device
+            )
+            X = X * noise
+            target = torch.fft.irfft(X, n=target.shape[1], dim=1)
+            batch = {**batch, "target": target}
+        # Dominant shuffle: shuffle amplitudes/phases of top-k dominant frequencies
+        if self.hparams.dominant_shuffle_k > 0:
+            target = batch["target"]
+            X = torch.fft.rfft(target, dim=1)
+            amp = X.abs()
+            k = self.hparams.dominant_shuffle_k
+            # Get top-k dominant frequencies (exclude DC=0)
+            topk_vals, topk_idx = torch.topk(amp[:, 1:, :].mean(dim=-1), k, dim=-1)
+            topk_idx = topk_idx + 1  # offset for DC
+            X_aug = X.clone()
+            for b in range(X.shape[0]):
+                idx = topk_idx[b]
+                perm = idx[torch.randperm(k, device=idx.device)]
+                X_aug[b, idx] = X[b, perm]
+            target = torch.fft.irfft(X_aug, n=target.shape[1], dim=1)
+            batch = {**batch, "target": target}
+        # Frequency masking: randomly zero out frequency bins
+        if self.hparams.freq_mask_rate > 0:
+            target = batch["target"]
+            X = torch.fft.rfft(target, dim=1)
+            n_freq = X.shape[1]
+            n_mask = int(n_freq * self.hparams.freq_mask_rate)
+            if n_mask > 0:
+                mask = torch.ones(X.shape[0], n_freq, 1, device=X.device)
+                for b in range(X.shape[0]):
+                    idx = torch.randperm(n_freq, device=X.device)[:n_mask]
+                    mask[b, idx] = 0
+                X = X * mask
+                target = torch.fft.irfft(X, n=target.shape[1], dim=1)
+                batch = {**batch, "target": target}
         input_mask = self.sample_patch_mask(batch["sample_id"])
         result = self(
             target=batch["target"],
@@ -312,6 +454,14 @@ class Moirai2Pretrain(L.LightningModule):
                 sample_id=batch["sample_id"],
             )
             loss = loss + self.hparams.ps_loss_lambda * ps_loss
+        # MoE load balancing loss
+        moe_aux_loss = 0.0
+        for m in self.module.modules():
+            if hasattr(m, '_aux_loss') and m._aux_loss != 0.0:
+                moe_aux_loss = moe_aux_loss + m._aux_loss
+                m._aux_loss = 0.0  # reset
+        if isinstance(moe_aux_loss, torch.Tensor):
+            loss = loss + 0.01 * moe_aux_loss
         batch_size = batch["sample_id"].max(dim=1).values.sum()
         if _dual_head:
             self.log(
@@ -534,11 +684,20 @@ class Moirai2Pretrain(L.LightningModule):
             betas=(self.hparams.beta1, self.hparams.beta2),
             eps=1e-6,
         )
+        sched_type = SchedulerType(self.hparams.scheduler_type)
+        sched_kwargs = {}
+        if sched_type == SchedulerType.COSINE_WITH_RESTARTS:
+            sched_kwargs["num_cycles"] = self.hparams.scheduler_num_cycles
+        if sched_type == SchedulerType.COSINE and self.hparams.min_lr_ratio > 0:
+            sched_kwargs["min_lr_ratio"] = self.hparams.min_lr_ratio
+        if sched_type == SchedulerType.WSD:
+            sched_kwargs["stable_ratio"] = self.hparams.wsd_stable_ratio
         scheduler = get_scheduler(
-            SchedulerType.COSINE,
+            sched_type,
             optimizer,
             num_warmup_steps=self.hparams.num_warmup_steps,
             num_training_steps=self.hparams.num_training_steps,
+            scheduler_specific_kwargs=sched_kwargs,
         )
         return {
             "optimizer": optimizer,
@@ -616,6 +775,7 @@ class Moirai2Pretrain(L.LightningModule):
                 )
                 + CausalPredictionMask(
                     prefix_ratio=self.hparams.prefix_ratio,
+                    prefix_ratio_jitter=self.hparams.prefix_ratio_jitter,
                     target_field="target",
                     prediction_mask_field="prediction_mask",
                     expected_ndim=3,

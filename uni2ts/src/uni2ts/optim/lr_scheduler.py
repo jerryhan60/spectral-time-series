@@ -141,15 +141,15 @@ def _get_cosine_schedule_with_warmup_lr_lambda(
     num_warmup_steps: int,
     num_training_steps: int,
     num_cycles: float,
+    min_lr_ratio: float = 0.0,
 ):
     if current_step < num_warmup_steps:
         return float(current_step) / float(max(1, num_warmup_steps))
     progress = float(current_step - num_warmup_steps) / float(
         max(1, num_training_steps - num_warmup_steps)
     )
-    return max(
-        0.0, 0.5 * (1.0 + math.cos(math.pi * float(num_cycles) * 2.0 * progress))
-    )
+    cosine_val = 0.5 * (1.0 + math.cos(math.pi * float(num_cycles) * 2.0 * progress))
+    return max(min_lr_ratio, min_lr_ratio + (1.0 - min_lr_ratio) * cosine_val)
 
 
 def get_cosine_schedule_with_warmup(
@@ -157,6 +157,7 @@ def get_cosine_schedule_with_warmup(
     num_warmup_steps: int,
     num_training_steps: int,
     num_cycles: float = 0.5,
+    min_lr_ratio: float = 0.0,
     last_epoch: int = -1,
 ):
     """
@@ -174,6 +175,8 @@ def get_cosine_schedule_with_warmup(
         num_cycles (`float`, *optional*, defaults to 0.5):
             The number of waves in the cosine schedule (the defaults is to just decrease from the max value to 0
             following a half-cosine).
+        min_lr_ratio (`float`, *optional*, defaults to 0.0):
+            Minimum LR as a fraction of the peak LR (e.g. 0.01 = floor at 1% of peak).
         last_epoch (`int`, *optional*, defaults to -1):
             The index of the last epoch when resuming training.
 
@@ -186,6 +189,7 @@ def get_cosine_schedule_with_warmup(
         num_warmup_steps=num_warmup_steps,
         num_training_steps=num_training_steps,
         num_cycles=num_cycles,
+        min_lr_ratio=min_lr_ratio,
     )
     return LambdaLR(optimizer, lr_lambda, last_epoch)
 
@@ -367,6 +371,49 @@ def get_inverse_sqrt_schedule(
     return LambdaLR(optimizer, lr_lambda, last_epoch=last_epoch)
 
 
+def _get_wsd_schedule_lr_lambda(
+    current_step: int,
+    *,
+    num_warmup_steps: int,
+    num_training_steps: int,
+    stable_ratio: float = 0.7,
+    decay_type: str = "sqrt",
+):
+    """Warmup-Stable-Decay schedule (ICLR 2025)."""
+    if current_step < num_warmup_steps:
+        return float(current_step) / float(max(1, num_warmup_steps))
+    stable_end = num_warmup_steps + int(stable_ratio * (num_training_steps - num_warmup_steps))
+    if current_step < stable_end:
+        return 1.0
+    # Decay phase
+    decay_steps = num_training_steps - stable_end
+    progress = float(current_step - stable_end) / float(max(1, decay_steps))
+    if decay_type == "sqrt":
+        return 1.0 - math.sqrt(progress)
+    elif decay_type == "cosine":
+        return 0.5 * (1.0 + math.cos(math.pi * progress))
+    else:  # linear
+        return 1.0 - progress
+
+
+def get_wsd_schedule(
+    optimizer: Optimizer,
+    num_warmup_steps: int,
+    num_training_steps: int,
+    stable_ratio: float = 0.7,
+    decay_type: str = "sqrt",
+    last_epoch: int = -1,
+):
+    lr_lambda = partial(
+        _get_wsd_schedule_lr_lambda,
+        num_warmup_steps=num_warmup_steps,
+        num_training_steps=num_training_steps,
+        stable_ratio=stable_ratio,
+        decay_type=decay_type,
+    )
+    return LambdaLR(optimizer, lr_lambda, last_epoch)
+
+
 class SchedulerType(Enum):
     LINEAR = "linear"
     COSINE = "cosine"
@@ -376,6 +423,7 @@ class SchedulerType(Enum):
     CONSTANT_WITH_WARMUP = "constant_with_warmup"
     INVERSE_SQRT = "inverse_sqrt"
     REDUCE_ON_PLATEAU = "reduce_lr_on_plateau"
+    WSD = "wsd"
 
 
 TYPE_TO_SCHEDULER_FUNCTION = {
@@ -387,6 +435,7 @@ TYPE_TO_SCHEDULER_FUNCTION = {
     SchedulerType.CONSTANT_WITH_WARMUP: get_constant_schedule_with_warmup,
     SchedulerType.INVERSE_SQRT: get_inverse_sqrt_schedule,
     SchedulerType.REDUCE_ON_PLATEAU: get_reduce_on_plateau_schedule,
+    SchedulerType.WSD: get_wsd_schedule,
 }
 
 

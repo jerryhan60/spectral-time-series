@@ -25,7 +25,7 @@ python -m cli.train -cp conf/pretrain \
   tf32=false \
   train_dataloader.num_batches_per_epoch=100 \
   train_dataloader.batch_size=256 \
-  train_dataloader.num_workers=11 \
+  train_dataloader.num_workers=8 \
   model.num_warmup_steps=10000 \
   trainer.enable_progress_bar=true \
   seed=42 \

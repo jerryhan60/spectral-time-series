@@ -6,7 +6,7 @@ _args_:
       buildings_900k: 0.07049713172331126
     sample_time_series:
       _target_: uni2ts.data.dataset.SampleTimeSeriesType
-      _args_: ["variate_proportional"]
+      _args_: ["proportional"]
   - _target_: uni2ts.data.builder.lotsa_v1.BuildingsBenchDatasetBuilder
     datasets: ${cls_getattr:${._target_},dataset_list}
     weight_map:
@@ -21,7 +21,7 @@ _args_:
       lcl: 61.224515184913
     sample_time_series:
       _target_: uni2ts.data.dataset.SampleTimeSeriesType
-      _args_: ["variate_proportional"]
+      _args_: ["proportional"]
   - _target_: uni2ts.data.builder.lotsa_v1.CloudOpsTSFDatasetBuilder
     datasets: ${cls_getattr:${._target_},dataset_list}
     weight_map:
@@ -30,7 +30,7 @@ _args_:
       alibaba_cluster_trace_2018: 2.1667961908107465
     sample_time_series:
       _target_: uni2ts.data.dataset.SampleTimeSeriesType
-      _args_: ["variate_proportional"]
+      _args_: ["proportional"]
   - _target_: uni2ts.data.builder.lotsa_v1.CMIP6DatasetBuilder
     datasets: ${cls_getattr:${._target_},dataset_list}
     weight_map:
@@ -69,7 +69,7 @@ _args_:
       cmip6_2010: 0.014186655115280208
     sample_time_series:
       _target_: uni2ts.data.dataset.SampleTimeSeriesType
-      _args_: ["variate_proportional"]
+      _args_: ["proportional"]
   - _target_: uni2ts.data.builder.lotsa_v1.ERA5DatasetBuilder
     datasets: ${cls_getattr:${._target_},dataset_list}
     weight_map:
@@ -105,7 +105,7 @@ _args_:
       era5_2018: 0.01716585268948905
     sample_time_series:
       _target_: uni2ts.data.dataset.SampleTimeSeriesType
-      _args_: ["variate_proportional"]
+      _args_: ["proportional"]
   - _target_: uni2ts.data.builder.lotsa_v1.GluonTSDatasetBuilder
     datasets: ${cls_getattr:${._target_},dataset_list}
     weight_map:
@@ -162,7 +162,7 @@ _args_:
       us_births: 33.276511599273626
     sample_time_series:
       _target_: uni2ts.data.dataset.SampleTimeSeriesType
-      _args_: ["variate_proportional"]
+      _args_: ["proportional"]
   - _target_: uni2ts.data.builder.lotsa_v1.LargeSTDatasetBuilder
     datasets: ${cls_getattr:${._target_},dataset_list}
     weight_map:
@@ -173,7 +173,7 @@ _args_:
       largest_2021: 0.5979278516007128
     sample_time_series:
       _target_: uni2ts.data.dataset.SampleTimeSeriesType
-      _args_: ["variate_proportional"]
+      _args_: ["proportional"]
   - _target_: uni2ts.data.builder.lotsa_v1.LibCityDatasetBuilder
     datasets: ${cls_getattr:${._target_},dataset_list}
     weight_map:
@@ -192,7 +192,7 @@ _args_:
       SZ_TAXI: 13.612494641847192
     sample_time_series:
       _target_: uni2ts.data.dataset.SampleTimeSeriesType
-      _args_: ["variate_proportional"]
+      _args_: ["proportional"]
   - _target_: uni2ts.data.builder.lotsa_v1.OthersLOTSADatasetBuilder
     datasets: ${cls_getattr:${._target_},dataset_list}
     weight_map:
@@ -208,7 +208,7 @@ _args_:
       saugeenday: 0.518188648716334
     sample_time_series:
       _target_: uni2ts.data.dataset.SampleTimeSeriesType
-      _args_: ["variate_proportional"]
+      _args_: ["proportional"]
   - _target_: uni2ts.data.builder.lotsa_v1.ProEnFoDatasetBuilder
     datasets: ${cls_getattr:${._target_},dataset_list}
     weight_map:
@@ -226,7 +226,7 @@ _args_:
       gdp_monthly: 9.17057367305114
     sample_time_series:
       _target_: uni2ts.data.dataset.SampleTimeSeriesType
-      _args_: ["variate_proportional"]
+      _args_: ["proportional"]
   - _target_: uni2ts.data.builder.lotsa_v1.SubseasonalDatasetBuilder
     datasets: ${cls_getattr:${._target_},dataset_list}
     weight_map:
@@ -236,4 +236,4 @@ _args_:
       contest_precip_34w: 5.330605605752403
     sample_time_series:
       _target_: uni2ts.data.dataset.SampleTimeSeriesType
-      _args_: ["variate_proportional"]
+      _args_: ["proportional"]

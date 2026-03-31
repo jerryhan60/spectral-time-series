@@ -19,6 +19,7 @@ from .cloudops_tsf import CloudOpsTSFDatasetBuilder
 from .cmip6 import CMIP6DatasetBuilder
 from .era5 import ERA5DatasetBuilder
 from .gluonts import GluonTSDatasetBuilder
+from .kernelsynth import KernelSynthDatasetBuilder
 from .largest import LargeSTDatasetBuilder
 from .lib_city import LibCityDatasetBuilder
 from .others import OthersLOTSADatasetBuilder
@@ -38,4 +39,5 @@ __all__ = [
     "OthersLOTSADatasetBuilder",
     "ProEnFoDatasetBuilder",
     "SubseasonalDatasetBuilder",
+    "KernelSynthDatasetBuilder",
 ]

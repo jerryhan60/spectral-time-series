@@ -80,12 +80,20 @@ class Moirai2Module(
         quantile_levels: tuple[float] = (0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9),
         patch_mask_ratio: float = 0.0,
         hint_dropout: float = 0.0,
+        hint_sequence_dropout: float = 0.0,
         hint_embed_mode: str = "concat",
         hint_normalize: bool = False,
         time_precondition_extra_hints: str | None = None,
         stu_enabled: bool = False,
         stu_num_filters: int = 24,
         stu_gate_init: float = 0.0,
+        hint_ramp_steps: int = 0,
+        hint_dropout_ramp_steps: int = 0,
+        hint_freq_gate: bool = False,
+        hint_pred_gate: bool = False,
+        moe_num_experts: int = 0,
+        moe_top_k: int = 2,
+        hint_ablation: str = "none",
     ):
         """
         :param d_model: model hidden dimensions
@@ -96,6 +104,8 @@ class Moirai2Module(
         :param dropout_p: dropout probability for all other layers
         :param scaling: whether to apply scaling (standardization)
         :param num_quantiles: number of quantile levels
+        :param hint_ramp_steps: linearly ramp hint scale from 0 to 1 over this many steps (0=disabled)
+        :param hint_dropout_ramp_steps: linearly ramp hint dropout from 0 to hint_dropout over this many steps (0=disabled)
         """
         super().__init__()
         self.d_model = d_model
@@ -109,8 +119,14 @@ class Moirai2Module(
         self.patch_mask_ratio = patch_mask_ratio
         self.attn_l1_lambda = attn_l1_lambda
         self.hint_dropout = hint_dropout
+        self.hint_sequence_dropout = hint_sequence_dropout
         self.hint_embed_mode = hint_embed_mode
         self.hint_normalize = hint_normalize
+        self.hint_ramp_steps = hint_ramp_steps
+        self.hint_dropout_ramp_steps = hint_dropout_ramp_steps
+        self.hint_freq_gate = hint_freq_gate
+        self.hint_pred_gate = hint_pred_gate
+        self.hint_ablation = hint_ablation
         self.latent_precondition_enabled = latent_precondition_enabled
         self.latent_precondition_stride = latent_precondition_stride
         self.time_precondition_enabled = time_precondition_enabled
@@ -217,6 +233,15 @@ class Moirai2Module(
             )
             # Store stride as int attribute
             setattr(self, f"_extra_hint_stride_{idx}", extra_stride)
+        # Frequency-adaptive hint gate: scales hints by learned function of spectral energy
+        if hint_freq_gate and _hint_active:
+            # Gate = sigmoid(w * high_freq_ratio + b), init b=2.0 so gate starts ~0.88 (hints mostly on)
+            self.freq_gate_weight = nn.Parameter(torch.tensor(0.0))
+            self.freq_gate_bias = nn.Parameter(torch.tensor(2.0))
+        if hint_pred_gate and _hint_active:
+            # Gate = sigmoid(w * pred_ratio + b), init b=2.0 so gate starts ~0.88 (hints mostly on)
+            self.pred_gate_weight = nn.Parameter(torch.tensor(0.0))
+            self.pred_gate_bias = nn.Parameter(torch.tensor(2.0))
         if time_precondition_inverse_enabled:
             if not time_precondition_enabled:
                 raise ValueError(
@@ -277,6 +302,8 @@ class Moirai2Module(
             stu_num_filters=stu_num_filters,
             stu_max_seq_len=max_seq_len,
             stu_gate_init=stu_gate_init,
+            moe_num_experts=moe_num_experts,
+            moe_top_k=moe_top_k,
         )
         self.out_proj = ResidualBlock(
             input_dims=d_model,
@@ -328,6 +355,7 @@ class Moirai2Module(
         prediction_mask: Bool[torch.Tensor, "*batch seq_len"],
         training_mode: Bool = True,
         input_mask: Optional[Bool[torch.Tensor, "*batch seq_len"]] = None,
+        global_step: int = 0,
     ):
         """
         Defines the forward pass of MoiraiDecoderModule.
@@ -378,6 +406,13 @@ class Moirai2Module(
                     stride_override=extra_stride,
                 )
                 hint_channels.append(extra_precond - scaled_target)
+            # Hint ablation: replace computed hints for controlled experiments
+            if self.hint_ablation == "zero":
+                hint_channels = [torch.zeros_like(h) for h in hint_channels]
+            elif self.hint_ablation == "random":
+                hint_channels = [torch.randn_like(h) for h in hint_channels]
+            elif self.hint_ablation == "duplicate":
+                hint_channels = [scaled_target.clone() for _ in hint_channels]
             # Zero unobserved slots
             scaled_target_zeroed = torch.where(observed_mask, scaled_target, 0.0)
             hint_channels = [torch.where(observed_mask, h, 0.0) for h in hint_channels]
@@ -395,12 +430,53 @@ class Moirai2Module(
                 ]
             # Hint dropout: randomly zero entire hint channel per patch
             if training_mode and self.hint_dropout > 0:
+                # Progressive dropout: ramp from 0 to target rate
+                effective_dropout = self.hint_dropout
+                if self.hint_dropout_ramp_steps > 0 and global_step is not None:
+                    effective_dropout = self.hint_dropout * min(1.0, global_step / self.hint_dropout_ramp_steps)
+                if effective_dropout > 0:
+                    for i in range(len(hint_channels)):
+                        hint_mask = torch.rand(
+                            hint_channels[i].shape[:-1], device=hint_channels[i].device
+                        ) < effective_dropout
+                        hint_channels[i] = hint_channels[i].masked_fill(hint_mask.unsqueeze(-1), 0.0)
+            # Sequence-level hint dropout: zero ALL hints for entire sequences
+            if training_mode and self.hint_sequence_dropout > 0:
+                B = hint_channels[0].shape[0]
+                seq_mask = torch.rand(B, device=hint_channels[0].device) < self.hint_sequence_dropout
                 for i in range(len(hint_channels)):
-                    hint_mask = torch.rand(
-                        hint_channels[i].shape[:-1], device=hint_channels[i].device
-                    ) < self.hint_dropout
-                    hint_channels[i] = hint_channels[i].masked_fill(hint_mask.unsqueeze(-1), 0.0)
+                    hint_channels[i] = hint_channels[i].masked_fill(seq_mask[:, None, None], 0.0)
             all_hints = torch.cat(hint_channels, dim=-1)  # (B, T, num_hints * patch_size)
+            # Frequency-adaptive gate: scale hints based on spectral content
+            if self.hint_freq_gate:
+                # Compute high-freq energy ratio from z-scored target (per sequence)
+                # Use observed context only (not prediction window)
+                # Average across patch dimension to get single value per timestep
+                obs_target = (scaled_target * observed_mask).mean(dim=-1)  # (B, T)
+                X = torch.fft.rfft(obs_target, dim=1)  # (B, F)
+                power = X.abs().pow(2)
+                n_freq = power.shape[1]
+                # High-freq = upper half of spectrum, low-freq = lower half
+                low_energy = power[:, :n_freq // 2].sum(dim=1, keepdim=True)
+                high_energy = power[:, n_freq // 2:].sum(dim=1, keepdim=True)
+                total_energy = low_energy + high_energy + 1e-8
+                high_ratio = high_energy / total_energy  # (B, 1), range [0, 1]
+                # Learned gate: sigmoid(w * high_ratio + b)
+                freq_gate = torch.sigmoid(
+                    self.freq_gate_weight * high_ratio + self.freq_gate_bias
+                )  # (B, 1)
+                all_hints = all_hints * freq_gate.unsqueeze(1)  # (B, 1, 1) broadcast
+            # Prediction-ratio gate: scale hints by learned function of prediction ratio
+            if self.hint_pred_gate:
+                pred_ratio = prediction_mask.float().mean(dim=1, keepdim=True)  # (B, 1)
+                pred_gate = torch.sigmoid(
+                    self.pred_gate_weight * pred_ratio + self.pred_gate_bias
+                )  # (B, 1)
+                all_hints = all_hints * pred_gate.unsqueeze(-1)  # (B, 1, 1) broadcast
+            # Hint ramp: linearly scale hints from 0 to 1 over hint_ramp_steps
+            if training_mode and self.hint_ramp_steps > 0:
+                hint_scale = min(1.0, global_step / self.hint_ramp_steps)
+                all_hints = all_hints * hint_scale
             if self.hint_embed_mode == "separate":
                 # Separate pathway: main in_proj sees [target, mask] only
                 input_tokens = torch.cat(
