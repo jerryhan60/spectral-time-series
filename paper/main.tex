@@ -788,6 +788,62 @@ HD10 $\Delta$\% vs BL & $-8.2\%$ & $-5.8\%$ & $-0.5\%$ & $-2.2\%$ & $-2.4\%$ & $
 
 Baseline seed 0 exhibits training instability at 80K steps (MASE spikes to 1.3038 before partial recovery to 1.2783); seeds 2 and 7 are stable ($\sim$1.21). Duplicate \emph{hurts} at 100K ($-0.9\%$ vs BL), and Zero hurts more ($-1.7\%$; note seed 42 outlier at 1.3511). HD10 remains the most stable method across seeds (range 1.17--1.21 vs.\ BL range 1.21--1.28).
 
+\subsection{Training dynamics}
+
+Figure~\ref{fig:trainloss10k} shows the training loss for all four conditions at 10K steps. All methods converge to similar final loss (0.135--0.138), with HD10 achieving the lowest (0.1354). The small training loss gap contrasts with the larger eval gap ($-2.9\%$ MASE), suggesting the hint channel improves generalization rather than optimization speed.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.7\linewidth]{figures/fig_training_loss_10k.pdf}
+\caption{Training loss at 10K steps (seed 0). All methods converge similarly; the eval improvement from hints is a generalization effect.}
+\label{fig:trainloss10k}
+\end{figure}
+
+\begin{table}[h]
+\centering
+\caption{Final training loss at 10K and 100K steps (seed 0, epoch-averaged).}
+\small
+\begin{tabular}{lcccc}
+\toprule
+& \multicolumn{2}{c}{\textbf{10K steps}} & \multicolumn{2}{c}{\textbf{100K steps}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5}
+\textbf{Method} & \textbf{Train loss} & \textbf{Eval MASE} & \textbf{Train loss} & \textbf{Eval MASE} \\
+\midrule
+Baseline & 0.1366 & 1.2185 & 0.1185 & 1.2783 \\
+HD10 (ours) & 0.1354 & 1.1577 & 0.1144 & 1.1739 \\
+Zero & 0.1378 & 1.2072 & --- & 1.2537 \\
+Duplicate & 0.1376 & 1.2341 & --- & 1.2495 \\
+MSHD10 & --- & 1.2029 & 0.1147 & 1.1622 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+At 100K steps (Figure~\ref{fig:trainloss100k}), HD10 maintains a consistent training loss advantage over the baseline throughout training (0.1144 vs 0.1185 at convergence). The baseline's training loss is smooth despite its eval MASE instability at 80K, confirming that the eval collapse is a generalization phenomenon rather than an optimization failure.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.7\linewidth]{figures/fig_training_loss_100k.pdf}
+\caption{Training loss at 100K steps (seed 0). HD10 and MSHD10 maintain lower training loss throughout. The baseline's eval collapse at 80K (see Table above) is not reflected in training loss.}
+\label{fig:trainloss100k}
+\end{figure}
+
+Table~\ref{tab:traineval_gap} summarizes the train-eval gap. At 10K, the training loss difference between HD10 and baseline is small (0.9\%), but the eval difference is much larger (5.0\%). This gap widens at 100K (3.5\% train vs 8.2\% eval), consistent with hints acting as a regularizer that improves generalization disproportionately to its effect on training loss.
+
+\begin{table}[h]
+\centering
+\caption{Train loss vs eval MASE improvement (HD10 over baseline, seed 0).}
+\label{tab:traineval_gap}
+\small
+\begin{tabular}{lcc}
+\toprule
+& \textbf{Train loss improvement} & \textbf{Eval MASE improvement} \\
+\midrule
+10K steps & $0.9\%$ & $5.0\%$ \\
+100K steps & $3.5\%$ & $8.2\%$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \subsection{Matched Learning Rate (5 seeds, $\eta = 2 \times 10^{-3}$)}
 
 \begin{table}[h]
