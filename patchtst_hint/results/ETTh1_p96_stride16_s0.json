@@ -1,0 +1,14 @@
+{
+  "dataset": "ETTh1",
+  "pred_len": 96,
+  "patch_stride": 16,
+  "overlap_pct": 0,
+  "num_patches": 32,
+  "seed": 0,
+  "n_params": 613472,
+  "best_epoch": 60,
+  "train_time_s": 213.3,
+  "test_mse": 10.973901,
+  "test_mae": 1.8285,
+  "test_mase": 1.935606
+}

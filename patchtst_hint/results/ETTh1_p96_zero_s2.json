@@ -1,0 +1,15 @@
+{
+  "dataset": "ETTh1",
+  "pred_len": 96,
+  "context_len": 512,
+  "hint_mode": "zero",
+  "hint_degree": 4,
+  "hint_dropout": 0.1,
+  "seed": 2,
+  "n_params": 615520,
+  "best_epoch": 10,
+  "train_time_s": 219.5,
+  "test_mse": 9.916666,
+  "test_mae": 1.754004,
+  "test_mase": 1.856746
+}

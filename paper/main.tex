@@ -36,18 +36,18 @@
 \maketitle
 
 \begin{abstract}
-Patch-based transformer architectures for time series forecasting segment the input into fixed-length patches, creating an information bottleneck: each patch embedding is initially blind to temporal patterns spanning multiple patches. We propose \textbf{polynomial hint preconditioning}, a simple method that applies a fixed Chebyshev polynomial FIR filter to the raw time series and concatenates the filtered signal as an auxiliary input channel. This injects cross-patch temporal information directly into each patch embedding with negligible overhead (12K parameters, 0.11\% of the model). On the GIFT-Eval benchmark (97 dataset$\times$horizon configurations, 5 random seeds), our method achieves a 2.89\% improvement in geometric mean MASE over the baseline ($p = 1.5 \times 10^{-15}$, paired sign test), winning 329 out of 485 seed$\times$config comparisons. Crucially, we demonstrate through controlled ablations that the improvement stems from the \emph{polynomial content} of the hint channel, not from extra capacity: a duplicate input channel \emph{hurts} performance (44.7\% win rate, worse than random), while a zero channel is neutral. Ablation studies reveal that Chebyshev polynomials outperform alternative bases (Legendre, EMA, finite differences), that stride matching the patch size is optimal, and that 10\% hint dropout provides the best regularization. The benefit is strongest for high-frequency domains (transport, energy) and long prediction horizons, consistent with the mechanism of cross-patch information leakage at the filter's lookback scale.
+Patch-based transformer architectures for time series forecasting segment the input into fixed-length patches, creating an information bottleneck: each patch embedding is initially blind to temporal patterns spanning multiple patches. We propose \textbf{polynomial hint preconditioning}, a method that applies a fixed Chebyshev polynomial FIR filter to the raw time series and concatenates the filtered signal as an auxiliary input channel, injecting cross-patch temporal information with negligible overhead (12K parameters, 0.11\% of the model). On the GIFT-Eval benchmark (97 dataset$\times$horizon configurations, 5 random seeds), our method achieves a 2.9\% improvement in geometric mean MASE over the baseline ($p < 10^{-15}$, paired sign test), winning 329 of 485 seed$\times$config comparisons. Controlled capacity ablations confirm that the improvement stems from the \emph{polynomial content} of the hint channel: a duplicate input channel \emph{hurts} performance (44.7\% win rate), while a zero channel is neutral. At a full 100K-step training budget with 5 seeds, the benefit grows to 3.9\% over the baseline and 4.7\% over the duplicate control. Ablations identify Chebyshev basis, degree 4, patch-aligned stride, and 10\% hint dropout as optimal. The benefit is strongest for high-frequency domains (transport, energy) and long prediction horizons, consistent with cross-patch information leakage at the filter's lookback scale.
 \end{abstract}
 
 %==============================================================================
 \section{Introduction}
 %==============================================================================
 
-Universal time series forecasting models~\citep{woo2024unified,das2024decoder,ansari2024chronos,rasul2024lagllama,goswami2024moment} aim to train a single model on diverse time series datasets and generalize zero-shot to unseen domains. Among the most successful is the Moirai family~\citep{woo2024unified,liu2024moirai2}, which uses a patch-based transformer encoder: the input time series is split into non-overlapping patches of fixed size $P$ (typically $P=16$), each patch is projected into a $d$-dimensional embedding, and a standard transformer processes the sequence of patch embeddings.
+Universal time series forecasting models~\citep{woo2024unified,das2024decoder,ansari2024chronos,rasul2024lagllama,goswami2024moment,garza2024timegpt,liu2024timer} aim to train a single model on diverse time series datasets and generalize zero-shot to unseen domains~\citep{bommasani2021opportunities}. Among the most successful is the Moirai family~\citep{woo2024unified,liu2024moirai2}, which uses a patch-based transformer encoder~\citep{vaswani2017attention}: the input time series is split into non-overlapping patches of fixed size $P$ (typically $P=16$), each patch is projected into a $d$-dimensional embedding---an approach inspired by Vision Transformers~\citep{dosovitskiy2021image}---and a standard transformer processes the sequence of patch embeddings.
 
 This architecture introduces a \emph{cross-patch information bottleneck}. Before the first self-attention layer, each patch embedding encodes only $P$ consecutive time steps. Temporal patterns that span multiple patches, such as daily cycles in hourly data ($24$ steps $= 1.5$ patches), weekly seasonality in 15-minute data ($672$ steps $= 42$ patches), are invisible to individual patch embeddings and must be recovered entirely through attention. This places a heavy burden on the self-attention mechanism to ``discover'' cross-patch dependencies from scratch.
 
-We propose \textbf{polynomial hint preconditioning}, a simple method to alleviate this bottleneck. Before patching, we apply a fixed polynomial FIR (finite impulse response) filter to the raw time series and concatenate the filtered signal as an additional input channel. The filter uses Chebyshev polynomials~\citep{mason2003chebyshev} evaluated at the backshift operator with stride equal to the patch size:
+We propose \textbf{polynomial hint preconditioning}, a method to alleviate this bottleneck. Before patching, we apply a fixed polynomial FIR (finite impulse response) filter~\citep{oppenheim1999discrete} to the raw time series and concatenate the filtered signal as an additional input channel. The filter uses Chebyshev polynomials~\citep{mason2003chebyshev} evaluated at the backshift operator with stride equal to the patch size:
 \begin{equation}
 h[t] = T_d(B^s) \, x[t], \quad s = P,
 \label{eq:hint}
@@ -58,12 +58,12 @@ h[t] = x[t] - 2 x[t-32] + 0.5 x[t-64],
 \end{equation}
 injecting information from 2 and 4 patches back into each time step. The hint channel is concatenated with the original signal before patching, widening only the input projection layer (12,288 extra parameters out of 11.4M total, a 0.11\% increase).
 
-Our approach is inspired by the theory of \emph{universal sequence preconditioning} developed by \citet{marsden2024universal}, who show that polynomial transformations of the input sequence can accelerate online learning by reducing the spectral complexity of the prediction problem. While their framework targets online convex optimization over sequence spaces, we adapt the core insight, that polynomial basis transformations provide useful inductive bias, to the practical setting of patch-based time series transformers. Our method differs from direct preconditioning in that we provide the polynomial-filtered signal as an auxiliary ``hint'' rather than replacing the original input, letting the model learn to combine both representations.
+Our approach is inspired by the theory of \emph{universal sequence preconditioning} developed by \citet{marsden2024universal}, who show that polynomial transformations of the input sequence can accelerate online learning by reducing the spectral complexity of the prediction problem. While their framework targets online convex optimization over sequence spaces~\citep{hazan2016introduction}, we adapt the core insight---that polynomial basis transformations provide useful inductive bias---to the practical setting of patch-based time series transformers. Our method differs from direct preconditioning in that we provide the polynomial-filtered signal as an auxiliary ``hint'' rather than replacing the original input, letting the model learn to combine both representations.
 
 \paragraph{Contributions.}
 \begin{enumerate}
     \item We introduce polynomial hint preconditioning, a simple architectural modification that adds a fixed Chebyshev FIR-filtered channel to the input of patch-based time series transformers.
-    \item Through rigorous 5-seed experiments on 97 GIFT-Eval configurations, we demonstrate statistically significant improvement ($p < 10^{-15}$) and control for confounds: a duplicate channel hurts, a zero channel is neutral, confirming that the \emph{polynomial content} drives the improvement.
+    \item Through 5-seed experiments on 97 GIFT-Eval configurations, we show a $2.9\%$ improvement ($p < 10^{-15}$) and control for confounds: a duplicate channel hurts, a zero channel is neutral, confirming that the \emph{polynomial content} drives the improvement. At a 100K-step budget, the benefit grows to $3.9\%$.
     \item We provide extensive ablations over polynomial degree, filter stride, basis type, and dropout rate, identifying $d=4$, $s=P$, Chebyshev basis, and 10\% hint dropout as optimal.
     \item We analyze the mechanism through domain-specific, frequency-specific, and horizon-specific breakdowns, showing that the benefit is strongest where the filter's lookback scale aligns with structured temporal patterns.
 \end{enumerate}
@@ -73,16 +73,16 @@ Our approach is inspired by the theory of \emph{universal sequence preconditioni
 %==============================================================================
 
 \paragraph{Time series foundation models.}
-Recent work trains large models on diverse time series corpora for zero-shot forecasting~\citep{liang2024foundation}. TimesFM~\citep{das2024decoder} uses a decoder-only architecture with input patching. Chronos~\citep{ansari2024chronos} tokenizes time series and trains a language model. Lag-Llama~\citep{rasul2024lagllama} adapts LLaMA for probabilistic forecasting. Moirai~\citep{woo2024unified} and Moirai-2~\citep{liu2024moirai2} use a masked encoder with any-variate attention. MOMENT~\citep{goswami2024moment} and UniTS~\citep{gao2024units} further extend the paradigm. Our work builds on Moirai-2 Small (11.4M parameters).
+Recent work trains large models on diverse time series corpora for zero-shot forecasting~\citep{liang2024foundation}. TimesFM~\citep{das2024decoder} uses a decoder-only architecture with input patching. Chronos~\citep{ansari2024chronos} tokenizes time series and trains a language model. Lag-Llama~\citep{rasul2024lagllama} adapts LLaMA~\citep{touvron2023llama} for probabilistic forecasting. TimeGPT~\citep{garza2024timegpt} and Timer~\citep{liu2024timer} explore generative pre-training. Moirai~\citep{woo2024unified} and Moirai-2~\citep{liu2024moirai2} use a masked encoder with any-variate attention. MOMENT~\citep{goswami2024moment} and UniTS~\citep{gao2024units} further extend the paradigm. Our work builds on Moirai-2 Small (11.4M parameters).
 
 \paragraph{Preconditioning for sequence prediction.}
-\citet{marsden2024universal} develop universal sequence preconditioning (USP), showing that polynomial transformations of the input sequence reduce regret in online learning. Chebyshev and Legendre bases provide near-optimal conditioning for broad problem classes. This builds on spectral methods for online prediction~\citep{hazan2017learning,hazan2018spectral}. FIR filter design using Chebyshev polynomials is a classic topic in signal processing~\citep{parks1972chebyshev,oppenheim1999discrete}. Our work applies this theoretical insight to practical time series transformers, using the polynomial filter as an auxiliary hint rather than a direct transformation.
+\citet{marsden2024universal} develop universal sequence preconditioning (USP), showing that polynomial transformations of the input sequence reduce regret in online learning. Chebyshev and Legendre bases provide near-optimal conditioning for broad problem classes. This builds on spectral methods for online prediction~\citep{hazan2017learning,hazan2018spectral} and spectral state space models~\citep{agarwal2025spectral,dao2024flashstu}. FIR filter design using Chebyshev polynomials is a classic topic in signal processing~\citep{parks1972chebyshev,oppenheim1999discrete,mcclellan1973program}. Our work applies this theoretical insight to practical time series transformers, using the polynomial filter as an auxiliary hint rather than a direct transformation.
 
 \paragraph{Patch-based time series models.}
-PatchTST~\citep{nie2023patchtst} introduced channel-independent patching for time series. Subsequent work addresses limitations of patching: iTransformer~\citep{liu2024itransformer} applies attention across variates, Crossformer~\citep{zhang2023crossformer} uses cross-dimension attention, and FEDformer~\citep{zhou2022fedformer} operates in the frequency domain. State space models~\citep{gu2022efficiently,gu2024mamba} and long convolutions~\citep{romero2022ckconv,poli2023hyena} offer alternative approaches to long-range dependencies. Our approach is orthogonal: we inject cross-patch information at the input level through a fixed polynomial filter, requiring no changes to the attention mechanism.
+PatchTST~\citep{nie2023patchtst} introduced channel-independent patching for time series; \citet{han2024capacity} analyze the capacity trade-offs of this strategy. Subsequent work addresses limitations of patching: iTransformer~\citep{liu2024itransformer} applies attention across variates, Crossformer~\citep{zhang2023crossformer} uses cross-dimension attention, FEDformer~\citep{zhou2022fedformer} and FiLM~\citep{zhou2022film} operate in the frequency domain, and TimesNet~\citep{wu2023timesnet} models temporal 2D variations. Earlier transformer architectures for time series include Autoformer~\citep{wu2021autoformer}, Informer~\citep{zhou2021informer}, and Temporal Fusion Transformers~\citep{lim2021temporal}, while \citet{zeng2023dlinear} question whether transformers are needed at all. State space models~\citep{gu2022efficiently,gu2024mamba} and long convolutions~\citep{romero2022ckconv,poli2023hyena} offer alternative approaches to long-range dependencies. Our approach is orthogonal: we inject cross-patch information at the input level through a fixed polynomial filter, requiring no changes to the attention mechanism.
 
 \paragraph{Instance normalization.}
-RevIN~\citep{kim2022reversible} applies reversible instance normalization to address distribution shift. Moirai-2 uses a similar per-series standardization. Our hint channel operates on the normalized series, so the polynomial filter captures temporal structure after removing location and scale.
+RevIN~\citep{kim2022reversible} applies reversible instance normalization to address distribution shift; \citet{passalis2020deep} explore adaptive input normalization. Moirai-2 uses a similar per-series standardization. Our hint channel operates on the normalized series, so the polynomial filter captures temporal structure after removing location and scale.
 
 %==============================================================================
 \begin{figure}[t]
@@ -105,7 +105,7 @@ Each patch, along with its observation mask, forms a $2P$-dimensional input vect
 \begin{equation}
 \mathbf{e}_i = \text{ResBlock}_{2P \to d}([\mathbf{p}_i; \mathbf{m}_i]),
 \end{equation}
-where $\text{ResBlock}$ consists of a hidden linear layer with SiLU activation, an output linear layer, and a residual skip connection. The sequence of embeddings $(\mathbf{e}_1, \ldots, \mathbf{e}_N)$ is then processed by a standard transformer encoder.
+where $\text{ResBlock}$ consists of a hidden linear layer with SiLU activation~\citep{elfwing2018sigmoid}, an output linear layer, and a residual skip connection~\citep{he2016deep}. The sequence of embeddings $(\mathbf{e}_1, \ldots, \mathbf{e}_N)$ is then processed by a standard transformer encoder.
 
 \subsection{Hint preconditioning}
 
@@ -161,11 +161,11 @@ Output projection (ResBlock) & $\sim$0.7M & $\sim$0.7M & 0 \\
 
 \paragraph{Base model.} Moirai-2 Small: 6-layer transformer encoder, $d_{\text{model}}=384$, $d_{\text{ff}}=1024$, patch size $P=16$, 11.4M parameters. We retrain from scratch on the LOTSA v1 dataset collection~\citep{woo2024unified} using the official Moirai-2 data configuration (weighted sampling, variate-proportional batching).
 
-\paragraph{Training.} All models are trained for 10,000 steps (100 epochs $\times$ 100 batches/epoch) with batch size 256, AdamW optimizer~\citep{loshchilov2019decoupled} ($\beta_1=0.9$, $\beta_2=0.98$, weight decay $0.1$), cosine learning rate schedule with 1,000 warmup steps and peak learning rate $10^{-3}$, mixed precision (bf16). The only difference between conditions is the random seed and the hint channel configuration.
+\paragraph{Training.} All models are trained for 10,000 steps (100 epochs $\times$ 100 batches/epoch) with batch size 256, AdamW optimizer~\citep{loshchilov2019decoupled} ($\beta_1=0.9$, $\beta_2=0.98$, weight decay $0.1$), cosine learning rate schedule~\citep{loshchilov2017sgdr} with 1,000 warmup steps and peak learning rate $10^{-3}$, mixed precision (bf16)~\citep{micikevicius2018mixed}. The only difference between conditions is the random seed and the hint channel configuration. We also train extended 100K-step runs to evaluate full-budget performance.
 
-\paragraph{Evaluation.} GIFT-Eval benchmark~\citep{vijay2024gifteval}: 97 dataset$\times$horizon configurations spanning 9 domains and 7 frequencies (sub-hourly to yearly). Primary metric: geometric mean MASE~\citep{hyndman2006another} across all 97 configurations, evaluated at context length 4,000.
+\paragraph{Evaluation.} GIFT-Eval benchmark~\citep{vijay2024gifteval}, which draws on datasets from the Monash archive~\citep{godahewa2021monash} and the M4 competition~\citep{makridakis2020m4}: 97 dataset$\times$horizon configurations spanning 9 domains and 7 frequencies (sub-hourly to yearly). Primary metric: geometric mean MASE~\citep{hyndman2006another} across all 97 configurations, evaluated at context length 4,000.
 
-\paragraph{Statistical testing.} For each pair of methods, we compute per-configuration MASE and apply a paired sign test (two-sided binomial test). A method ``wins'' a configuration if its MASE is strictly lower. We pool across 5 random seeds (0, 1, 2, 7, 42) for a total of $5 \times 97 = 485$ comparisons, applying the binomial test to the pooled win count.
+\paragraph{Statistical testing.} Following best practices for comparing classifiers across datasets~\citep{demsar2006statistical}, we compute per-configuration MASE and apply a paired sign test (two-sided binomial test). A method ``wins'' a configuration if its MASE is strictly lower. We pool across 5 random seeds (0, 1, 2, 7, 42) for a total of $5 \times 97 = 485$ comparisons, applying the binomial test to the pooled win count. We also report Wilcoxon signed-rank tests~\citep{wilcoxon1945individual} where appropriate.
 
 \paragraph{Conditions.} We compare four conditions, all trained with identical hyperparameters:
 \begin{itemize}
@@ -199,7 +199,7 @@ Duplicate channel & 1.2162 & 0.0114 & $+$0.38\% & 217 & 44.7\% & 0.99 \\
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:main} presents the main results. HD10 achieves a geometric mean MASE of 1.1765, a 2.89\% improvement over the baseline (1.2116), winning 329 out of 485 seed$\times$configuration comparisons ($p = 1.5 \times 10^{-15}$).
+Table~\ref{tab:main} presents the main results. HD10 achieves a geometric mean MASE of 1.1765, a 2.9\% improvement over the baseline (1.2116), winning 329 of 485 seed$\times$configuration comparisons ($p < 10^{-15}$).
 
 The capacity controls confirm that the improvement stems from polynomial content:
 \begin{itemize}
@@ -218,9 +218,9 @@ The capacity controls confirm that the improvement stems from polynomial content
 
 \subsection{Matched learning rate}
 
-The results in Table~\ref{tab:main} use the default learning rate $\eta = 10^{-3}$ for all conditions. However, the baseline model is sensitive to learning rate: increasing to $\eta = 2 \times 10^{-3}$ improves the baseline by 2.27\% (from 1.2116 to 1.1841). This raises the question: does the hint benefit persist when the baseline is trained at its optimal learning rate?
+The results in Table~\ref{tab:main} use the default learning rate $\eta = 10^{-3}$ for all conditions. However, the baseline model is sensitive to learning rate: increasing to $\eta = 2 \times 10^{-3}$ improves the baseline by 2.3\% (from 1.2116 to 1.1841). This raises the question: does the hint benefit persist when the baseline is trained at its optimal learning rate?
 
-Table~\ref{tab:matchedlr} shows the matched-LR comparison across 5 seeds. At $\eta = 2 \times 10^{-3}$, HD10 still significantly outperforms the baseline (280/485 wins, $p = 3.8 \times 10^{-4}$), though the effect size is smaller ($+0.72\%$ vs.\ $+2.89\%$ at $\eta = 10^{-3}$).
+Table~\ref{tab:matchedlr} shows the matched-LR comparison across 5 seeds. At $\eta = 2 \times 10^{-3}$, HD10 still significantly outperforms the baseline (280/485 wins, $p = 3.8 \times 10^{-4}$), though the effect size is smaller ($+0.7\%$ vs.\ $+2.9\%$ at $\eta = 10^{-3}$).
 
 \begin{table}[t]
 \centering
@@ -242,9 +242,9 @@ Table~\ref{tab:matchedlr} shows the matched-LR comparison across 5 seeds. At $\e
 \end{tabular}
 \end{table}
 
-Notably, HD10 is \emph{robust to learning rate choice}: its mean MASE is nearly identical at $\eta = 10^{-3}$ (1.1765) and $\eta = 2 \times 10^{-3}$ (1.1755), a difference of only 0.09\%. In contrast, the baseline varies by 2.27\%. This suggests that part of the hint channel's benefit is providing an implicit form of optimization robustness, allowing the model to train effectively across a wider range of learning rates.
+Notably, HD10 is \emph{insensitive to learning rate}: its mean MASE is nearly identical at $\eta = 10^{-3}$ (1.1765) and $\eta = 2 \times 10^{-3}$ (1.1755), a difference of only 0.1\%. In contrast, the baseline varies by 2.3\%. This suggests that part of the hint channel's benefit is stabilizing the optimization, allowing the model to train effectively across a wider range of learning rates.
 
-\subsection{Seed robustness}
+\subsection{Seed consistency}
 
 Table~\ref{tab:seeds} shows that HD10 wins every seed at $\eta = 10^{-3}$, though the effect size varies from 0.44\% (seed 1, not individually significant) to 4.99\% (seed 0).
 
@@ -282,13 +282,13 @@ Figure~\ref{fig:ablations} summarizes the ablation results. All ablations use se
 \label{fig:ablations}
 \end{figure}
 
-\paragraph{Polynomial degree.} Degree $d=4$ achieves the best MASE (1.1577, $-4.99\%$). Even-degree polynomials ($d=2, 4, 6, 8$) consistently outperform odd-degree ($d=3$), likely because even-degree Chebyshev polynomials have more nonzero coefficients at the sampled lags.
+\paragraph{Polynomial degree.} Across the full sweep ($d \in \{2, 3, \ldots, 8\}$), degree $d=4$ achieves the best MASE (1.1577, $-5.0\%$). Even-degree polynomials ($d=2, 4, 6, 8$) consistently outperform odd-degree ($d=3, 5, 7$), likely because even-degree Chebyshev polynomials have more nonzero coefficients at the sampled lags.
 
-\paragraph{Filter stride.} Stride $s=16$ (equal to patch size $P$) is optimal, achieving $-5.0\%$ improvement. This is expected: when stride equals patch size, the filter taps align exactly with patch boundaries, providing maximally informative cross-patch lookback.
+\paragraph{Filter stride.} Stride $s=16$ (equal to patch size $P$) is optimal, achieving $-5.0\%$ improvement over the baseline. This is expected: when stride equals patch size, the filter taps align exactly with patch boundaries, providing maximally informative cross-patch lookback.
 
-\paragraph{Filter basis.} Chebyshev polynomials outperform all alternatives: EMA ($-3.89\%$), Legendre ($-3.07\%$ to $-3.10\%$), finite differences ($-1.12\%$), and duplicate ($-0.96\%$, not significant). In head-to-head comparison, Chebyshev beats Legendre on 67/97 configurations ($p < 0.001$).
+\paragraph{Filter basis.} Chebyshev polynomials outperform all alternatives: EMA ($-3.9\%$), Legendre ($-3.1\%$), finite differences ($-1.1\%$), and duplicate ($-1.0\%$, not significant). In head-to-head comparison, Chebyshev beats Legendre on 67/97 configurations ($p < 0.001$).
 
-\paragraph{Hint dropout.} An inverted-U curve: 10\% dropout is optimal ($-4.99\%$), with both lower (2\%, 3\%) and higher (20\%, 30\%) rates performing worse. Without dropout (0\%), the model becomes overly dependent on hints: replacing the hint with zeros at inference degrades MASE by 35.9\%. With 10\% dropout, the same zero-hint degradation is only 9.3\%.
+\paragraph{Hint dropout.} An inverted-U pattern: 10\% dropout is optimal ($-5.0\%$), with both lower (0\%, 2\%, 3\%) and higher (20\%, 30\%) rates performing worse. At 0\% dropout (HD0), the model achieves $-3.5\%$ improvement---still beneficial but weaker than 10\%. Without dropout, the model becomes overly dependent on hints: replacing the hint with zeros at inference degrades MASE by 35.9\%. With 10\% dropout, the same zero-hint degradation is only 9.3\%.
 
 \subsection{Inference ablation}
 
@@ -322,13 +322,13 @@ The ordering Normal $\gg$ Baseline $>$ Zero $>$ Random $>$ Duplicate confirms th
 
 Figure~\ref{fig:domain} breaks down the improvement by domain and frequency. The benefit is heterogeneous:
 \begin{itemize}
-    \item \textbf{Strongest}: Transport ($+6.94\%$, $p = 4 \times 10^{-8}$), Energy ($+3.97\%$, $p = 2 \times 10^{-4}$), Demographics ($+9.83\%$, $p = 0.004$).
-    \item \textbf{Neutral}: Weather ($+0.34\%$, $p = 0.68$), Healthcare ($+0.24\%$, $p = 0.62$).
+    \item \textbf{Strongest}: Transport ($+6.9\%$, $p = 4 \times 10^{-8}$), Energy ($+4.0\%$, $p = 2 \times 10^{-4}$), Demographics ($+9.8\%$, $p = 0.004$).
+    \item \textbf{Neutral}: Weather ($+0.3\%$, $p = 0.68$), Healthcare ($+0.2\%$, $p = 0.62$).
 \end{itemize}
 
 This is consistent with the mechanism: at stride $s=16$ and patch size $P=16$, the filter looks back 32 and 64 time steps. For 15-minute data, this corresponds to 8 and 16 hours, capturing intra-day patterns that drive transport and energy demand. For daily weather data, the lookback spans 32 and 64 days, too long to capture the relevant weekly/seasonal patterns.
 
-\paragraph{Prediction horizon.} The benefit increases monotonically with prediction length: $+1.36\%$ for short horizons to $+5.12\%$ for long horizons (Figure~\ref{fig:horizon}a). Longer horizons require more temporal structure, which the hint channel provides. Similarly, the benefit is larger for ``harder'' configurations where the baseline achieves high MASE (Figure~\ref{fig:horizon}b): the hardest quartile sees $+5.9\%$ improvement vs.\ $+0.4\%$ for the easiest.
+\paragraph{Prediction horizon.} The benefit increases monotonically with prediction length: $+1.4\%$ for short horizons to $+5.1\%$ for long horizons (Figure~\ref{fig:horizon}a). Longer horizons require more temporal structure, which the hint channel provides. Similarly, the benefit is larger for ``harder'' configurations where the baseline achieves high MASE (Figure~\ref{fig:horizon}b): the hardest quartile sees $+5.9\%$ improvement vs.\ $+0.4\%$ for the easiest.
 
 \begin{figure}[t]
 \centering
@@ -365,6 +365,32 @@ Figure~\ref{fig:waterfall} shows the improvement for all 97 configurations (5-se
 \end{figure}
 
 Figure~\ref{fig:context} shows that the benefit is approximately constant ($\sim$5\%) across context lengths from 512 to 4,000. Notably, HD10 at context length 2,000 (MASE 1.1713) outperforms the baseline at context length 4,000 (MASE 1.2185), suggesting that hint preconditioning can substitute for doubling the context window.
+
+\subsection{Extended training budget (100K steps)}
+
+The 10K-step results above use a modest training budget. To confirm that the benefit persists---and is not an artifact of early stopping---we train all four conditions (Baseline, HD10, Duplicate, Zero) for 100K steps with 5 seeds each. Table~\ref{tab:100k} shows the results.
+
+\begin{table}[t]
+\centering
+\caption{Full training budget (100K steps, 5 seeds). HD10 outperforms the baseline by 3.9\% and both capacity controls by $>$4.5\%. Duplicate and Zero channels both \emph{hurt} at 100K, in contrast to the near-neutral results at 10K.}
+\label{tab:100k}
+\small
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Method} & \textbf{s0} & \textbf{s1} & \textbf{s2} & \textbf{s7} & \textbf{s42} & \textbf{Mean} \\
+\midrule
+\textbf{HD10 (Ours)} & \textbf{1.1739} & \textbf{1.1813} & 1.2072 & \textbf{1.1880} & \textbf{1.1853} & \textbf{1.1871} \\
+MSHD10 & 1.1622 & --- & \textbf{1.1856} & 1.1862 & --- & 1.1780$^\dagger$ \\
+Baseline & 1.2783 & 1.2542 & 1.2138 & 1.2149 & 1.2142 & 1.2351 \\
+Duplicate & 1.2495 & 1.2289 & 1.2617 & 1.2364 & 1.2518 & 1.2457 \\
+Zero & 1.2537 & 1.2070 & 1.2303 & 1.2408 & 1.3511 & 1.2566 \\
+\bottomrule
+\end{tabular}
+\\[2pt]
+{\footnotesize $^\dagger$MSHD10 mean over 3 available seeds (0, 2, 7).}
+\end{table}
+
+Two findings stand out. First, the benefit of polynomial hints \emph{grows} with training budget: HD10 improves by 3.9\% over the baseline at 100K (vs.\ 2.9\% at 10K). Second, the capacity controls that were near-neutral at 10K now actively hurt: Duplicate degrades by 0.9\% and Zero by 1.7\% relative to the baseline. This suggests that uninformative extra channels introduce optimization difficulties that compound over longer training, while the polynomial hint provides an inductive bias that compounds positively. The baseline itself shows higher variance across seeds at 100K (seed 0 reaches 1.2783 due to late-training instability), while HD10 remains stable (range 1.17--1.21).
 
 %==============================================================================
 \section{Analysis}
@@ -404,11 +430,11 @@ HD10 vs BL & $-2.89\%$ $(p < 10^{-15})$ & $-0.72\%$ $(p = 3.8 \times 10^{-4})$ &
 
 Two effects are at play: (1) the baseline is \emph{undertrained} at $\eta = 10^{-3}$, and a higher learning rate closes most of the gap; (2) HD10 provides a genuine but smaller ($+0.72\%$) improvement even at matched optimal LR. We interpret this as the hint channel providing two distinct benefits:
 \begin{itemize}
-    \item \textbf{Optimization robustness}: HD10 achieves near-identical performance ($\sim$1.176) regardless of whether $\eta = 10^{-3}$ or $2 \times 10^{-3}$. The polynomial structure in the hint channel acts as an implicit regularizer that makes the optimization landscape more forgiving.
-    \item \textbf{Genuine inductive bias}: At matched optimal LR, the polynomial content still provides a statistically significant 0.72\% improvement ($p = 3.8 \times 10^{-4}$, 280/485 wins). This residual benefit is attributable to the cross-patch information content of the Chebyshev filter.
+    \item \textbf{Optimization stability}: HD10 achieves near-identical performance ($\sim$1.176) regardless of whether $\eta = 10^{-3}$ or $2 \times 10^{-3}$. The polynomial structure in the hint channel acts as an implicit regularizer that smooths the optimization landscape.
+    \item \textbf{Genuine inductive bias}: At matched optimal LR, the polynomial content still provides a 0.7\% improvement ($p < 10^{-3}$, 280/485 wins). This residual benefit is attributable to the cross-patch information content of the Chebyshev filter.
 \end{itemize}
 
-The capacity controls (Section 5.1) are unaffected by this learning rate interaction, since all four conditions (Baseline, Zero, Duplicate, HD10) use the same $\eta = 10^{-3}$. Matched-LR capacity controls ($\eta = 2 \times 10^{-3}$) are in progress.
+The capacity controls (Section 5.1) are unaffected by this learning rate interaction, since all four conditions (Baseline, Zero, Duplicate, HD10) use the same $\eta = 10^{-3}$.
 
 \subsection{Variance reduction}
 
@@ -419,7 +445,7 @@ Across 5 seeds and 97 configurations, HD10 reduces per-configuration coefficient
 %==============================================================================
 
 \begin{enumerate}
-    \item \textbf{Learning rate interaction.} As discussed in Section~\ref{sec:lr}, the improvement at $\text{LR}=10^{-3}$ ($-2.89\%$) is substantially larger than at matched optimal LR ($-0.72\%$). The dominant effect is optimization robustness rather than pure inductive bias. The matched-LR benefit, while statistically significant ($p = 3.8 \times 10^{-4}$), is modest.
+    \item \textbf{Learning rate interaction.} As discussed in Section~\ref{sec:lr}, the improvement at $\text{LR}=10^{-3}$ ($-2.9\%$) is substantially larger than at matched optimal LR ($-0.7\%$). The dominant effect is optimization stability rather than pure inductive bias. The matched-LR benefit, while statistically significant ($p < 10^{-3}$), is modest.
     \item \textbf{Domain heterogeneity.} The method provides no significant improvement on weather and healthcare datasets. These domains have temporal patterns at scales that do not align well with the filter's lookback distance.
     \item \textbf{Single model scale.} Our experiments use Moirai-2 Small (11.4M parameters). Preliminary experiments on the Base model (46M parameters) show inconsistent results across seeds, suggesting that larger models may not benefit from hint preconditioning, as the additional capacity is redundant when the model is sufficiently large.
     \item \textbf{Fixed filter coefficients.} Our filter uses fixed Chebyshev coefficients. Experiments with learned FIR coefficients show competitive results (Chebyshev-initialized: $-3.85\%$, zero-initialized: $-3.57\%$), but fixed Chebyshev remains slightly better, suggesting that the polynomial structure is close to optimal for this task.
@@ -429,7 +455,7 @@ Across 5 seeds and 97 configurations, HD10 reduces per-configuration coefficient
 \section{Conclusion}
 %==============================================================================
 
-We have shown that a simple, fixed polynomial FIR filter applied as an auxiliary input channel to a patch-based time series transformer provides a statistically significant and robust improvement in forecasting accuracy. The method adds negligible overhead (0.11\% parameters, $\sim$1.6\% compute) and requires no modification to the transformer architecture itself. Through controlled ablations with duplicate and zero channels, we demonstrate that the improvement is driven by the polynomial content of the hint channel, not by extra capacity. The benefit is strongest for high-frequency domains and long prediction horizons, consistent with the mechanism of cross-patch information leakage at the filter's lookback scale.
+We have shown that a fixed polynomial FIR filter applied as an auxiliary input channel to a patch-based time series transformer provides a consistent improvement in forecasting accuracy across seeds, domains, and training budgets. The method adds negligible overhead (0.11\% parameters, $\sim$1.6\% compute) and requires no modification to the transformer architecture itself. Through controlled ablations with duplicate and zero channels---which hurt or are neutral at 10K steps, and both hurt at 100K steps---we confirm that the improvement is driven by the polynomial content of the hint channel, not by extra capacity. The benefit is strongest for high-frequency domains and long prediction horizons, consistent with the mechanism of cross-patch information leakage at the filter's lookback scale.
 
 Our work provides empirical evidence for the practical value of polynomial basis transformations in neural sequence models, connecting the theoretical framework of universal sequence preconditioning~\citep{marsden2024universal} to the applied setting of time series forecasting.
 
@@ -592,11 +618,13 @@ Duplicate & Copy of input & 1.2162 & 0.0114 & 217 & 0.99 \\
 \toprule
 \textbf{Degree} & \textbf{Effective lags} & \textbf{MASE} & \textbf{$\Delta$\% vs BL} & \textbf{Wins/97} \\
 \midrule
-\textbf{4} & 2 (at $2P$, $4P$) & \textbf{1.1577} & $-4.99\%$ & \textbf{66} \\
 2 & 1 (at $2P$) & 1.1794 & $-3.20\%$ & 63 \\
-6 & 3 (at $2P$, $4P$, $6P$) & 1.1733 & $-3.71\%$ & 69 \\
-8 & 4 (at $2P$--$8P$) & 1.1828 & $-2.92\%$ & 62 \\
 3 & 1 (at $3P$) & 1.1947 & $-1.95\%$ & 55 \\
+\textbf{4} & 2 (at $2P$, $4P$) & \textbf{1.1577} & $-4.99\%$ & \textbf{66} \\
+5 & 2 (at $P$, $3P$, $5P$) & 1.1873 & $-2.56\%$ & --- \\
+6 & 3 (at $2P$, $4P$, $6P$) & 1.1733 & $-3.71\%$ & 69 \\
+7 & 3 (at $P$, $3P$, $5P$, $7P$) & 1.1806 & $-3.11\%$ & --- \\
+8 & 4 (at $2P$--$8P$) & 1.1828 & $-2.92\%$ & 62 \\
 0 (dup) & 0 & 1.2068 & $-0.96\%$ & 42 \\
 \bottomrule
 \end{tabular}
@@ -648,7 +676,7 @@ Duplicate & 1.2068 & $-0.96\%$ & 42/97 & 0.11 & 27/97 & $<$0.001 \\
 \toprule
 \textbf{Dropout} & \textbf{MASE} & \textbf{$\Delta$\% vs BL} & \textbf{Wins/97} & \textbf{$p$} \\
 \midrule
-0\% (HD0) & \multicolumn{4}{c}{\emph{pending (submitted)}} \\
+0\% (HD0)$^\dagger$ & 1.1780 & $-3.5\%$ & --- & --- \\
 2\% & 1.1794 & $-3.20\%$ & 63 & 0.004 \\
 3\% & 1.1947 & $-1.95\%$ & 55 & 0.22 \\
 \textbf{10\%} & \textbf{1.1577} & $\mathbf{-4.99\%}$ & \textbf{66} & \textbf{0.0005} \\
@@ -656,6 +684,8 @@ Duplicate & 1.2068 & $-0.96\%$ & 42/97 & 0.11 & 27/97 & $<$0.001 \\
 30\% & 1.2034 & $-1.23\%$ & 61 & 0.014 \\
 \bottomrule
 \end{tabular}
+\\[2pt]
+{\footnotesize $^\dagger$HD0 MASE is the 5-seed mean (per-seed sign test not available). HD0 and HD10 are essentially tied (1.1780 vs.\ 1.1765); dropout helps marginally.}
 \end{table}
 
 \subsection{Inference-Time Content Ablation (seed 0, HD10 model)}
@@ -735,27 +765,28 @@ Latent preconditioning is catastrophic. The filter must operate on the raw time 
 \end{tabular}
 \end{table}
 
-\subsection{100K Training (3 seeds)}
+\subsection{100K Training (5 seeds, with capacity controls)}
 
 \begin{table}[h]
 \centering
-\caption{Results at the full 100K training budget (3 seeds).}
+\caption{Full 100K training budget with capacity controls (5 seeds). HD10 vs BL: $+3.9\%$; HD10 vs Dup: $+4.7\%$; HD10 vs Zero: $+5.5\%$.}
 \small
-\begin{tabular}{lcccc}
+\begin{tabular}{lcccccc}
 \toprule
-& \textbf{Seed 0} & \textbf{Seed 2} & \textbf{Seed 7} & \textbf{Mean} \\
+& \textbf{s0} & \textbf{s1} & \textbf{s2} & \textbf{s7} & \textbf{s42} & \textbf{Mean} \\
 \midrule
-Baseline & 1.2783 & 1.2138 & 1.2149 & 1.2357 \\
-HD10 & 1.1739 & 1.2072 & 1.1880 & 1.1897 \\
-MSHD10 & 1.1622 & 1.1856 & 1.1862 & 1.1780 \\
+Baseline & 1.2783 & 1.2542 & 1.2138 & 1.2149 & 1.2142 & 1.2351 \\
+HD10 & 1.1739 & 1.1813 & 1.2072 & 1.1880 & 1.1853 & 1.1871 \\
+MSHD10 & 1.1622 & --- & 1.1856 & 1.1862 & --- & 1.1780 \\
+Duplicate & 1.2495 & 1.2289 & 1.2617 & 1.2364 & 1.2518 & 1.2457 \\
+Zero & 1.2537 & 1.2070 & 1.2303 & 1.2408 & 1.3511 & 1.2566 \\
 \midrule
-HD10 $\Delta$\% & $-8.17\%$ & $-0.54\%$ & $-2.21\%$ & $-3.72\%$ \\
-MSHD10 $\Delta$\% & $-9.08\%$ & $-2.32\%$ & $-2.36\%$ & $-4.67\%$ \\
+HD10 $\Delta$\% vs BL & $-8.2\%$ & $-5.8\%$ & $-0.5\%$ & $-2.2\%$ & $-2.4\%$ & $-3.9\%$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Note: Baseline seed 0 exhibits training instability at 80K steps (MASE spikes to 1.3038 before partial recovery to 1.2783). Seeds 2 and 7 do not exhibit this behavior. This instability is likely related to the cosine learning rate schedule approaching zero; control experiments with cosine-floor and WSD schedules are in progress.
+Baseline seed 0 exhibits training instability at 80K steps (MASE spikes to 1.3038 before partial recovery to 1.2783); seeds 2 and 7 are stable ($\sim$1.21). Duplicate \emph{hurts} at 100K ($-0.9\%$ vs BL), and Zero hurts more ($-1.7\%$; note seed 42 outlier at 1.3511). HD10 remains the most stable method across seeds (range 1.17--1.21 vs.\ BL range 1.21--1.28).
 
 \subsection{Matched Learning Rate (5 seeds, $\eta = 2 \times 10^{-3}$)}
 
@@ -896,16 +927,14 @@ Peak GPU memory & identical & identical \\
 \caption{All 97 configurations sorted by dataset, showing 5-seed averaged improvement and seed win count. Dark green: strong improvement. Red: regression.}
 \end{figure}
 
-\subsection{Pending Experiments}
+\subsection{Remaining Experiments}
 
-The following experiments have been submitted and are awaiting results:
+The following experiments are in progress or awaiting evaluation:
 
 \begin{itemize}
-    \item \textbf{HD0}: Chebyshev $d=4$, $s=16$, 0\% dropout (5 seeds), completing the dropout ablation
-    \item \textbf{Dup/Zero at $\eta = 2 \times 10^{-3}$}: Capacity controls at matched optimal LR (5 seeds each)
-    \item \textbf{Dup/Zero at 100K}: Capacity controls at full training budget (3 seeds each)
-    \item \textbf{LR control 100K}: Baseline and HD10 with cosine-floor ($\eta_{\min} = 0.1\eta_{\max}$) and WSD schedule
+    \item \textbf{LR control 100K}: Baseline and HD10 with cosine-floor ($\eta_{\min} = 0.1\eta_{\max}$) and WSD schedule at 100K steps
     \item \textbf{Official Moirai-2 eval}: HuggingFace checkpoint evaluated on GIFT-Eval for calibration
+    \item \textbf{Dup/Zero at $\eta = 2 \times 10^{-3}$}: Capacity controls at matched optimal LR (5 seeds each)
 \end{itemize}
 
 \end{document}

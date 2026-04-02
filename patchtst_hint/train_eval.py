@@ -154,6 +154,7 @@ def main():
                         choices=["hint", "none", "zero", "duplicate"])
     parser.add_argument("--hint_degree", type=int, default=4)
     parser.add_argument("--hint_dropout", type=float, default=0.1)
+    parser.add_argument("--hint_normalize", action="store_true", default=False)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--lr", type=float, default=1e-3)
@@ -211,6 +212,7 @@ def main():
         hint_stride=args.patch_len,
         hint_dropout=args.hint_dropout,
         hint_mode=args.hint_mode if args.hint_mode != "none" else "none",
+        hint_normalize=args.hint_normalize,
     ).to(device)
 
     n_params = sum(p.numel() for p in model.parameters())
@@ -266,6 +268,7 @@ def main():
         "hint_mode": args.hint_mode,
         "hint_degree": args.hint_degree,
         "hint_dropout": args.hint_dropout,
+        "hint_normalize": args.hint_normalize,
         "seed": args.seed,
         "n_params": n_params,
         "best_epoch": best_epoch + 1,

@@ -13,24 +13,28 @@ from transformers import PatchTSTForPrediction, PatchTSTConfig
 
 
 def chebyshev_coefficients(degree: int) -> np.ndarray:
-    """Compute Chebyshev polynomial T_d coefficients in monomial basis."""
-    if degree == 0:
-        return np.array([1.0])
-    elif degree == 1:
-        return np.array([0.0, 1.0])
-    T_prev = np.zeros(degree + 1)
-    T_prev[0] = 1.0
-    T_curr = np.zeros(degree + 1)
-    T_curr[1] = 1.0
-    for _ in range(2, degree + 1):
-        T_next = np.zeros(degree + 1)
-        for j in range(degree):
-            T_next[j + 1] += 2 * T_curr[j]
-        for j in range(degree + 1):
-            T_next[j] -= T_prev[j]
-        T_prev = T_curr
-        T_curr = T_next
-    return T_curr
+    """Compute MONIC Chebyshev polynomial coefficients in monomial basis.
+
+    Returns coefficients [c0, c1, ..., cd] where the FIR filter is:
+        y[t] = c0*x[t] + c1*x[t-s] + ... + cd*x[t-d*s]
+    with c0 = leading monic term (always 1 after normalization absorbed into
+    the lower-order terms).
+
+    The monic form divides by the leading coefficient (2^{d-1} for T_d),
+    matching Moirai's implementation. Without this, T_4 has coefficients
+    [-8, +8] instead of [-1, +0.125], making hints ~8x too large.
+    """
+    from numpy.polynomial import chebyshev, polynomial
+
+    cheb = chebyshev.Chebyshev.basis(degree)
+    power_poly = cheb.convert(kind=polynomial.Polynomial)
+    power_coeffs = power_poly.coef  # ascending: x^0, x^1, ..., x^d
+    leading_coeff = power_coeffs[-1]
+    monic_coeffs = power_coeffs / leading_coeff  # monic: leading coeff = 1
+    # Reverse to descending power = ascending lag order for FIR filter:
+    # coeffs[0]*x[t] + coeffs[1]*x[t-s] + ... + coeffs[d]*x[t-d*s]
+    # This ensures the x[t] coefficient is 1 (cancels in hint residual).
+    return monic_coeffs[::-1].copy()
 
 
 def apply_fir_hint(x: torch.Tensor, coeffs: torch.Tensor, stride: int) -> torch.Tensor:
@@ -79,12 +83,14 @@ class HintPatchTSTForPrediction(nn.Module):
         hint_stride: int = None,
         hint_dropout: float = 0.1,
         hint_mode: str = "hint",
+        hint_normalize: bool = False,
     ):
         super().__init__()
         self.hint_degree = hint_degree
         self.hint_stride = hint_stride or config.patch_length
         self.hint_dropout_rate = hint_dropout
         self.hint_mode = hint_mode
+        self.hint_normalize = hint_normalize
         self.patch_length = config.patch_length
         self.has_hint = (hint_mode != "none")
 
@@ -153,6 +159,11 @@ class HintPatchTSTForPrediction(nn.Module):
             hints = scaled_past.clone()
         else:
             hints = apply_fir_hint(scaled_past, self.hint_coeffs, self.hint_stride)
+
+        # 2b. Normalize hints to unit std (matching Moirai's hint_normalize)
+        if self.hint_normalize:
+            hint_std = hints.std(dim=(1, 2), keepdim=True).clamp(min=1e-6)
+            hints = hints / hint_std
 
         # 3. Hint dropout (per-patch, during training)
         if self.training and self.hint_dropout_rate > 0:
