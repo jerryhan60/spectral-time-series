@@ -1,0 +1,89 @@
+\begin{thebibliography}{13}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Ansari et~al.(2024)Ansari, Stella, Turkmen, Zhang, Mercado, Shen,
+  Shchur, Rangapuram, Arango, Kapoor, et~al.]{ansari2024chronos}
+Ansari, A.~F., Stella, L., Turkmen, C., Zhang, X., Mercado, P., Shen, H.,
+  Shchur, O., Rangapuram, S.~S., Arango, S.~P., Kapoor, S., et~al.
+\newblock Chronos: Learning the language of time series.
+\newblock In \emph{ICML}, 2024.
+
+\bibitem[Das et~al.(2024)Das, Kong, Leber, Mathews, and Sen]{das2024decoder}
+Das, A., Kong, W., Leber, A., Mathews, R., and Sen, R.
+\newblock A decoder-only foundation model for time-series forecasting.
+\newblock In \emph{ICML}, 2024.
+
+\bibitem[Dosovitskiy et~al.(2021)Dosovitskiy, Beyer, Kolesnikov, Weissenborn,
+  Zhai, Unterthiner, Dehghani, Minderer, Heigold, Gelly, Uszkoreit, and
+  Houlsby]{dosovitskiy2021image}
+Dosovitskiy, A., Beyer, L., Kolesnikov, A., Weissenborn, D., Zhai, X.,
+  Unterthiner, T., Dehghani, M., Minderer, M., Heigold, G., Gelly, S.,
+  Uszkoreit, J., and Houlsby, N.
+\newblock An image is worth 16x16 words: Transformers for image recognition at
+  scale.
+\newblock In \emph{ICLR}, 2021.
+
+\bibitem[Goswami et~al.(2024)Goswami, Szafer, Choudhry, Cai, Li, and
+  Dubrawski]{goswami2024moment}
+Goswami, M., Szafer, K., Choudhry, A., Cai, Y., Li, S., and Dubrawski, A.
+\newblock Moment: A family of open time-series foundation models.
+\newblock \emph{arXiv preprint arXiv:2402.03885}, 2024.
+
+\bibitem[Hazan et~al.(2017)Hazan, Singh, and Zhang]{hazan2017learning}
+Hazan, E., Singh, K., and Zhang, C.
+\newblock Learning linear dynamical systems via spectral filtering.
+\newblock In \emph{NeurIPS}, 2017.
+
+\bibitem[Hazan et~al.(2018)Hazan, Lee, Singh, Zhang, and
+  Zhang]{hazan2018spectral}
+Hazan, E., Lee, H., Singh, K., Zhang, C., and Zhang, Y.
+\newblock Spectral filtering for general linear dynamical systems.
+\newblock In \emph{NeurIPS}, 2018.
+
+\bibitem[Liu et~al.(2024)Liu, Woo, Kumar, and Sahoo]{liu2024moirai2}
+Liu, C., Woo, G., Kumar, A., and Sahoo, D.
+\newblock Moirai-moe: Empowering time series foundation models with sparse
+  mixture of experts.
+\newblock \emph{arXiv preprint arXiv:2410.10469}, 2024.
+
+\bibitem[Marsden \& Hazan(2024)Marsden and Hazan]{marsden2024universal}
+Marsden, A. and Hazan, E.
+\newblock Universal sequence preconditioning.
+\newblock \emph{arXiv preprint arXiv:2406.09368}, 2024.
+
+\bibitem[Nie et~al.(2023)Nie, Nguyen, Sinthong, and
+  Kalagnanam]{nie2023patchtst}
+Nie, Y., Nguyen, N.~H., Sinthong, P., and Kalagnanam, J.
+\newblock A time series is worth 64 words: Long-term forecasting with
+  transformers.
+\newblock In \emph{ICLR}, 2023.
+
+\bibitem[Oppenheim et~al.(1999)Oppenheim, Schafer, and
+  Buck]{oppenheim1999discrete}
+Oppenheim, A.~V., Schafer, R.~W., and Buck, J.~R.
+\newblock \emph{Discrete-Time Signal Processing}.
+\newblock Prentice Hall, 1999.
+
+\bibitem[Parks \& McClellan(1972)Parks and McClellan]{parks1972chebyshev}
+Parks, T.~W. and McClellan, J.~H.
+\newblock Chebyshev approximation for nonrecursive digital filters with linear
+  phase.
+\newblock \emph{IEEE Transactions on Circuit Theory}, 1972.
+
+\bibitem[Vijay et~al.(2024)Vijay, Abid, Ansari, et~al.]{vijay2024gifteval}
+Vijay, T., Abid, K., Ansari, A.~F., et~al.
+\newblock {GIFT-Eval}: A benchmark for general time series forecasting model
+  evaluation.
+\newblock \emph{arXiv preprint arXiv:2410.10393}, 2024.
+
+\bibitem[Woo et~al.(2024)Woo, Liu, Kumar, Xiong, Savarese, and
+  Sahoo]{woo2024unified}
+Woo, G., Liu, C., Kumar, A., Xiong, C., Savarese, S., and Sahoo, D.
+\newblock Unified training of universal time series forecasting transformers.
+\newblock In \emph{ICML}, 2024.
+
+\end{thebibliography}

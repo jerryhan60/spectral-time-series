@@ -1,0 +1,38 @@
+# Parallel STU+Attention MOIRAI Small Configuration
+# Every layer runs BOTH STU and Attention in parallel with a learned gate.
+# FFN reduced (d_ff=888) to match baseline parameter count (~13.83M).
+
+_target_: uni2ts.model.moirai.pretrain_parallel.MoiraiParallelPretrain
+module_kwargs:
+  _target_: builtins.dict
+  distr_output:
+    _target_: uni2ts.distribution.MixtureOutput
+    components:
+      - _target_: uni2ts.distribution.StudentTOutput
+      - _target_: uni2ts.distribution.NormalFixedScaleOutput
+      - _target_: uni2ts.distribution.NegativeBinomialOutput
+      - _target_: uni2ts.distribution.LogNormalOutput
+  d_model: 384
+  num_layers: 6
+  patch_sizes: ${as_tuple:[8, 16, 32, 64, 128]}
+  max_seq_len: 512
+  attn_dropout_p: 0.0
+  dropout_p: 0.0
+  scaling: true
+  use_parallel_stu: true
+  num_eigh: 24
+  use_hankel_L: false
+  use_approx: true
+  parallel_d_ff: 888
+min_patches: 2
+min_mask_ratio: 0.15
+max_mask_ratio: 0.5
+max_dim: 128
+loss_func:
+  _target_: uni2ts.loss.packed.PackedNLLLoss
+lr: 1e-3
+weight_decay: 1e-1
+beta1: 0.9
+beta2: 0.98
+num_training_steps: ${mul:${trainer.max_epochs},${train_dataloader.num_batches_per_epoch}}
+num_warmup_steps: 10_000

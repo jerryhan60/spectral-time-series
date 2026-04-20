@@ -1,0 +1,216 @@
+\begin{thebibliography}{32}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Agarwal et~al.(2023)Agarwal, Hazan, Singh, and
+  Zhang]{agarwal2025spectral}
+Naman Agarwal, Elad Hazan, Karan Singh, and Cyril Zhang.
+\newblock Spectral state space models.
+\newblock \emph{arXiv preprint arXiv:2312.06837}, 2023.
+
+\bibitem[Ansari et~al.(2024)Ansari, Stella, Turkmen, Zhang, Mercado, Shen,
+  Shchur, Rangapuram, Arango, Kapoor, et~al.]{ansari2024chronos}
+Abdul~Fatir Ansari, Lorenzo Stella, Caner Turkmen, Xiyuan Zhang, Pedro Mercado,
+  Huibin Shen, Oleksandr Shchur, Syama~Sundar Rangapuram, Sebastian~Pineda
+  Arango, Shubham Kapoor, et~al.
+\newblock Chronos: Learning the language of time series.
+\newblock In \emph{ICML}, 2024.
+
+\bibitem[Bommasani et~al.(2021)Bommasani, Hudson, Adeli, Altman, Arber, von
+  Arx, Bernstein, Bohg, Bosselut, Brunskill,
+  et~al.]{bommasani2021opportunities}
+Rishi Bommasani, Drew~A. Hudson, Ehsan Adeli, Russ Altman, Simran Arber, Sydney
+  von Arx, Michael~S. Bernstein, Jeannette Bohg, Antoine Bosselut, Emma
+  Brunskill, et~al.
+\newblock On the opportunities and risks of foundation models.
+\newblock \emph{arXiv preprint arXiv:2108.07258}, 2021.
+
+\bibitem[Dao et~al.(2024)Dao, Agarwal, Hazan, et~al.]{dao2024flashstu}
+Tri Dao, Naman Agarwal, Elad Hazan, et~al.
+\newblock Flash {STU}: Fast spectral transform units.
+\newblock \emph{arXiv preprint arXiv:2409.10489}, 2024.
+
+\bibitem[Das et~al.(2024)Das, Kong, Leber, Mathews, and Sen]{das2024decoder}
+Abhimanyu Das, Weihao Kong, Andrew Leber, Rajat Mathews, and Ruhan Sen.
+\newblock A decoder-only foundation model for time-series forecasting.
+\newblock In \emph{ICML}, 2024.
+
+\bibitem[Dosovitskiy et~al.(2021)Dosovitskiy, Beyer, Kolesnikov, Weissenborn,
+  Zhai, Unterthiner, Dehghani, Minderer, Heigold, Gelly, Uszkoreit, and
+  Houlsby]{dosovitskiy2021image}
+Alexei Dosovitskiy, Lucas Beyer, Alexander Kolesnikov, Dirk Weissenborn,
+  Xiaohua Zhai, Thomas Unterthiner, Mostafa Dehghani, Matthias Minderer, Georg
+  Heigold, Sylvain Gelly, Jakob Uszkoreit, and Neil Houlsby.
+\newblock An image is worth 16x16 words: Transformers for image recognition at
+  scale.
+\newblock In \emph{ICLR}, 2021.
+
+\bibitem[Ekambaram et~al.(2024)Ekambaram, Jati, Nguyen, Dayama, Reddy, Gifford,
+  and Kalagnanam]{ekambaram2024ttm}
+Vijay Ekambaram, Arindam Jati, Nam~H. Nguyen, Pankaj Dayama, Chandra Reddy,
+  Wesley Gifford, and Jayant Kalagnanam.
+\newblock {TTMs}: Fast multi-level tiny time mixers for improved zero-shot and
+  few-shot forecasting of multivariate time series.
+\newblock In \emph{NeurIPS}, 2024.
+
+\bibitem[Garza and Mergenthaler-Canseco(2023)]{garza2024timegpt}
+Azul Garza and Max Mergenthaler-Canseco.
+\newblock Timegpt-1.
+\newblock \emph{arXiv preprint arXiv:2310.03589}, 2023.
+
+\bibitem[Goswami et~al.(2024)Goswami, Szafer, Choudhry, Cai, Li, and
+  Dubrawski]{goswami2024moment}
+Mononito Goswami, Konrad Szafer, Arjun Choudhry, Yifu Cai, Shuo Li, and Artur
+  Dubrawski.
+\newblock Moment: A family of open time-series foundation models.
+\newblock \emph{arXiv preprint arXiv:2402.03885}, 2024.
+
+\bibitem[Gu and Dao(2023)]{gu2024mamba}
+Albert Gu and Tri Dao.
+\newblock Mamba: Linear-time sequence modeling with selective state spaces.
+\newblock \emph{arXiv preprint arXiv:2312.00752}, 2023.
+
+\bibitem[Gu et~al.(2022)Gu, Goel, and Re]{gu2022efficiently}
+Albert Gu, Karan Goel, and Christopher Re.
+\newblock Efficiently modeling long sequences with structured state spaces.
+\newblock In \emph{ICLR}, 2022.
+
+\bibitem[Han et~al.(2024)Han, Ye, and Zhan]{han2024capacity}
+Lu~Han, Han-Jia Ye, and De-Chuan Zhan.
+\newblock The capacity and robustness trade-off: Revisiting the channel
+  independent strategy for multivariate time series forecasting.
+\newblock \emph{arXiv preprint arXiv:2304.05206}, 2024.
+
+\bibitem[Hazan(2016)]{hazan2016introduction}
+Elad Hazan.
+\newblock \emph{Introduction to Online Convex Optimization}.
+\newblock MIT Press, 2016.
+
+\bibitem[Hazan et~al.(2017)Hazan, Singh, and Zhang]{hazan2017learning}
+Elad Hazan, Karan Singh, and Cyril Zhang.
+\newblock Learning linear dynamical systems via spectral filtering.
+\newblock In \emph{NeurIPS}, 2017.
+
+\bibitem[Hazan et~al.(2018)Hazan, Lee, Singh, Zhang, and
+  Zhang]{hazan2018spectral}
+Elad Hazan, Holden Lee, Karan Singh, Cyril Zhang, and Yi~Zhang.
+\newblock Spectral filtering for general linear dynamical systems.
+\newblock In \emph{NeurIPS}, 2018.
+
+\bibitem[Hyndman and Koehler(2006)]{hyndman2006another}
+Rob~J. Hyndman and Anne~B. Koehler.
+\newblock Another look at measures of forecast accuracy.
+\newblock \emph{International Journal of Forecasting}, 2006.
+
+\bibitem[Kim et~al.(2022)Kim, Kim, Tae, Park, Choi, and
+  Choo]{kim2022reversible}
+Taesung Kim, Jinhee Kim, Yunwon Tae, Cheonbok Park, Jang-Ho Choi, and Jaegul
+  Choo.
+\newblock Reversible instance normalization for accurate time-series
+  forecasting against distribution shift.
+\newblock In \emph{ICLR}, 2022.
+
+\bibitem[Liang et~al.(2024)Liang, Wen, Nie, Jiang, Jin, Song, Pan, and
+  Wen]{liang2024foundation}
+Yuxuan Liang, Haomin Wen, Yuqi Nie, Yushan Jiang, Ming Jin, Dongjin Song,
+  Shirui Pan, and Qingsong Wen.
+\newblock Foundation models for time series analysis: A tutorial and survey.
+\newblock \emph{arXiv preprint arXiv:2403.14735}, 2024.
+
+\bibitem[Liu et~al.(2024{\natexlab{a}})Liu, Woo, Kumar, and
+  Sahoo]{liu2024moirai2}
+Chenghao Liu, Gerald Woo, Akshat Kumar, and Doyen Sahoo.
+\newblock Moirai-moe: Empowering time series foundation models with sparse
+  mixture of experts.
+\newblock \emph{arXiv preprint arXiv:2410.10469}, 2024{\natexlab{a}}.
+
+\bibitem[Liu et~al.(2024{\natexlab{b}})Liu, Hu, Zhang, Wu, Wang, Ma, and
+  Long]{liu2024itransformer}
+Yong Liu, Tengge Hu, Haoran Zhang, Haixu Wu, Shiyu Wang, Lintao Ma, and
+  Mingsheng Long.
+\newblock itransformer: Inverted transformers are effective for time series
+  forecasting.
+\newblock In \emph{ICLR}, 2024{\natexlab{b}}.
+
+\bibitem[Loshchilov and Hutter(2019)]{loshchilov2019decoupled}
+Ilya Loshchilov and Frank Hutter.
+\newblock Decoupled weight decay regularization.
+\newblock In \emph{ICLR}, 2019.
+
+\bibitem[Marsden and Hazan(2024)]{marsden2024universal}
+Annie Marsden and Elad Hazan.
+\newblock Universal sequence preconditioning.
+\newblock \emph{arXiv preprint arXiv:2406.09368}, 2024.
+
+\bibitem[McClellan et~al.(1973)McClellan, Parks, and
+  Rabiner]{mcclellan1973program}
+James~H. McClellan, Thomas~W. Parks, and Lawrence~R. Rabiner.
+\newblock A computer program for designing optimum {FIR} linear phase digital
+  filters.
+\newblock \emph{IEEE Transactions on Audio and Electroacoustics}, 1973.
+
+\bibitem[Nie et~al.(2023)Nie, Nguyen, Sinthong, and
+  Kalagnanam]{nie2023patchtst}
+Yuqi Nie, Nam~H. Nguyen, Phanwadee Sinthong, and Jayant Kalagnanam.
+\newblock A time series is worth 64 words: Long-term forecasting with
+  transformers.
+\newblock In \emph{ICLR}, 2023.
+
+\bibitem[Oppenheim et~al.(1999)Oppenheim, Schafer, and
+  Buck]{oppenheim1999discrete}
+Alan~V. Oppenheim, Ronald~W. Schafer, and John~R. Buck.
+\newblock \emph{Discrete-Time Signal Processing}.
+\newblock Prentice Hall, 1999.
+
+\bibitem[Parks and McClellan(1972)]{parks1972chebyshev}
+Thomas~W. Parks and James~H. McClellan.
+\newblock Chebyshev approximation for nonrecursive digital filters with linear
+  phase.
+\newblock \emph{IEEE Transactions on Circuit Theory}, 1972.
+
+\bibitem[Rasul et~al.(2023)Rasul, Ashok, Williams, Khorasani, Adamopoulos,
+  Bhatt, Bilos, Ghonia, Hassen, Schneider, Thiele, and
+  Gasthaus]{rasul2024lagllama}
+Kashif Rasul, Arjun Ashok, Andrew~Robert Williams, Arian Khorasani, George
+  Adamopoulos, Rishika Bhatt, Marin Bilos, Hena Ghonia, Nadhir~Vincent Hassen,
+  Anderson Schneider, Sahil Thiele, and Johannes Gasthaus.
+\newblock Lag-llama: Towards foundation models for probabilistic time series
+  forecasting.
+\newblock \emph{arXiv preprint arXiv:2310.08278}, 2023.
+
+\bibitem[Srivastava et~al.(2014)Srivastava, Hinton, Krizhevsky, Sutskever, and
+  Salakhutdinov]{srivastava2014dropout}
+Nitish Srivastava, Geoffrey Hinton, Alex Krizhevsky, Ilya Sutskever, and Ruslan
+  Salakhutdinov.
+\newblock Dropout: A simple way to prevent neural networks from overfitting.
+\newblock \emph{JMLR}, 2014.
+
+\bibitem[Vijay et~al.(2024)Vijay, Abid, Ansari, et~al.]{vijay2024gifteval}
+Taha Vijay, Kashif Abid, Abdul~Fatir Ansari, et~al.
+\newblock {GIFT-Eval}: A benchmark for general time series forecasting model
+  evaluation.
+\newblock \emph{arXiv preprint arXiv:2410.10393}, 2024.
+
+\bibitem[Woo et~al.(2024)Woo, Liu, Kumar, Xiong, Savarese, and
+  Sahoo]{woo2024unified}
+Gerald Woo, Chenghao Liu, Akshat Kumar, Caiming Xiong, Silvio Savarese, and
+  Doyen Sahoo.
+\newblock Unified training of universal time series forecasting transformers.
+\newblock In \emph{ICML}, 2024.
+
+\bibitem[Zhang and Yan(2023)]{zhang2023crossformer}
+Yunhao Zhang and Junchi Yan.
+\newblock Crossformer: Transformer utilizing cross-dimension dependency for
+  multivariate time series forecasting.
+\newblock In \emph{ICLR}, 2023.
+
+\bibitem[Zhou et~al.(2022)Zhou, Ma, Wen, Wang, Sun, and Jin]{zhou2022fedformer}
+Tian Zhou, Ziqing Ma, Qingsong Wen, Xue Wang, Liang Sun, and Rong Jin.
+\newblock Fedformer: Frequency enhanced decomposed transformer for long-term
+  series forecasting.
+\newblock In \emph{ICML}, 2022.
+
+\end{thebibliography}

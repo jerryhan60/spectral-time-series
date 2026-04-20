@@ -29,6 +29,32 @@ class SetValue:
 
 
 @dataclass
+class CopyField(Transformation):
+    source_field: str
+    target_field: str
+    enabled: bool = True
+
+    def __call__(self, data_entry: dict[str, Any]) -> dict[str, Any]:
+        if not self.enabled:
+            return data_entry
+        if self.source_field not in data_entry:
+            return data_entry
+        value = data_entry[self.source_field]
+        data_entry[self.target_field] = self._copy_value(value)
+        return data_entry
+
+    @staticmethod
+    def _copy_value(value: Any) -> Any:
+        if isinstance(value, list):
+            return [CopyField._copy_value(v) for v in value]
+        if isinstance(value, dict):
+            return {k: CopyField._copy_value(v) for k, v in value.items()}
+        if hasattr(value, "copy"):
+            return value.copy()
+        return value
+
+
+@dataclass
 class LambdaSetFieldIfNotPresent(Transformation):
     field: str
     get_value: Callable[[dict[str, Any]], Any]

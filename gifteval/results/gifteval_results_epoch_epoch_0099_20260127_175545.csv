@@ -1,0 +1,9 @@
+dataset,term,config_name,error
+monash_m3_monthly,short,monash_m3_monthly/?/short,Directory /scratch/gpfs/EHAZAN/jh1161/gifteval/data/monash_m3_monthly not found
+electricity_hourly,short,electricity_hourly/?/short,Directory /scratch/gpfs/EHAZAN/jh1161/gifteval/data/electricity_hourly not found
+traffic_hourly,short,traffic_hourly/?/short,Directory /scratch/gpfs/EHAZAN/jh1161/gifteval/data/traffic_hourly not found
+weather,short,weather/?/short,Directory /scratch/gpfs/EHAZAN/jh1161/gifteval/data/weather not found
+nn5_daily_with_missing,short,nn5_daily_with_missing/?/short,Directory /scratch/gpfs/EHAZAN/jh1161/gifteval/data/nn5_daily_with_missing not found
+hospital,short,hospital/?/short,tuple index out of range
+tourism_monthly,short,tourism_monthly/?/short,Directory /scratch/gpfs/EHAZAN/jh1161/gifteval/data/tourism_monthly not found
+m4_hourly,short,m4_hourly/?/short,tuple index out of range

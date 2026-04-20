@@ -238,7 +238,11 @@ class GroupedQueryAttention(nn.Module):
         kv_var_id: Optional[Int[torch.Tensor, "*batch kv_len"]] = None,
         query_time_id: Optional[Int[torch.Tensor, "*batch q_len"]] = None,
         kv_time_id: Optional[Int[torch.Tensor, "*batch kv_len"]] = None,
-    ) -> Float[torch.Tensor, "*batch q_len dim"]:
+        return_attn_weights: bool = False,
+    ) -> (
+        Float[torch.Tensor, "*batch q_len dim"]
+        | tuple[Float[torch.Tensor, "*batch q_len dim"], Float[torch.Tensor, "*batch group hpg q_len kv_len"]]
+    ):
         query = self.q_proj(query)
         key = self.k_proj(key)
         value = self.v_proj(value)
@@ -292,6 +296,26 @@ class GroupedQueryAttention(nn.Module):
             query_time_id=query_time_id,
             kv_time_id=kv_time_id,
         )
+
+        if return_attn_weights:
+            scale_factor = self.softmax_scale or (1 / math.sqrt(query.size(-1)))
+            attn_logits = query @ key.transpose(-2, -1) * scale_factor
+            if attn_mask is not None:
+                if attn_mask.dtype == torch.bool:
+                    attn_bias = torch.zeros_like(attn_logits)
+                    attn_bias.masked_fill_(attn_mask.logical_not(), float("-inf"))
+                else:
+                    attn_bias = attn_mask
+                attn_logits = attn_logits + attn_bias
+            attn_weight = torch.softmax(attn_logits, dim=-1)
+            attn_weight_dropped = torch.dropout(
+                attn_weight,
+                self.attn_dropout_p if self.training else 0.0,
+                train=self.training,
+            )
+            out = attn_weight_dropped @ value
+            out = rearrange(out, "... group hpg q_len dim -> ... q_len (group hpg dim)")
+            return self.out_proj(out), attn_weight
 
         out = F.scaled_dot_product_attention(
             query,

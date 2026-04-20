@@ -49,9 +49,6 @@ uni2ts/outputs/
 eval_*_results_*/
 eval/outputs/
 
-# External libraries (not our code)
-Time-Series-Library/
-
 # Temporary files
 *.tmp
 *.bak
@@ -69,3 +66,11 @@ Time-Series-Library/
 
 # Archive
 archive/
+
+# External repos (cloned dependencies)
+flash-fft-conv/
+flash-stu-2/
+
+# GIFT-Eval data and external code
+gifteval/data/
+gifteval/gift-eval/

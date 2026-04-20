@@ -1,0 +1,224 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyperFirstAtBeginDocument{\AtBeginDocument}
+\HyperFirstAtBeginDocument{\ifx\hyper@anchor\@undefined
+\global\let\oldcontentsline\contentsline
+\gdef\contentsline#1#2#3#4{\oldcontentsline{#1}{#2}{#3}}
+\global\let\oldnewlabel\newlabel
+\gdef\newlabel#1#2{\newlabelxx{#1}#2}
+\gdef\newlabelxx#1#2#3#4#5#6{\oldnewlabel{#1}{{#2}{#3}}}
+\AtEndDocument{\ifx\hyper@anchor\@undefined
+\let\contentsline\oldcontentsline
+\let\newlabel\oldnewlabel
+\fi}
+\fi}
+\global\let\hyper@last\relax 
+\gdef\HyperFirstAtBeginDocument#1{#1}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\citation{woo2024unified,das2024decoder,ansari2024chronos,rasul2024lagllama,goswami2024moment,garza2024timegpt}
+\citation{bommasani2021opportunities,liang2024foundation}
+\citation{woo2024unified,liu2024moirai2}
+\citation{nie2023patchtst}
+\citation{dosovitskiy2021image}
+\citation{nie2023patchtst}
+\citation{han2024capacity}
+\citation{oppenheim1999discrete}
+\citation{marsden2024universal}
+\citation{hazan2016introduction}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
+\newlabel{eq:hint}{{1}{1}{Introduction}{equation.1.1}{}}
+\citation{das2024decoder}
+\citation{rasul2024lagllama}
+\citation{ansari2024chronos}
+\citation{woo2024unified}
+\citation{liu2024moirai2}
+\citation{goswami2024moment}
+\citation{ekambaram2024ttm}
+\citation{marsden2024universal}
+\citation{hazan2017learning,hazan2018spectral}
+\citation{parks1972chebyshev,oppenheim1999discrete,mcclellan1973program}
+\citation{agarwal2025spectral,dao2024flashstu}
+\citation{nie2023patchtst}
+\citation{woo2024unified}
+\citation{das2024decoder}
+\citation{liu2024itransformer}
+\citation{zhang2023crossformer}
+\citation{zhou2022fedformer}
+\citation{gu2022efficiently,gu2024mamba}
+\citation{woo2024unified,liu2024moirai2}
+\citation{kim2022reversible}
+\@writefile{toc}{\contentsline {paragraph}{Contributions.}{2}{section*.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}Related Work}{2}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Time series foundation models.}{2}{section*.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Preconditioning for sequence prediction.}{2}{section*.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Patch-based models.}{2}{section*.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Method}{2}{section.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Background}{2}{subsection.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Hint preconditioning}{2}{subsection.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Chebyshev FIR filter.}{2}{section*.5}\protected@file@percent }
+\citation{srivastava2014dropout}
+\citation{liu2024moirai2}
+\citation{woo2024unified}
+\citation{loshchilov2019decoupled}
+\citation{vijay2024gifteval}
+\citation{hyndman2006another}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Overview of polynomial hint preconditioning{}. (a) Standard patch transformer: each patch is embedded independently. (b) Our method adds a Chebyshev FIR-filtered hint channel (orange) concatenated with the target before the input projection. Only the input projection layer is wider; the transformer encoder is unchanged. Total overhead: 12K parameters (0.11\%).}}{3}{figure.1}\protected@file@percent }
+\newlabel{fig:arch}{{1}{3}{Overview of \method {}. (a) Standard patch transformer: each patch is embedded independently. (b) Our method adds a Chebyshev FIR-filtered hint channel (orange) concatenated with the target before the input projection. Only the input projection layer is wider; the transformer encoder is unchanged. Total overhead: 12K parameters (0.11\%)}{figure.1}{}}
+\@writefile{toc}{\contentsline {paragraph}{Hint channel.}{3}{section*.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Hint dropout.}{3}{section*.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Parameter overhead.}{3}{section*.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4}Experimental Setup}{3}{section.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Base model and training.}{3}{section*.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Evaluation.}{3}{section*.10}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Main results across 5 random seeds on GIFT-Eval (97 configurations per seed, 485 total comparisons). $p$-values from two-sided binomial sign test.}}{4}{table.1}\protected@file@percent }
+\newlabel{tab:main}{{1}{4}{Main results across 5 random seeds on GIFT-Eval (97 configurations per seed, 485 total comparisons). $p$-values from two-sided binomial sign test}{table.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces \textbf  {Main result.} (a) Geometric mean MASE across 5 seeds (error bars: cross-seed std). HD10 significantly outperforms baseline and both capacity controls. Duplicate channel is worse than baseline. (b) Pooled win rates (485 comparisons).}}{4}{figure.2}\protected@file@percent }
+\newlabel{fig:main}{{2}{4}{\textbf {Main result.} (a) Geometric mean MASE across 5 seeds (error bars: cross-seed std). HD10 significantly outperforms baseline and both capacity controls. Duplicate channel is worse than baseline. (b) Pooled win rates (485 comparisons)}{figure.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{Conditions.}{4}{section*.11}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Results}{4}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Main result}{4}{subsection.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Seed consistency and matched learning rate.}{4}{section*.12}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Ablations}{4}{subsection.5.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces \textbf  {Ablation studies} (seed 0, 97 configurations). Numbers inside bars show wins vs.\ baseline. Dashed line = baseline MASE. Orange = optimal. (a) Degree: $d{=}4$ optimal. (b) Stride: $s{=}16$ (= patch size) optimal. (c) Filter basis: Chebyshev best. (d) Hint dropout: 10\% optimal.}}{5}{figure.3}\protected@file@percent }
+\newlabel{fig:ablations}{{3}{5}{\textbf {Ablation studies} (seed 0, 97 configurations). Numbers inside bars show wins vs.\ baseline. Dashed line = baseline MASE. Orange = optimal. (a) Degree: $d{=}4$ optimal. (b) Stride: $s{=}16$ (= patch size) optimal. (c) Filter basis: Chebyshev best. (d) Hint dropout: 10\% optimal}{figure.3}{}}
+\@writefile{toc}{\contentsline {paragraph}{Polynomial degree.}{5}{section*.13}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Stride.}{5}{section*.14}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Basis.}{5}{section*.15}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Dropout.}{5}{section*.16}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Inference ablation.}{5}{section*.17}\protected@file@percent }
+\citation{nie2023patchtst}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Full training budget (100K steps, 5 seeds). HD10 outperforms the baseline by 3.9\% and both capacity controls by $>$4.5\%. Duplicate and Zero both \emph  {hurt} at 100K.}}{6}{table.2}\protected@file@percent }
+\newlabel{tab:100k}{{2}{6}{Full training budget (100K steps, 5 seeds). HD10 outperforms the baseline by 3.9\% and both capacity controls by $>$4.5\%. Duplicate and Zero both \emph {hurt} at 100K}{table.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Extended training budget (100K steps)}{6}{subsection.5.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Domain and frequency analysis}{6}{subsection.5.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}Analysis}{6}{section.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Mechanism.}{6}{section*.18}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Learning rate interaction.}{6}{section*.19}\protected@file@percent }
+\citation{marsden2024universal,hazan2017learning}
+\citation{nie2023patchtst,woo2024unified,das2024decoder}
+\bibdata{references}
+\bibcite{agarwal2025spectral}{{1}{2023}{{Agarwal et~al.}}{{Agarwal, Hazan, Singh, and Zhang}}}
+\bibcite{ansari2024chronos}{{2}{2024}{{Ansari et~al.}}{{Ansari, Stella, Turkmen, Zhang, Mercado, Shen, Shchur, Rangapuram, Arango, Kapoor, et~al.}}}
+\bibcite{bommasani2021opportunities}{{3}{2021}{{Bommasani et~al.}}{{Bommasani, Hudson, Adeli, Altman, Arber, von Arx, Bernstein, Bohg, Bosselut, Brunskill, et~al.}}}
+\bibcite{dao2024flashstu}{{4}{2024}{{Dao et~al.}}{{Dao, Agarwal, Hazan, et~al.}}}
+\bibcite{das2024decoder}{{5}{2024}{{Das et~al.}}{{Das, Kong, Leber, Mathews, and Sen}}}
+\bibcite{dosovitskiy2021image}{{6}{2021}{{Dosovitskiy et~al.}}{{Dosovitskiy, Beyer, Kolesnikov, Weissenborn, Zhai, Unterthiner, Dehghani, Minderer, Heigold, Gelly, Uszkoreit, and Houlsby}}}
+\@writefile{toc}{\contentsline {paragraph}{Variance reduction.}{7}{section*.20}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7}Limitations}{7}{section.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {8}Conclusion}{7}{section.8}\protected@file@percent }
+\bibcite{ekambaram2024ttm}{{7}{2024}{{Ekambaram et~al.}}{{Ekambaram, Jati, Nguyen, Dayama, Reddy, Gifford, and Kalagnanam}}}
+\bibcite{garza2024timegpt}{{8}{2023}{{Garza and Mergenthaler-Canseco}}{{}}}
+\bibcite{goswami2024moment}{{9}{2024}{{Goswami et~al.}}{{Goswami, Szafer, Choudhry, Cai, Li, and Dubrawski}}}
+\bibcite{gu2024mamba}{{10}{2023}{{Gu and Dao}}{{}}}
+\bibcite{gu2022efficiently}{{11}{2022}{{Gu et~al.}}{{Gu, Goel, and Re}}}
+\bibcite{han2024capacity}{{12}{2024}{{Han et~al.}}{{Han, Ye, and Zhan}}}
+\bibcite{hazan2016introduction}{{13}{2016}{{Hazan}}{{}}}
+\bibcite{hazan2017learning}{{14}{2017}{{Hazan et~al.}}{{Hazan, Singh, and Zhang}}}
+\bibcite{hazan2018spectral}{{15}{2018}{{Hazan et~al.}}{{Hazan, Lee, Singh, Zhang, and Zhang}}}
+\bibcite{hyndman2006another}{{16}{2006}{{Hyndman and Koehler}}{{}}}
+\bibcite{kim2022reversible}{{17}{2022}{{Kim et~al.}}{{Kim, Kim, Tae, Park, Choi, and Choo}}}
+\bibcite{liang2024foundation}{{18}{2024}{{Liang et~al.}}{{Liang, Wen, Nie, Jiang, Jin, Song, Pan, and Wen}}}
+\bibcite{liu2024moirai2}{{19}{2024{}}{{Liu et~al.}}{{Liu, Woo, Kumar, and Sahoo}}}
+\bibcite{liu2024itransformer}{{20}{2024{}}{{Liu et~al.}}{{Liu, Hu, Zhang, Wu, Wang, Ma, and Long}}}
+\bibcite{loshchilov2019decoupled}{{21}{2019}{{Loshchilov and Hutter}}{{}}}
+\bibcite{marsden2024universal}{{22}{2024}{{Marsden and Hazan}}{{}}}
+\bibcite{mcclellan1973program}{{23}{1973}{{McClellan et~al.}}{{McClellan, Parks, and Rabiner}}}
+\bibcite{nie2023patchtst}{{24}{2023}{{Nie et~al.}}{{Nie, Nguyen, Sinthong, and Kalagnanam}}}
+\bibcite{oppenheim1999discrete}{{25}{1999}{{Oppenheim et~al.}}{{Oppenheim, Schafer, and Buck}}}
+\bibcite{parks1972chebyshev}{{26}{1972}{{Parks and McClellan}}{{}}}
+\bibcite{rasul2024lagllama}{{27}{2023}{{Rasul et~al.}}{{Rasul, Ashok, Williams, Khorasani, Adamopoulos, Bhatt, Bilos, Ghonia, Hassen, Schneider, Thiele, and Gasthaus}}}
+\bibcite{srivastava2014dropout}{{28}{2014}{{Srivastava et~al.}}{{Srivastava, Hinton, Krizhevsky, Sutskever, and Salakhutdinov}}}
+\bibcite{vijay2024gifteval}{{29}{2024}{{Vijay et~al.}}{{Vijay, Abid, Ansari, et~al.}}}
+\bibcite{woo2024unified}{{30}{2024}{{Woo et~al.}}{{Woo, Liu, Kumar, Xiong, Savarese, and Sahoo}}}
+\bibcite{zhang2023crossformer}{{31}{2023}{{Zhang and Yan}}{{}}}
+\bibcite{zhou2022fedformer}{{32}{2022}{{Zhou et~al.}}{{Zhou, Ma, Wen, Wang, Sun, and Jin}}}
+\bibstyle{plainnat}
+\citation{vijay2024gifteval}
+\@writefile{toc}{\contentsline {section}{\numberline {A}Detailed Experimental Methodology}{10}{appendix.A}\protected@file@percent }
+\newlabel{app:methodology}{{A}{10}{Detailed Experimental Methodology}{appendix.A}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.1}Training Protocol}{10}{subsection.A.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.2}Evaluation Protocol}{10}{subsection.A.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.3}Hint Channel Implementation}{10}{subsection.A.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {B}Per-Seed Detailed Results}{10}{appendix.B}\protected@file@percent }
+\newlabel{app:seeds}{{B}{10}{Per-Seed Detailed Results}{appendix.B}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces HD10 vs.\ Baseline: per-seed pairwise comparison (10K steps, $\eta = 10^{-3}$).}}{10}{table.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Per-seed results for all conditions. HD10 achieves the lowest MASE on every seed.}}{11}{table.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Per-seed MASE for all four conditions.}}{11}{figure.4}\protected@file@percent }
+\newlabel{fig:seeds}{{4}{11}{Per-seed MASE for all four conditions}{figure.4}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {C}Matched Learning Rate}{11}{appendix.C}\protected@file@percent }
+\newlabel{app:matchedlr}{{C}{11}{Matched Learning Rate}{appendix.C}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {D}Multi-Scale Variants}{11}{appendix.D}\protected@file@percent }
+\newlabel{app:multiscale}{{D}{11}{Multi-Scale Variants}{appendix.D}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {E}Domain and Frequency Analysis}{11}{appendix.E}\protected@file@percent }
+\newlabel{app:domain}{{E}{11}{Domain and Frequency Analysis}{appendix.E}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {F}Prediction Horizon Effect}{11}{appendix.F}\protected@file@percent }
+\newlabel{app:horizon}{{F}{11}{Prediction Horizon Effect}{appendix.F}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {G}Per-Configuration Analysis}{11}{appendix.G}\protected@file@percent }
+\newlabel{app:perconfig}{{G}{11}{Per-Configuration Analysis}{appendix.G}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {H}Context Length}{11}{appendix.H}\protected@file@percent }
+\newlabel{app:context}{{H}{11}{Context Length}{appendix.H}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {I}Training Dynamics}{11}{appendix.I}\protected@file@percent }
+\newlabel{app:training}{{I}{11}{Training Dynamics}{appendix.I}{}}
+\@writefile{toc}{\contentsline {paragraph}{Slow start, growing gap.}{11}{section*.22}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Monotonically growing gap at 100K.}{11}{section*.23}\protected@file@percent }
+\citation{vijay2024gifteval}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Matched learning rate comparison ($\eta = 2 \times 10^{-3}$, 5 seeds, 485 comparisons).}}{12}{table.5}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Learning rate $\times $ method interaction (5-seed mean MASE).}}{12}{table.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Optimization smoothing.}{12}{section*.24}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Train--eval amplification.}{12}{section*.25}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {J}Base Model Scale}{12}{appendix.J}\protected@file@percent }
+\newlabel{app:base}{{J}{12}{Base Model Scale}{appendix.J}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {K}Complete Experiment Catalog}{12}{appendix.K}\protected@file@percent }
+\newlabel{app:catalog}{{K}{12}{Complete Experiment Catalog}{appendix.K}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {K.1}Polynomial Degree (seed 0, Chebyshev, $s{=}16$, 10\% dropout)}{12}{subsection.K.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {K.2}Filter Stride (seed 0, Chebyshev $d{=}4$, 10\% dropout)}{12}{subsection.K.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {K.3}Filter Basis (seed 0, $d{=}4$, $s{=}16$, 10\% dropout)}{12}{subsection.K.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {K.4}Hint Dropout Rate (seed 0, Chebyshev $d{=}4$, $s{=}16$)}{12}{subsection.K.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {K.5}Learned FIR Coefficients (seed 0)}{12}{subsection.K.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {K.6}Latent Preconditioning (seed 0)}{12}{subsection.K.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {K.7}Zero-Hint Dependence vs Dropout Rate (seed 0)}{12}{subsection.K.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {K.8}Computational Overhead}{12}{subsection.K.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {K.9}Seed Consistency Distribution}{12}{subsection.K.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {K.10}Representative Configurations}{12}{subsection.K.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {L}FEV-Bench (Second Benchmark)}{12}{appendix.L}\protected@file@percent }
+\newlabel{app:fevbench}{{L}{12}{FEV-Bench (Second Benchmark)}{appendix.L}{}}
+\citation{liu2024moirai2}
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces Multi-scale variants (5 seeds, $\eta = 10^{-3}$, 10K steps).}}{13}{table.7}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Domain and frequency analysis (HD10 vs.\ Baseline, 5 seeds pooled). Green bars: significant at $p < 0.05$. Gray: not significant.}}{13}{figure.5}\protected@file@percent }
+\newlabel{fig:domain}{{5}{13}{Domain and frequency analysis (HD10 vs.\ Baseline, 5 seeds pooled). Green bars: significant at $p < 0.05$. Gray: not significant}{figure.5}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {M}Leaderboard Context}{13}{appendix.M}\protected@file@percent }
+\newlabel{app:leaderboard}{{M}{13}{Leaderboard Context}{appendix.M}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {N}Matched-Official Protocol (100K Steps, 10K Warmup)}{13}{appendix.N}\protected@file@percent }
+\newlabel{app:matched_official}{{N}{13}{Matched-Official Protocol (100K Steps, 10K Warmup)}{appendix.N}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces (a) Improvement by prediction horizon (short/medium/long). (b) Improvement by baseline difficulty quartile. Harder configurations benefit more.}}{14}{figure.6}\protected@file@percent }
+\newlabel{fig:horizon}{{6}{14}{(a) Improvement by prediction horizon (short/medium/long). (b) Improvement by baseline difficulty quartile. Harder configurations benefit more}{figure.6}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Per-configuration improvement (5-seed average), sorted. Green: HD10 wins. Red: baseline wins. 72/97 configurations improve.}}{14}{figure.7}\protected@file@percent }
+\newlabel{fig:waterfall}{{7}{14}{Per-configuration improvement (5-seed average), sorted. Green: HD10 wins. Red: baseline wins. 72/97 configurations improve}{figure.7}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Improvement by dataset (5-seed average). Transport and energy datasets benefit most; weather is neutral.}}{15}{figure.8}\protected@file@percent }
+\newlabel{fig:perdataset}{{8}{15}{Improvement by dataset (5-seed average). Transport and energy datasets benefit most; weather is neutral}{figure.8}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Final training loss across 5 seeds at 10K steps ($\eta = 10^{-3}$, epoch-averaged). Training loss differences between methods are small ($\sim $1\%), while eval MASE differences are much larger ($\sim $3\%), confirming hints act as a regularizer.}}{15}{table.8}\protected@file@percent }
+\newlabel{tab:trainloss_10k}{{8}{15}{Final training loss across 5 seeds at 10K steps ($\eta = 10^{-3}$, epoch-averaged). Training loss differences between methods are small ($\sim $1\%), while eval MASE differences are much larger ($\sim $3\%), confirming hints act as a regularizer}{table.8}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces Final training loss across seeds at 100K steps ($\eta = 10^{-3}$). HD10 maintains lower training loss on every seed. Zero and Duplicate have training loss comparable to baseline despite worse eval MASE.}}{15}{table.9}\protected@file@percent }
+\newlabel{tab:trainloss_100k}{{9}{15}{Final training loss across seeds at 100K steps ($\eta = 10^{-3}$). HD10 maintains lower training loss on every seed. Zero and Duplicate have training loss comparable to baseline despite worse eval MASE}{table.9}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces Train loss vs eval MASE improvement (5-seed mean, HD10 over baseline).}}{15}{table.10}\protected@file@percent }
+\newlabel{tab:traineval_gap}{{10}{15}{Train loss vs eval MASE improvement (5-seed mean, HD10 over baseline)}{table.10}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces All 97 configurations: 5-seed averaged improvement and seed win count.}}{16}{figure.9}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces The improvement from hint preconditioning is approximately constant ($\sim $5\%) across context lengths 512--4,000. HD10 at context 2,000 (0.8331) outperforms the baseline at 4,000 (0.8666).}}{16}{figure.10}\protected@file@percent }
+\newlabel{fig:context}{{10}{16}{The improvement from hint preconditioning is approximately constant ($\sim $5\%) across context lengths 512--4,000. HD10 at context 2,000 (0.8331) outperforms the baseline at 4,000 (0.8666)}{figure.10}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces Training loss at 10K steps (seed 0). All methods converge similarly; the eval improvement from hints is a generalization effect.}}{17}{figure.11}\protected@file@percent }
+\newlabel{fig:trainloss10k}{{11}{17}{Training loss at 10K steps (seed 0). All methods converge similarly; the eval improvement from hints is a generalization effect}{figure.11}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces Training loss at 100K steps (seed 0). HD10 and MSHD10 maintain lower training loss throughout. The baseline's eval collapse at 80K is not reflected in training loss.}}{17}{figure.12}\protected@file@percent }
+\newlabel{fig:trainloss100k}{{12}{17}{Training loss at 100K steps (seed 0). HD10 and MSHD10 maintain lower training loss throughout. The baseline's eval collapse at 80K is not reflected in training loss}{figure.12}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {11}{\ignorespaces Training loss at matched LR $\eta = 2 \times 10^{-3}$ (5 seeds, 10K steps).}}{17}{table.11}\protected@file@percent }
+\newlabel{tab:trainloss_matchedlr}{{11}{17}{Training loss at matched LR $\eta = 2 \times 10^{-3}$ (5 seeds, 10K steps)}{table.11}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {12}{\ignorespaces HD10 vs baseline training loss gap over 100K steps (seed 0). The gap grows monotonically and does not plateau.}}{17}{table.12}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {13}{\ignorespaces Base model (46M parameters, 10K steps). Results are inconsistent across seeds.}}{18}{table.13}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces For each configuration, how many of 5 seeds does HD10 win? 74 of 97 configs see HD10 win the majority ($\geq 3/5$) of seeds.}}{19}{figure.13}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces Six representative configurations. Top: strong wins (transport, energy). Bottom: neutral (weather) and losses.}}{19}{figure.14}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {14}{\ignorespaces FEV-Bench results (100 tasks, seed 0, 10K steps). HD10 wins 72\% of tasks on this independent benchmark.}}{19}{table.14}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {15}{\ignorespaces GIFT-Eval leaderboard context. Our HD10 at 11.4M params outperforms Moirai\nobreakspace  {}1.0 Large at 311M.}}{20}{table.15}\protected@file@percent }
+\newlabel{tab:leaderboard}{{15}{20}{GIFT-Eval leaderboard context. Our HD10 at 11.4M params outperforms Moirai~1.0 Large at 311M}{table.15}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {16}{\ignorespaces Matched-official 100K results (10K warmup, cosine annealing to 0, otherwise identical to official protocol).}}{20}{table.16}\protected@file@percent }
+\newlabel{tab:matched_official}{{16}{20}{Matched-official 100K results (10K warmup, cosine annealing to 0, otherwise identical to official protocol)}{table.16}{}}
+\gdef \@abspage@last{20}

@@ -1,0 +1,44 @@
+#!/bin/bash
+#SBATCH --job-name=base_sd
+#SBATCH --nodes=1 --ntasks=1 --cpus-per-task=8 --mem=128G
+#SBATCH --time=24:00:00 --gres=gpu:1
+#SBATCH --partition=pli --account=eladgroup --qos=pli-low
+#SBATCH --output=/scratch/gpfs/EHAZAN/jh1161/logs/base_sd_%A_%a.out
+#SBATCH --error=/scratch/gpfs/EHAZAN/jh1161/logs/base_sd_%A_%a.err
+#SBATCH --array=0,1
+
+# Base model (46M) multi-seed: BL + HD10, seeds 0 and 1
+# Seed 42 already done. Running 0,1 for 3-seed coverage.
+module load anaconda3/2024.6 intel-mkl/2024.2 cudatoolkit/12.6
+cd /scratch/gpfs/EHAZAN/jh1161/uni2ts
+source venv/bin/activate
+set -a; source .env; set +a
+export HYDRA_FULL_ERROR=1
+
+SEED=$SLURM_ARRAY_TASK_ID
+COMMON="model=moirai2_base model.log_on_step=true data=lotsa_v1_moirai2 trainer.max_epochs=100 trainer.precision=bf16-mixed tf32=false train_dataloader.num_batches_per_epoch=100 train_dataloader.batch_size=64 train_dataloader.num_workers=8 model.num_warmup_steps=1000 trainer.enable_progress_bar=true model.anomaly_zscore_threshold=8.0 model.anomaly_variance_ratio_threshold=0.0"
+HINT="model.module_kwargs.time_precondition_enabled=true model.module_kwargs.time_precondition_type=chebyshev model.module_kwargs.time_precondition_stride=16 model.module_kwargs.time_precondition_hint_mode=true model.module_kwargs.time_precondition_degree=4 model.module_kwargs.hint_dropout=0.1"
+
+echo "=== Base Scale Multi-Seed: seed=$SEED ==="
+echo "Job ID: $SLURM_JOB_ID | Array: $SLURM_ARRAY_TASK_ID | Node: $(hostname) | Time: $(date)"
+
+# 1. Baseline
+echo -e "\n--- baseline_base_m2d_seed${SEED}_10k ---\nTime: $(date)"
+python -m cli.train -cp conf/pretrain run_name=baseline_base_m2d_seed${SEED}_10k $COMMON seed=$SEED
+
+# 2. HD10
+echo -e "\n--- hd10_base_m2d_seed${SEED}_10k ---\nTime: $(date)"
+python -m cli.train -cp conf/pretrain run_name=hd10_base_m2d_seed${SEED}_10k $COMMON seed=$SEED $HINT
+
+echo -e "\n=== Training complete, starting eval ===\nTime: $(date)"
+
+BASE=/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_base/lotsa_v1_moirai2
+for MODEL in baseline_base_m2d_seed${SEED}_10k hd10_base_m2d_seed${SEED}_10k; do
+  ckpt="${BASE}/${MODEL}/checkpoints/epoch_99-step_10000.ckpt"
+  echo -e "\n--- Evaluating ${MODEL} ---"
+  if [ ! -f "$ckpt" ]; then echo "SKIP: $ckpt not found"; continue; fi
+  python /scratch/gpfs/EHAZAN/jh1161/gifteval/eval_gifteval.py \
+    --checkpoint "$ckpt" --context-length 4000 --batch-size 32
+done
+
+echo "=== Base scale seed=$SEED complete: $(date) ==="

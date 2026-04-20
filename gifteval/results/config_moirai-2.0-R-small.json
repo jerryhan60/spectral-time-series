@@ -1,0 +1,9 @@
+{
+  "model_name": "moirai-2.0-R-small",
+  "model_type": "pretrained",
+  "is_zero_shot": true,
+  "data_leakage": false,
+  "code_available": true,
+  "organization": "Princeton",
+  "evaluation_date": "20260225_220910"
+}

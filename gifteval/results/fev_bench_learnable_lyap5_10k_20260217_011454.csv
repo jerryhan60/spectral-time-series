@@ -1,0 +1,127 @@
+dataset,model,error
+proenfo_gfc12,learnable_lyap5_10k,"Failed to load the dataset when calling `datasets.load_dataset` with arguments
+{'data_files': None,
+ 'name': 'proenfo_gfc12',
+ 'path': 'autogluon/fev_datasets',
+ 'split': NamedSplit('train'),
+ 'storage_options': {},
+ 'trust_remote_code': None}"
+proenfo_gfc14,learnable_lyap5_10k,"Failed to load the dataset when calling `datasets.load_dataset` with arguments
+{'data_files': None,
+ 'name': 'proenfo_gfc14',
+ 'path': 'autogluon/fev_datasets',
+ 'split': NamedSplit('train'),
+ 'storage_options': {},
+ 'trust_remote_code': None}"
+proenfo_gfc17,learnable_lyap5_10k,"Failed to load the dataset when calling `datasets.load_dataset` with arguments
+{'data_files': None,
+ 'name': 'proenfo_gfc17',
+ 'path': 'autogluon/fev_datasets',
+ 'split': NamedSplit('train'),
+ 'storage_options': {},
+ 'trust_remote_code': None}"
+rohlik_sales_1D,learnable_lyap5_10k,"Failed to load the dataset when calling `datasets.load_dataset` with arguments
+{'data_files': None,
+ 'name': 'rohlik_sales_1D',
+ 'path': 'autogluon/fev_datasets',
+ 'split': NamedSplit('train'),
+ 'storage_options': {},
+ 'trust_remote_code': None}"
+rohlik_orders_1D,learnable_lyap5_10k,"Failed to load the dataset when calling `datasets.load_dataset` with arguments
+{'data_files': None,
+ 'name': 'rohlik_orders_1D',
+ 'path': 'autogluon/fev_datasets',
+ 'split': NamedSplit('train'),
+ 'storage_options': {},
+ 'trust_remote_code': None}"
+rohlik_sales_1W,learnable_lyap5_10k,"Failed to load the dataset when calling `datasets.load_dataset` with arguments
+{'data_files': None,
+ 'name': 'rohlik_sales_1W',
+ 'path': 'autogluon/fev_datasets',
+ 'split': NamedSplit('train'),
+ 'storage_options': {},
+ 'trust_remote_code': None}"
+rohlik_orders_1W,learnable_lyap5_10k,"Failed to load the dataset when calling `datasets.load_dataset` with arguments
+{'data_files': None,
+ 'name': 'rohlik_orders_1W',
+ 'path': 'autogluon/fev_datasets',
+ 'split': NamedSplit('train'),
+ 'storage_options': {},
+ 'trust_remote_code': None}"
+entsoe_15T,learnable_lyap5_10k,"Failed to load the dataset when calling `datasets.load_dataset` with arguments
+{'data_files': None,
+ 'name': 'entsoe_15T',
+ 'path': 'autogluon/fev_datasets',
+ 'split': NamedSplit('train'),
+ 'storage_options': {},
+ 'trust_remote_code': None}"
+entsoe_30T,learnable_lyap5_10k,"Failed to load the dataset when calling `datasets.load_dataset` with arguments
+{'data_files': None,
+ 'name': 'entsoe_30T',
+ 'path': 'autogluon/fev_datasets',
+ 'split': NamedSplit('train'),
+ 'storage_options': {},
+ 'trust_remote_code': None}"
+entsoe_1H,learnable_lyap5_10k,"Failed to load the dataset when calling `datasets.load_dataset` with arguments
+{'data_files': None,
+ 'name': 'entsoe_1H',
+ 'path': 'autogluon/fev_datasets',
+ 'split': NamedSplit('train'),
+ 'storage_options': {},
+ 'trust_remote_code': None}"
+epf_be,learnable_lyap5_10k,"Failed to load the dataset when calling `datasets.load_dataset` with arguments
+{'data_files': None,
+ 'name': 'epf_be',
+ 'path': 'autogluon/fev_datasets',
+ 'split': NamedSplit('train'),
+ 'storage_options': {},
+ 'trust_remote_code': None}"
+epf_de,learnable_lyap5_10k,"Failed to load the dataset when calling `datasets.load_dataset` with arguments
+{'data_files': None,
+ 'name': 'epf_de',
+ 'path': 'autogluon/fev_datasets',
+ 'split': NamedSplit('train'),
+ 'storage_options': {},
+ 'trust_remote_code': None}"
+epf_fr,learnable_lyap5_10k,"Failed to load the dataset when calling `datasets.load_dataset` with arguments
+{'data_files': None,
+ 'name': 'epf_fr',
+ 'path': 'autogluon/fev_datasets',
+ 'split': NamedSplit('train'),
+ 'storage_options': {},
+ 'trust_remote_code': None}"
+epf_np,learnable_lyap5_10k,"Failed to load the dataset when calling `datasets.load_dataset` with arguments
+{'data_files': None,
+ 'name': 'epf_np',
+ 'path': 'autogluon/fev_datasets',
+ 'split': NamedSplit('train'),
+ 'storage_options': {},
+ 'trust_remote_code': None}"
+epf_pjm,learnable_lyap5_10k,"Failed to load the dataset when calling `datasets.load_dataset` with arguments
+{'data_files': None,
+ 'name': 'epf_pjm',
+ 'path': 'autogluon/fev_datasets',
+ 'split': NamedSplit('train'),
+ 'storage_options': {},
+ 'trust_remote_code': None}"
+rossmann_1D,learnable_lyap5_10k,"Failed to load the dataset when calling `datasets.load_dataset` with arguments
+{'data_files': None,
+ 'name': 'rossmann_1D',
+ 'path': 'autogluon/fev_datasets',
+ 'split': NamedSplit('train'),
+ 'storage_options': {},
+ 'trust_remote_code': None}"
+rossmann_1W,learnable_lyap5_10k,"Failed to load the dataset when calling `datasets.load_dataset` with arguments
+{'data_files': None,
+ 'name': 'rossmann_1W',
+ 'path': 'autogluon/fev_datasets',
+ 'split': NamedSplit('train'),
+ 'storage_options': {},
+ 'trust_remote_code': None}"
+restaurant,learnable_lyap5_10k,"Failed to load the dataset when calling `datasets.load_dataset` with arguments
+{'data_files': None,
+ 'name': 'restaurant',
+ 'path': 'autogluon/fev_datasets',
+ 'split': NamedSplit('train'),
+ 'storage_options': {},
+ 'trust_remote_code': None}"

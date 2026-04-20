@@ -92,6 +92,75 @@ class GatedLinearUnitFeedForward(FeedForward):
         return self.activation(self.fc_gate(x)) * self.fc1(x)
 
 
+class LinearRouterMoEFeedForward(nn.Module):
+    """MoE FFN with standard learned linear router (no centroids needed)."""
+    def __init__(
+        self,
+        num_experts: int,
+        num_experts_per_token: int,
+        in_dim: int,
+        hidden_dim: Optional[int] = None,
+        out_dim: Optional[int] = None,
+        activation: Callable[[torch.Tensor], torch.Tensor] = F.silu,
+        bias: bool = True,
+        ffn_dropout_p: float = 0.0,
+        load_balance_alpha: float = 0.01,
+    ):
+        super().__init__()
+        self.num_experts = num_experts
+        self.num_experts_per_token = num_experts_per_token
+        self.load_balance_alpha = load_balance_alpha
+
+        self.router = nn.Linear(in_dim, num_experts, bias=False)
+        self.experts = nn.ModuleList([
+            GatedLinearUnitFeedForward(
+                in_dim=in_dim,
+                hidden_dim=hidden_dim,
+                out_dim=out_dim,
+                activation=activation,
+                bias=bias,
+                ffn_dropout_p=ffn_dropout_p,
+            )
+            for _ in range(num_experts)
+        ])
+        self._aux_loss = 0.0  # load balancing loss, set during forward
+
+    def forward(
+        self,
+        x: Float[torch.Tensor, "... in_dim"],
+        centroid: Optional[Float[torch.Tensor, "expert in_dim"]] = None,
+    ) -> Float[torch.Tensor, "... dim"]:
+        orig_shape = x.shape
+        x_flat = x.view(-1, x.shape[-1])  # (N, D)
+        N = x_flat.shape[0]
+
+        # Router logits
+        logits = self.router(x_flat)  # (N, num_experts)
+        # Top-k selection
+        topk_logits, topk_indices = torch.topk(logits, self.num_experts_per_token, dim=-1)
+        topk_weights = F.softmax(topk_logits, dim=-1, dtype=torch.float32).type_as(x)
+
+        # Load balancing loss
+        if self.training and self.load_balance_alpha > 0:
+            router_probs = F.softmax(logits, dim=-1)
+            # fraction of tokens routed to each expert
+            expert_mask = torch.zeros_like(logits).scatter_(1, topk_indices, 1.0)
+            tokens_per_expert = expert_mask.mean(dim=0)
+            prob_per_expert = router_probs.mean(dim=0)
+            self._aux_loss = self.num_experts * (tokens_per_expert * prob_per_expert).sum()
+
+        # Compute expert outputs
+        results = torch.zeros_like(x_flat)
+        for i, expert in enumerate(self.experts):
+            batch_idx, nth = torch.where(topk_indices == i)
+            if batch_idx.numel() > 0:
+                results[batch_idx] += topk_weights[batch_idx, nth, None] * expert(
+                    x_flat[batch_idx]
+                )
+
+        return results.view(orig_shape)
+
+
 class MoEFeedForward(nn.Module):
     def __init__(
         self,

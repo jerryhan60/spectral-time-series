@@ -27,9 +27,3 @@ beta1: 0.9
 beta2: 0.98
 num_training_steps: ${mul:${trainer.max_epochs},${train_dataloader.num_batches_per_epoch}}
 num_warmup_steps: 10_000
-# Preconditioning configuration
-enable_preconditioning: false
-precondition_type: chebyshev  # chebyshev or legendre
-precondition_degree: 5  # recommended: 2-10
-loss_in_original_space: false
-learnable_preconditioning: false

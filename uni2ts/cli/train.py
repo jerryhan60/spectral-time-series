@@ -128,6 +128,15 @@ def main(cfg: DictConfig):
 
     model: L.LightningModule = instantiate(cfg.model, _convert_="all")
 
+    # Load baseline checkpoint for fine-tuning (strict=False allows new precond params)
+    if getattr(cfg, "baseline_ckpt_path", None) is not None:
+        checkpoint = torch.load(cfg.baseline_ckpt_path, map_location="cpu")
+        incompatible = model.load_state_dict(checkpoint["state_dict"], strict=False)
+        print(f"Loaded baseline from: {cfg.baseline_ckpt_path}")
+        print(f"  Missing keys (new params): {incompatible.missing_keys}")
+        if incompatible.unexpected_keys:
+            print(f"  Unexpected keys: {incompatible.unexpected_keys}")
+
     # For fine-tuning wo using sequence packing, create 'sample_id' for each sample by transformation.
     if "collate_fn" not in cfg.train_dataloader:
         model.seq_fields = model.seq_fields + ("sample_id",)

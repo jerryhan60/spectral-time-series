@@ -1,0 +1,53 @@
+============================================================
+Embedding-Preconditioned Model Evaluation
+============================================================
+[2025-12-07 23:43:38,449][datasets][INFO] - PyTorch version 2.4.1 available.
+[2025-12-07 23:43:38,450][datasets][INFO] - JAX version 0.6.1 available.
+Dataset: m1_monthly
+Prediction length: 18
+Target dim: 1
+Embedding preconditioning enabled: True
+  - Reversal: False
+  - Num target variates: None (None = all)
+  - Degree: 4
+  - Type: chebyshev
+
+/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/torch/cuda/__init__.py:654: UserWarning: Can't initialize NVML
+  warnings.warn("Can't initialize NVML")
+/scratch/gpfs/EHAZAN/jh1161/uni2ts/cli/eval_embedding_precond.py:69: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  checkpoint = torch.load(checkpoint_path, map_location="cpu")
+Error executing job with overrides: ['checkpoint_path=/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai_small_embedding_precond/lotsa_v1_unweighted/embed_precond_chebyshev_d4_20251205_174706/checkpoints/last.ckpt', 'patch_size=8', 'context_length=1000', 'num_samples=100', 'batch_size=32', 'data=monash_cached', 'data.dataset_name=m1_monthly', 'data.prediction_length=18']
+Traceback (most recent call last):
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/cli/eval_embedding_precond.py", line 159, in main
+    predictor = model.create_predictor(batch_size, cfg.device)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/src/uni2ts/model/moirai/forecast.py", line 144, in create_predictor
+    return PyTorchPredictor(
+           ^^^^^^^^^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/gluonts/core/component.py", line 364, in init_wrapper
+    return init(self, **all_args)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/gluonts/torch/model/predictor.py", line 62, in __init__
+    self.prediction_net = prediction_net.to(self.device)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/lightning/fabric/utilities/device_dtype_mixin.py", line 55, in to
+    return super().to(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1174, in to
+    return self._apply(convert)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 780, in _apply
+    module._apply(fn)
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 780, in _apply
+    module._apply(fn)
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 805, in _apply
+    param_applied = fn(param)
+                    ^^^^^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1160, in convert
+    return t.to(
+           ^^^^^
+  File "/scratch/gpfs/EHAZAN/jh1161/uni2ts/venv/lib/python3.12/site-packages/torch/cuda/__init__.py", line 314, in _lazy_init
+    torch._C._cuda_init()
+RuntimeError: No CUDA GPUs are available
+
+Set the environment variable HYDRA_FULL_ERROR=1 for a complete stack trace.
