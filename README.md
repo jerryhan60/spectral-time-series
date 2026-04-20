@@ -25,14 +25,16 @@ python -m cli.train -cp conf/pretrain run_name=baseline \
     model=moirai2_small data=lotsa_v1_moirai2 \
     model.num_warmup_steps=10000 trainer.max_epochs=1000 \
     train_dataloader.num_batches_per_epoch=100 \
-    trainer.precision=bf16-mixed tf32=false +seed_everything=0
+    trainer.precision=bf16-mixed tf32=false seed=0
 
 # Train with hint preconditioning (HD10)
 python -m cli.train -cp conf/pretrain run_name=hd10 \
     model=moirai2_small data=lotsa_v1_moirai2 \
     model.num_warmup_steps=10000 trainer.max_epochs=1000 \
     train_dataloader.num_batches_per_epoch=100 \
-    trainer.precision=bf16-mixed tf32=false +seed_everything=0 \
+    trainer.precision=bf16-mixed tf32=false seed=0 \
+    model.module_kwargs.time_precondition_enabled=true \
+    model.module_kwargs.time_precondition_hint_mode=true \
     model.module_kwargs.time_precondition_type=chebyshev \
     model.module_kwargs.time_precondition_degree=4 \
     model.module_kwargs.time_precondition_stride=16 \

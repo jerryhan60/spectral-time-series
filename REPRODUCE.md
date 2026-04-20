@@ -117,7 +117,7 @@ python -m cli.train -cp conf/pretrain \
     model.anomaly_variance_ratio_threshold=0.0 \
     trainer.precision=bf16-mixed \
     tf32=false \
-    +seed_everything=0
+    seed=0
 ```
 
 ### HD10 -- Our Method (Chebyshev d=4, stride=16, 10% hint dropout)
@@ -138,7 +138,9 @@ python -m cli.train -cp conf/pretrain \
     model.anomaly_variance_ratio_threshold=0.0 \
     trainer.precision=bf16-mixed \
     tf32=false \
-    +seed_everything=0 \
+    seed=0 \
+    model.module_kwargs.time_precondition_enabled=true \
+    model.module_kwargs.time_precondition_hint_mode=true \
     model.module_kwargs.time_precondition_type=chebyshev \
     model.module_kwargs.time_precondition_degree=4 \
     model.module_kwargs.time_precondition_stride=16 \
@@ -163,12 +165,14 @@ python -m cli.train -cp conf/pretrain \
     model.anomaly_variance_ratio_threshold=0.0 \
     trainer.precision=bf16-mixed \
     tf32=false \
-    +seed_everything=0 \
+    seed=0 \
+    model.module_kwargs.time_precondition_enabled=true \
+    model.module_kwargs.time_precondition_hint_mode=true \
     model.module_kwargs.time_precondition_type=chebyshev \
     model.module_kwargs.time_precondition_degree=4 \
     model.module_kwargs.time_precondition_stride=16 \
     model.module_kwargs.hint_dropout=0.0 \
-    model.module_kwargs.time_precondition_extra_hints="6:16"
+    +model.module_kwargs.time_precondition_extra_hints="6:16"
 ```
 
 ### MSHD10 -- Multi-Scale with Dropout (d=4 + d=6, 10% dropout)
@@ -189,7 +193,9 @@ python -m cli.train -cp conf/pretrain \
     model.anomaly_variance_ratio_threshold=0.0 \
     trainer.precision=bf16-mixed \
     tf32=false \
-    +seed_everything=0 \
+    seed=0 \
+    model.module_kwargs.time_precondition_enabled=true \
+    model.module_kwargs.time_precondition_hint_mode=true \
     model.module_kwargs.time_precondition_type=chebyshev \
     model.module_kwargs.time_precondition_degree=4 \
     model.module_kwargs.time_precondition_stride=16 \
@@ -216,7 +222,9 @@ python -m cli.train -cp conf/pretrain \
     model.anomaly_variance_ratio_threshold=0.0 \
     trainer.precision=bf16-mixed \
     tf32=false \
-    +seed_everything=0 \
+    seed=0 \
+    model.module_kwargs.time_precondition_enabled=true \
+    model.module_kwargs.time_precondition_hint_mode=true \
     model.module_kwargs.time_precondition_type=chebyshev \
     model.module_kwargs.time_precondition_degree=4 \
     model.module_kwargs.time_precondition_stride=16 \
@@ -241,7 +249,9 @@ python -m cli.train -cp conf/pretrain \
     model.anomaly_variance_ratio_threshold=0.0 \
     trainer.precision=bf16-mixed \
     tf32=false \
-    +seed_everything=0 \
+    seed=0 \
+    model.module_kwargs.time_precondition_enabled=true \
+    model.module_kwargs.time_precondition_hint_mode=true \
     model.module_kwargs.time_precondition_type=chebyshev \
     model.module_kwargs.time_precondition_degree=4 \
     model.module_kwargs.time_precondition_stride=16 \
@@ -286,7 +296,9 @@ python -m cli.train -cp conf/pretrain \
     model.anomaly_variance_ratio_threshold=0.0 \
     trainer.precision=bf16-mixed \
     tf32=false \
-    +seed_everything=0 \
+    seed=0 \
+    model.module_kwargs.time_precondition_enabled=true \
+    model.module_kwargs.time_precondition_hint_mode=true \
     model.module_kwargs.time_precondition_type=chebyshev \
     model.module_kwargs.time_precondition_degree=4 \
     model.module_kwargs.time_precondition_stride=16 \
@@ -299,7 +311,7 @@ python -m cli.train -cp conf/pretrain \
 
 - `trainer.max_epochs=1000` with `num_batches_per_epoch=100` = 100K total steps
 - For 10K step experiments, use `trainer.max_epochs=100`
-- The `+seed_everything=X` uses `+` prefix because it is not in the default YAML config
+- The `seed=X` uses `+` prefix because it is not in the default YAML config
 - `model.anomaly_variance_ratio_threshold=0.0` disables anomaly variance filtering for consistency
 - Checkpoints are saved to `uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/<run_name>/checkpoints/`
 - For multi-seed runs, change `+seed_everything` and `run_name` accordingly (seeds 0, 1, 2, 7, 42)

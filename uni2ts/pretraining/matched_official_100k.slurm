@@ -31,7 +31,7 @@ if [ $SLURM_ARRAY_TASK_ID -lt 3 ]; then
 else
     METHOD="hd10"
     RUN_NAME="hd10_official_s${SEED}_100k"
-    HINT_ARGS="model.module_kwargs.time_precondition_type=chebyshev model.module_kwargs.time_precondition_degree=4 model.module_kwargs.time_precondition_stride=16 model.module_kwargs.hint_dropout=0.1"
+    HINT_ARGS="model.module_kwargs.time_precondition_enabled=true model.module_kwargs.time_precondition_hint_mode=true model.module_kwargs.time_precondition_type=chebyshev model.module_kwargs.time_precondition_degree=4 model.module_kwargs.time_precondition_stride=16 model.module_kwargs.hint_dropout=0.1"
 fi
 
 echo "========================================"
@@ -59,7 +59,7 @@ python -m cli.train -cp conf/pretrain \
     model.anomaly_variance_ratio_threshold=0.0 \
     trainer.precision=bf16-mixed \
     tf32=false \
-    +seed_everything=$SEED \
+    seed=$SEED \
     $HINT_ARGS
 
 echo "Training done: $(date)"
