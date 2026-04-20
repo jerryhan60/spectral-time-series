@@ -84,31 +84,29 @@ All experiments add a pre-attention DV2-style block (depthwise conv + SiLU gatin
 
 ---
 
-## Active/Pending Jobs (updated 2026-03-10 16:00)
+## Active/Pending Jobs (updated 2026-04-02)
 
-### ALL PENDING (cluster maintenance)
+### NeurIPS Ablation Sprint (submitted 2026-04-02)
 
-| Job ID | Name | Partition | Description | Priority |
-|--------|------|-----------|-------------|----------|
-| 5553059 | lr_ctrl | pli | LR control 100K: cosine-floor + WSD for BL | CRITICAL |
-| 5553061 | hd_lrc | ailab | LR control 100K: cosine-floor + WSD for HD10 | CRITICAL |
-| 5560420 | bl_lr2 | pli | Higher-LR BL: LR=2e-3, LR=3e-3 (10K) | HIGH |
-| 5560421 | bl_lr2 | ailab | Higher-LR BL backup | HIGH |
-| 5553030_[2,7] | hd100_sN | pli | HD10+BL multi-seed 100K (s2,s7) | HIGH |
-| 5553031_[2,7] | hd100_sN | ailab | HD10+BL multi-seed 100K backup | HIGH |
-| 5560425_[2,7] | ms100_s | pli | MSHD10 multi-seed 100K (s2,s7) | HIGH |
-| 5560426_[2,7] | ms100_s | ailab | MSHD10 multi-seed 100K backup | HIGH |
-| 5560455_[0,1] | base_sd | pli | Base model (46M) BL+HD10 seeds 0,1 | HIGH |
-| 5560456_[0,1] | base_sd | ailab | Base model backup | HIGH |
-| 5560316 | bx_2e3 | ailab | OLMo bx_lr2e3 | MEDIUM |
-| 5560317 | bl_2e3 | pli | OLMo baseline_lr2e3 | MEDIUM |
-| 5560400 | bx15w5 | pli | OLMo bx_lr1.5e3_w500 | MEDIUM |
-| 5560401 | bx2w5 | pli | OLMo bx_lr2e3_w500 | MEDIUM |
+| Job ID | Name | Partition | Description | Status |
+|--------|------|-----------|-------------|--------|
+| 6414623_[0-5] | deg_ms | pli | d=2 seeds 1,2,7 + d=6 seeds 1,2,7 (10K, train+eval) | PENDING |
+| 6414624_[0-2] | ema_ms | pli | EMA d=4 seeds 1,2,7 (10K, train+eval) | PENDING |
+| 6414625_[0-3] | ev_lrc | pli | Eval-only: 4 LR control 100K checkpoints | PENDING |
+| 6414690_[0-2] | leg_ms | pli | Legendre d=4 seeds 1,2,7 (10K, train+eval) | PENDING |
 
-### COMPLETED
+### Still Running
+| Job ID | Name | Partition | Description | Status |
+|--------|------|-----------|-------------|--------|
+| 6273026 | lr_ctrl | pli | LR control 100K BL (rerun, checkpoints already exist) | RUNNING |
+| 6273027 | hd_lrc | pli | LR control 100K HD10 (rerun, checkpoints already exist) | RUNNING |
+
+### Recently Completed
 | Job ID | Name | Status | Result |
 |--------|------|--------|--------|
-| 5560429 | attn_anl | DONE | HD10 more local attention in last layer; figures saved |
+| 6109487 | lr_ctrl | DONE | BL cosine-floor + WSD 100K trained (no eval — submitted 6414625) |
+| 6109488 | hd_lrc | DONE | HD10 cosine-floor + WSD 100K trained (no eval — submitted 6414625) |
+| 6109485_[0-9] | abl_lr2 | DONE | Dup/Zero @2e-3 5 seeds each. Dup=[1.2016,1.2028,1.1873,1.1784,1.1908], Zero=[1.1875,1.1822,1.1628,1.1796,1.1813] |
 
 ---
 
@@ -1276,3 +1274,30 @@ Eval jobs:
 | 5560421 | bl_lr2 | ailab | Same as above (backup) | PENDING |
 | 5560425 | ms100_s | pli (array 2,7) | MSHD10 100K seeds 2,7 | PENDING |
 | 5560426 | ms100_s | ailab (array 2,7) | MSHD10 100K seeds 2,7 (backup) | PENDING |
+
+---
+
+## Active Jobs (2026-04-06)
+
+### Matched-Official 100K (10K warmup, matching Moirai 2.0 protocol)
+| Job ID | Partition | Method | Seeds | Status |
+|--------|-----------|--------|-------|--------|
+| 6631509_0-2 | pli | BL + 10K warmup, 100K steps | 0, 2, 7 | PENDING |
+| 6631509_3-5 | pli | HD10 + 10K warmup, 100K steps | 0, 2, 7 | PENDING |
+| 6631513_0-2 | ailab | BL + 10K warmup, 100K steps (backup) | 0, 2, 7 | PENDING |
+| 6631513_3-5 | ailab | HD10 + 10K warmup, 100K steps (backup) | 0, 2, 7 | PENDING |
+
+**Hypothesis**: With 10K warmup (matching official protocol), BL may not collapse at 100K. If HD10 still wins, the benefit is a genuine inductive bias, not just schedule regularization.
+
+### FEV-Bench + LSF Evals
+| Job ID | Partition | Tasks | Status |
+|--------|-----------|-------|--------|
+| 6631291_0-2 | pli | FEV-bench: official, BL s0, HD10 s0 | PENDING |
+| 6631291_3-5 | pli | LSF: official, BL s0, HD10 s0 | PENDING |
+
+### Completed Jobs (2026-04-03)
+- 6414623: Degree multi-seed (d=2, d=6, 3 seeds each) — DONE
+- 6414624: EMA multi-seed (3 seeds) — DONE
+- 6414690: Legendre multi-seed (3 seeds) — DONE
+- 6414625: LR control 100K eval (cosine-floor, WSD) — DONE
+- 6414673: PatchTST fix validation (10 tasks) — DONE

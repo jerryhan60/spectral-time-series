@@ -114,6 +114,7 @@ Before submitting SLURM jobs for new configs (new architecture, new Hydra keys):
 - Verify the Hydra overrides parse correctly (check for `+` prefix on new keys)
 - Verify the checkpoint output path will be correct
 - If possible, test with `trainer.max_epochs=1 train_dataloader.num_batches_per_epoch=3` first
+- **NEVER run training or heavy computation on the login node.** Submit a short SLURM job instead (e.g., `--time=00:10:00`). Login nodes are shared and heavy processes get killed or slow everyone down.
 
 ## Prompt Files for Common Workflows
 
@@ -414,23 +415,39 @@ Results saved to `/scratch/gpfs/EHAZAN/jh1161/gifteval/results/`:
 
 Location: `/scratch/gpfs/EHAZAN/jh1161/olmo-usp/`
 
-**Model**: OLMo3-190M (768 dim, 12 layers, 12 heads), trained on pes2o 1B tokens.
+**Model**: OLMo2-190M (768 dim, 12 layers, 12 heads), trained on pes2o 1B tokens.
+**Data**: gpt-neox tokenizer (dolma2 data was deleted; use `DATA_DIR_GPTNEOX` fallback).
+
+### CRITICAL: Parameter-Controlled Experiments
+
+**All preconditioning improvements MUST be parameter-controlled.** The goal is to show that polynomial preconditioning improves the OLMo baseline with the **same (or negligibly more) parameters**. Any approach that adds significant learnable parameters (>0.5% overhead) is confounded — the improvement could come from extra capacity rather than preconditioning.
+
+**Parameter overhead of each approach:**
+| Approach | Extra Params | % of 267M | Status |
+|----------|-------------|-----------|--------|
+| `usp_perlayer` (fixed poly + scalar gate) | 12 | 0.000% | CONTROLLED — but ~0% CE improvement |
+| `usp_poly_init` (depthwise conv init) | 147K | 0.055% | CONTROLLED — -0.87% CE at LR=1e-3 |
+| `usp_lowrank_hint` (bottleneck r=16) | 442K | 0.17% | CONTROLLED — needs testing |
+| `usp_hint` (full Linear mixer) | 21M | **7.9%** | **NOT CONTROLLED** |
+| `usp_deep_hint` (2-layer mixer) | 78M | **29.1%** | **NOT CONTROLLED** |
+
+When running experiments, always verify parameter overhead is <0.5%.
 
 ### Training with Evaluation
 
 ```bash
 cd /scratch/gpfs/EHAZAN/jh1161/olmo-usp
 
-# Standard training with downstream eval every 1000 steps (default)
+# Default OLMo training (LR=3e-4, warmup=2000) — use this for fair comparisons
 torchrun --nproc-per-node=1 train_usp_v4.py \
     --save-folder checkpoints/my_run --run-name my_run \
-    --usp-mode sel_dx2_bx --lr 1e-3
+    --usp-mode usp_poly_init --usp-degree 6 --usp-kernel-size 16
 
-# Custom eval interval and tasks
+# With downstream eval
 torchrun --nproc-per-node=1 train_usp_v4.py \
     --save-folder checkpoints/my_run --run-name my_run \
-    --eval-interval 500 \
-    --eval-tasks "hellaswag_rc_5shot,arc_easy_test_rc_5shot,piqa_val_rc_5shot"
+    --usp-mode usp_lowrank_hint --usp-degree 3 \
+    --eval-interval 1000 --eval-tasks "hellaswag_rc_5shot,arc_easy_test_rc_5shot"
 
 # Disable eval (faster, training-loss-only)
 torchrun --nproc-per-node=1 train_usp_v4.py \
@@ -461,6 +478,12 @@ torchrun --nproc-per-node=1 train_usp_v4.py \
 ## Experiment Results
 
 **Baseline**: MOIRAI 2.0 Small (11.4M params) retrained on LOTSA. When we refer to "baseline", assume MOIRAI 2.0 unless otherwise specified. All results compared at matched training steps using GIFT-Eval geometric mean MASE (97 configs).
+
+**MASE Reporting Convention**: We report **normalized MASE** following the GIFT-Eval leaderboard convention. Each model's per-configuration MASE is divided by the seasonal naive baseline's MASE for that configuration, then aggregated via geometric mean. A score below 1.0 means the model beats naive. The conversion factor from our raw eval pipeline MASE to normalized MASE is: **divide by 1.4060** (the seasonal naive geometric mean MASE across 97 configs). Key reference points:
+- Official Moirai 2.0-R-Small (HuggingFace): **0.728** normalized (1.0236 raw) — verified with our eval pipeline
+- Our retrained baseline (5-seed, 10K): **0.862** normalized (1.2116 raw)
+- Our HD10 (5-seed, 10K): **0.837** normalized (1.1765 raw)
+- Relative improvements (%) are identical whether using raw or normalized MASE
 
 **IMPORTANT — Training data config**: Always use `data=lotsa_v1_moirai2` for all new runs. This matches the official Moirai 2 training setup with proper dataset weighting and `variate_proportional` sampling. Previous runs used `lotsa_v1_unweighted` (uniform sampling, different dataset list) which is a confound. The key differences:
 - `lotsa_v1_moirai2`: weighted sampling, `variate_proportional`, includes extra datasets (solar_10min/5min, wind_10min/5min, energy_storage, etc.)

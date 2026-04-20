@@ -1,0 +1,9 @@
+% forloop.sty - simple for-loop macro
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{forloop}[2006/09/18 v3.0 For-Loop Macro]
+\RequirePackage{ifthen}
+\newcommand{\forloop}[5][1]{%
+  \setcounter{#2}{#3}%
+  \ifthenelse{#5}{#4\addtocounter{#2}{#1}%
+    \forloop[#1]{#2}{\value{#2}}{#5}{#4}}{}%
+}
