@@ -1,0 +1,44 @@
+# Large data and caches
+*.hf_cache/
+__pycache__/
+*.pyc
+.cache/
+data/
+
+# Checkpoints and model outputs (too large for git)
+uni2ts/outputs/
+*.ckpt
+
+# Cluster-specific
+logs/
+*.out
+*.err
+
+# HuggingFace
+.env
+
+# LaTeX build artifacts
+*.aux
+*.log
+*.blg
+*.out
+*.nav
+*.snm
+*.toc
+*.synctex.gz
+*.fdb_latexmk
+*.fls
+
+# OS
+.DS_Store
+*.swp
+
+# Large intermediate results (keep only aggregated)
+gifteval/results/gifteval_results_*.csv
+gifteval/results/fev_bench_*.csv
+gifteval/results/report_*.md
+gifteval/results/config_*.json
+gift-eval-space/
+
+# Images in root (debug artifacts)
+*.png
