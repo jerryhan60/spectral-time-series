@@ -78,12 +78,25 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ## 6. SLURM & Hydra Conventions (CRITICAL — bugs here waste GPU hours)
 
-**Partition rules:**
-- `--partition=pli --account=eladgroup --qos=pli-low` — preferred (less congested)
-- `--partition=ailab --account=ehazan` — backup
-- `--partition=della --account=ehazan` — also valid
+**Partition/account priority order (verified via fairshare 2026-04-12):**
+
+Always submit to pli first, using accounts in THIS priority order (higher fairshare = faster start):
+
+| Priority | Account | FairShare | Notes |
+|----------|---------|-----------|-------|
+| 1st (best) | `hazan_intern` | 0.951 | Highest fairshare, use first |
+| 2nd | `spectralssmtorch` | 0.945 | Very good backup |
+| 3rd | `eladgroup` | 0.928 | Our default, fine |
+| LAST RESORT | `ehazan` | 0.023 | ~40x worse — avoid on pli |
+
+- **Primary**: `--partition=pli --account=hazan_intern --qos=pli-low`
+- **Backup**: `--partition=pli --account=spectralssmtorch --qos=pli-low`
+- **Fallback**: `--partition=pli --account=eladgroup --qos=pli-low`
+- **ailab**: `--partition=ailab --account=ehazan` — but ehazan has very low fairshare, jobs sit at back of queue. Only use if pli is completely full.
 - **NEVER** use `--partition=gpu` (not allowed) or `--partition=grace` (ARM nodes)
 - **ALWAYS** `--cpus-per-task=8` for ailab (max 8 CPUs per GPU)
+
+**Root cause of ehazan's low priority**: accumulated 13.9B CPU-seconds of usage (vs ~12M for eladgroup — 1000x more). SLURM fairshare penalizes heavy users.
 
 **Hydra override syntax:**
 - Existing keys (in the YAML config): `model.lr=2e-3`
