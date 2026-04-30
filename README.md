@@ -75,7 +75,20 @@ This runs 20 training jobs and 20 evaluations sequentially. For parallelism, sub
 
 ## Pre-trained Checkpoints
 
-Pre-trained checkpoints for HD10 (d4 + 10% dropout) across 5 seeds can be provided on request. Contact the authors.
+We release weights-only checkpoints for all 5 conditions × 5 seeds at 10K steps (25 checkpoints, ~1.1GB total). To export from full training checkpoints:
+
+```bash
+bash scripts/export_checkpoints.sh checkpoints/
+```
+
+To evaluate a released checkpoint:
+```bash
+bash scripts/eval_gifteval.sh checkpoints/d4_dropout_seed0_10k.ckpt 4000
+```
+
+## Results
+
+`results/paper_results.csv` contains all per-seed MASE values from the paper with the checkpoint path that produced each number. Every entry can be independently verified by running `eval_gifteval.sh` on the corresponding checkpoint.
 
 ## Structure
 
@@ -84,17 +97,21 @@ poly-precond-release/
   poly_precond/
     __init__.py
     chebyshev.py             # Polynomial coefficient computation and residual filtering
-    precondition_channel.py  # PyTorch module for the hint channel
+    precondition_channel.py  # PyTorch module for the preconditioning channel
   configs/
     baseline.yaml            # No preconditioning
     d4.yaml                  # Chebyshev d=4, no dropout
     d4_dropout.yaml          # Chebyshev d=4, 10% dropout (recommended)
     zero.yaml                # Capacity control: zero channel
     duplicate.yaml           # Capacity control: duplicate channel
+  results/
+    paper_results.csv        # All per-seed results with checkpoint paths
   scripts/
     train.sh                 # Train a single condition + seed
     eval_gifteval.sh         # Evaluate a checkpoint on GIFT-Eval
     reproduce_all.sh         # Reproduce all paper results
+    export_checkpoints.sh    # Export weights-only checkpoints for release
+    verify_results.sh        # Verify eval reproduces paper numbers
   setup.py
   README.md
 ```
