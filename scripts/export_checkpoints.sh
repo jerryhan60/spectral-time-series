@@ -8,7 +8,7 @@ set -e
 OUTPUT_DIR="${1:-checkpoints}"
 mkdir -p "$OUTPUT_DIR"
 
-CKPT_BASE="uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2"
+CKPT_BASE="/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2"
 
 echo "=== Exporting checkpoints for release ==="
 
