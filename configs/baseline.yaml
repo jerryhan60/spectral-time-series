@@ -1,0 +1,6 @@
+# Baseline: standard Moirai-2 Small, no preconditioning
+model:
+  module_kwargs:
+    time_precondition_enabled: false
+    time_precondition_hint_mode: false
+    hint_dropout: 0.0
