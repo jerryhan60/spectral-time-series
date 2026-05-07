@@ -1,23 +1,39 @@
-#!/bin/bash
-# Reproduce all paper results: 5 seeds x 4 conditions = 20 training runs + evaluations
+#!/usr/bin/env bash
+# Reproduce all paper results: 5 seeds x 5 conditions = 25 training runs + evaluations
 #
 # This script trains and evaluates all conditions from Table 1 of the paper.
 # Each training run takes ~2 hours on a single H100 GPU (10K steps).
 # Each evaluation takes ~45 minutes on a single H100 GPU.
-# Total wall time (sequential): ~55 hours. Use SLURM for parallelism.
+# Total wall time (sequential): ~70 hours. Use SLURM for parallelism.
 #
 # Usage:
 #   bash scripts/reproduce_all.sh           # Run everything sequentially
 #   bash scripts/reproduce_all.sh train     # Training only
 #   bash scripts/reproduce_all.sh eval      # Evaluation only (assumes training is done)
+#   bash scripts/reproduce_all.sh --help    # Show this help
 
-set -e
+set -euo pipefail
 
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-UNI2TS_DIR="$SCRIPT_DIR/../uni2ts"
+UNI2TS_DIR="${UNI2TS_DIR:-$REPO_ROOT/external/uni2ts}"
 CHECKPOINT_DIR="$UNI2TS_DIR/outputs/pretrain/moirai2_small/lotsa_v1_moirai2"
-RESULTS_DIR="$SCRIPT_DIR/../results"
+RESULTS_DIR="$REPO_ROOT/results"
 mkdir -p "$RESULTS_DIR"
+
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+    echo "Usage: $0 [all|train|eval]"
+    echo ""
+    echo "Reproduce all paper results (5 seeds x 5 conditions)."
+    echo "Set UNI2TS_DIR to override the uni2ts directory location."
+    exit 0
+fi
+
+if [ ! -d "$UNI2TS_DIR" ]; then
+    echo "Error: uni2ts not found at $UNI2TS_DIR"
+    echo "Set UNI2TS_DIR or run: bash scripts/install_external.sh"
+    exit 1
+fi
 
 SEEDS=(0 1 2 7 42)
 CONDITIONS=(baseline d4 d4_dropout zero duplicate)

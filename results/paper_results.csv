@@ -1,36 +1,36 @@
 table,condition,steps,seed,raw_geomean_mase,normalized_mase,checkpoint
-Table 1 + Appendix B,baseline,10000,0,1.2185,0.8666,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/baseline_m2d_seed0_10k/checkpoints/epoch_99-step_10000.ckpt
-Table 1 + Appendix B,d4_dropout,10000,0,1.1577,0.8234,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/hd10_m2d_seed0_10k/checkpoints/epoch_99-step_10000.ckpt
-Appendix B,d4,10000,0,1.1708,0.8327,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/hd0_m2d_seed0_10k/checkpoints/epoch_99-step_10000.ckpt
-Table 1 + Appendix B,baseline,10000,1,1.1955,0.8503,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/baseline_m2d_seed1_10k/checkpoints/epoch_99-step_10000.ckpt
-Table 1 + Appendix B,d4_dropout,10000,1,1.1902,0.8465,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/hd10_m2d_seed1_10k/checkpoints/epoch_99-step_10000.ckpt
-Appendix B,d4,10000,1,1.1859,0.8435,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/hd0_m2d_seed1_10k/checkpoints/epoch_99-step_10000.ckpt
-Table 1 + Appendix B,baseline,10000,2,1.2134,0.863,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/baseline_m2d_seed2_10k/checkpoints/epoch_99-step_10000.ckpt
-Table 1 + Appendix B,d4_dropout,10000,2,1.1798,0.8391,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/hd10_m2d_seed2_10k/checkpoints/epoch_99-step_10000.ckpt
-Appendix B,d4,10000,2,1.1646,0.8283,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/hd0_m2d_seed2_10k/checkpoints/epoch_99-step_10000.ckpt
-Table 1 + Appendix B,baseline,10000,7,1.2198,0.8676,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/baseline_m2d_seed7_10k/checkpoints/epoch_99-step_10000.ckpt
-Table 1 + Appendix B,d4_dropout,10000,7,1.1698,0.832,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/hd10_m2d_seed7_10k/checkpoints/epoch_99-step_10000.ckpt
-Appendix B,d4,10000,7,1.1842,0.8422,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/hd0_m2d_seed7_10k/checkpoints/epoch_99-step_10000.ckpt
-Table 1 + Appendix B,baseline,10000,42,1.2111,0.8613,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/baseline_m2d_seed42_10k/checkpoints/epoch_99-step_10000.ckpt
-Table 1 + Appendix B,d4_dropout,10000,42,1.1852,0.843,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/hd10_m2d_seed42_10k/checkpoints/epoch_99-step_10000.ckpt
-Appendix B,d4,10000,42,1.1846,0.8425,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/hd0_m2d_seed42_10k/checkpoints/epoch_99-step_10000.ckpt
-Table 1 + Appendix B,zero,10000,0,1.2072,0.8586,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/zero_m2d_seed0_10k/checkpoints/epoch_99-step_10000.ckpt
-Table 1 + Appendix B,duplicate,10000,0,1.234,0.8777,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/duplicate_m2d_seed0_10k/checkpoints/epoch_99-step_10000.ckpt
-Table 1 + Appendix B,zero,10000,1,1.2286,0.8738,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/zero_m2d_seed1_10k/checkpoints/epoch_99-step_10000.ckpt
-Table 1 + Appendix B,duplicate,10000,1,1.2016,0.8546,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/duplicate_m2d_seed1_10k/checkpoints/epoch_99-step_10000.ckpt
-Table 1 + Appendix B,zero,10000,2,1.1846,0.8425,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/zero_m2d_seed2_10k/checkpoints/epoch_99-step_10000.ckpt
-Table 1 + Appendix B,duplicate,10000,2,1.2179,0.8662,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/duplicate_m2d_seed2_10k/checkpoints/epoch_99-step_10000.ckpt
-Table 1 + Appendix B,zero,10000,7,1.2054,0.8573,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/zero_m2d_seed7_10k/checkpoints/epoch_99-step_10000.ckpt
-Table 1 + Appendix B,duplicate,10000,7,1.2094,0.8602,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/duplicate_m2d_seed7_10k/checkpoints/epoch_99-step_10000.ckpt
-Table 1 + Appendix B,zero,10000,42,1.2048,0.8569,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/zero_m2d_seed42_10k/checkpoints/epoch_99-step_10000.ckpt
-Table 1 + Appendix B,duplicate,10000,42,1.2177,0.8661,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/duplicate_m2d_seed42_10k/checkpoints/epoch_99-step_10000.ckpt
-Table 3 + Appendix F,baseline,100000,0,1.2783,0.9092,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/baseline_m2d_s0_100k/checkpoints/epoch_999-step_100000.ckpt
-Table 3 + Appendix F,d4_dropout,100000,0,1.1739,0.8349,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/hd10_m2d_s0_100k/checkpoints/epoch_999-step_100000.ckpt
-Table 3 + Appendix F,baseline,100000,1,1.2542,0.892,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/baseline_m2d_s1_100k/checkpoints/epoch_999-step_100000.ckpt
-Table 3 + Appendix F,d4_dropout,100000,1,1.1813,0.8402,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/hd10_m2d_s1_100k/checkpoints/epoch_999-step_100000.ckpt
-Table 3 + Appendix F,baseline,100000,2,1.2138,0.8633,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/baseline_m2d_s2_100k/checkpoints/epoch_999-step_100000.ckpt
-Table 3 + Appendix F,d4_dropout,100000,2,1.2072,0.8586,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/hd10_m2d_s2_100k/checkpoints/epoch_999-step_100000.ckpt
-Table 3 + Appendix F,baseline,100000,7,1.2149,0.8641,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/baseline_m2d_s7_100k/checkpoints/epoch_999-step_100000.ckpt
-Table 3 + Appendix F,d4_dropout,100000,7,1.1881,0.845,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/hd10_m2d_s7_100k/checkpoints/epoch_999-step_100000.ckpt
-Table 3 + Appendix F,baseline,100000,42,1.2142,0.8636,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/baseline_m2d_s42_100k/checkpoints/epoch_999-step_100000.ckpt
-Table 3 + Appendix F,d4_dropout,100000,42,1.1853,0.843,/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2/hd10_m2d_s42_100k/checkpoints/epoch_999-step_100000.ckpt
+Table 1 + Appendix B,baseline,10000,0,1.2185,0.8666,checkpoints/baseline_seed0_10k.ckpt
+Table 1 + Appendix B,d4_dropout,10000,0,1.1577,0.8234,checkpoints/d4_dropout_seed0_10k.ckpt
+Appendix B,d4,10000,0,1.1708,0.8327,checkpoints/d4_seed0_10k.ckpt
+Table 1 + Appendix B,baseline,10000,1,1.1955,0.8503,checkpoints/baseline_seed1_10k.ckpt
+Table 1 + Appendix B,d4_dropout,10000,1,1.1902,0.8465,checkpoints/d4_dropout_seed1_10k.ckpt
+Appendix B,d4,10000,1,1.1859,0.8435,checkpoints/d4_seed1_10k.ckpt
+Table 1 + Appendix B,baseline,10000,2,1.2134,0.8630,checkpoints/baseline_seed2_10k.ckpt
+Table 1 + Appendix B,d4_dropout,10000,2,1.1798,0.8391,checkpoints/d4_dropout_seed2_10k.ckpt
+Appendix B,d4,10000,2,1.1646,0.8283,checkpoints/d4_seed2_10k.ckpt
+Table 1 + Appendix B,baseline,10000,7,1.2198,0.8676,checkpoints/baseline_seed7_10k.ckpt
+Table 1 + Appendix B,d4_dropout,10000,7,1.1698,0.8320,checkpoints/d4_dropout_seed7_10k.ckpt
+Appendix B,d4,10000,7,1.1842,0.8422,checkpoints/d4_seed7_10k.ckpt
+Table 1 + Appendix B,baseline,10000,42,1.2111,0.8613,checkpoints/baseline_seed42_10k.ckpt
+Table 1 + Appendix B,d4_dropout,10000,42,1.1852,0.8430,checkpoints/d4_dropout_seed42_10k.ckpt
+Appendix B,d4,10000,42,1.1846,0.8425,checkpoints/d4_seed42_10k.ckpt
+Table 1 + Appendix B,zero,10000,0,1.2072,0.8586,checkpoints/zero_seed0_10k.ckpt
+Table 1 + Appendix B,duplicate,10000,0,1.2340,0.8777,checkpoints/duplicate_seed0_10k.ckpt
+Table 1 + Appendix B,zero,10000,1,1.2286,0.8738,checkpoints/zero_seed1_10k.ckpt
+Table 1 + Appendix B,duplicate,10000,1,1.2016,0.8546,checkpoints/duplicate_seed1_10k.ckpt
+Table 1 + Appendix B,zero,10000,2,1.1846,0.8425,checkpoints/zero_seed2_10k.ckpt
+Table 1 + Appendix B,duplicate,10000,2,1.2179,0.8662,checkpoints/duplicate_seed2_10k.ckpt
+Table 1 + Appendix B,zero,10000,7,1.2054,0.8573,checkpoints/zero_seed7_10k.ckpt
+Table 1 + Appendix B,duplicate,10000,7,1.2094,0.8602,checkpoints/duplicate_seed7_10k.ckpt
+Table 1 + Appendix B,zero,10000,42,1.2048,0.8569,checkpoints/zero_seed42_10k.ckpt
+Table 1 + Appendix B,duplicate,10000,42,1.2177,0.8661,checkpoints/duplicate_seed42_10k.ckpt
+Table 3 + Appendix F,baseline,100000,0,1.2783,0.9092,
+Table 3 + Appendix F,d4_dropout,100000,0,1.1739,0.8349,
+Table 3 + Appendix F,baseline,100000,1,1.2542,0.8920,
+Table 3 + Appendix F,d4_dropout,100000,1,1.1813,0.8402,
+Table 3 + Appendix F,baseline,100000,2,1.2138,0.8633,
+Table 3 + Appendix F,d4_dropout,100000,2,1.2072,0.8586,
+Table 3 + Appendix F,baseline,100000,7,1.2149,0.8641,
+Table 3 + Appendix F,d4_dropout,100000,7,1.1881,0.8450,
+Table 3 + Appendix F,baseline,100000,42,1.2142,0.8636,
+Table 3 + Appendix F,d4_dropout,100000,42,1.1853,0.8430,

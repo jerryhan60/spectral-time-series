@@ -1,0 +1,9 @@
+# Chebyshev d=4, stride=4, 10% dropout
+model:
+  module_kwargs:
+    time_precondition_enabled: true
+    time_precondition_type: chebyshev
+    time_precondition_degree: 4
+    time_precondition_stride: 4
+    time_precondition_hint_mode: true
+    hint_dropout: 0.1

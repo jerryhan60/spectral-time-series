@@ -1,0 +1,9 @@
+# 100K training steps with 1K warmup (default schedule)
+trainer:
+  max_epochs: 1000
+
+train_dataloader:
+  num_batches_per_epoch: 100
+
+model:
+  num_warmup_steps: 1000

@@ -1,0 +1,11 @@
+method,seed,raw_mase,normalized_mase
+baseline,0,1.2429,0.8839
+baseline,1,1.2435,0.8843
+baseline,2,1.2301,0.8748
+baseline,7,1.2816,0.9114
+baseline,42,1.2671,0.9011
+d4_dropout,0,1.2450,0.8854
+d4_dropout,1,1.1814,0.8402
+d4_dropout,2,1.1828,0.8412
+d4_dropout,7,1.2300,0.8748
+d4_dropout,42,1.2363,0.8793

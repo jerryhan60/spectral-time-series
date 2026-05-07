@@ -1,0 +1,7 @@
+basis,mase,delta_pct,wins_vs_bl,wins_vs_cheby
+chebyshev,0.8234,0.00,66,0
+ema,0.8329,-1.15,60,40
+legendre_d4,0.8400,-2.02,55,35
+legendre_d6,0.8397,-1.98,56,37
+findiff,0.8569,-4.07,50,30
+duplicate,0.8583,-4.24,48,28

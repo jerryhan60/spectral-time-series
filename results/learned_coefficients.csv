@@ -1,0 +1,5 @@
+setting,mean_normalized_mase,std,delta_pct
+fixed_chebyshev,0.837,0.008,-2.89
+learned_zero_init,0.839,0.006,-2.63
+learned_cheb_init,0.844,0.007,-2.05
+baseline,0.862,0.006,0.00

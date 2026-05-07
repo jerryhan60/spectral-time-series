@@ -1,14 +1,30 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Export model-weights-only checkpoints for release (strips optimizer state).
 # Reduces checkpoint size from ~131MB to ~45MB each.
 # Usage: bash scripts/export_checkpoints.sh [output_dir]
 
-set -e
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+    echo "Usage: $0 [output_dir]"
+    echo ""
+    echo "Export model-weights-only checkpoints (strips optimizer state)."
+    echo "Set CKPT_BASE to override the source checkpoint directory."
+    exit 0
+fi
 
 OUTPUT_DIR="${1:-checkpoints}"
 mkdir -p "$OUTPUT_DIR"
 
-CKPT_BASE="/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2"
+CKPT_BASE="${CKPT_BASE:-/scratch/gpfs/EHAZAN/jh1161/uni2ts/outputs/pretrain/moirai2_small/lotsa_v1_moirai2}"
+
+if [ ! -d "$CKPT_BASE" ]; then
+    echo "Error: source checkpoint directory not found: $CKPT_BASE"
+    echo "Set CKPT_BASE to the directory containing training outputs."
+    exit 1
+fi
 
 echo "=== Exporting checkpoints for release ==="
 

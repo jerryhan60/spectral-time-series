@@ -1,0 +1,7 @@
+condition,steps,seed,geomean_mase,geomean_sql
+baseline,10000,0,1.2841,1.0446
+baseline,10000,1,1.2883,1.0504
+baseline,10000,2,1.2742,1.0391
+baseline,10000,7,1.2721,1.0391
+baseline,10000,42,1.2862,1.0464
+d4_dropout,10000,mean,1.2532,1.0236
