@@ -4,6 +4,9 @@ Computes the preconditioning residual r_t = sum_{k=1}^{d} c_k * x_{t-ks}
 and returns it as a patch-aligned tensor ready to concatenate with
 [target_patch, observation_mask] before the input projection. Respects
 sample and variate boundaries in packed sequences.
+
+sample_id=0 is treated as padding and excluded from residual computation,
+following the Uni2TS packed-sequence convention.
 """
 
 from __future__ import annotations
@@ -38,6 +41,9 @@ class PreconditioningChannel(nn.Module):
       4. Re-patches to (B, T, P).
       5. Optionally applies per-patch dropout during training.
 
+    sample_id=0 is treated as padding and excluded from residual computation,
+    following the Uni2TS packed-sequence convention.
+
     Args:
         degree: Polynomial degree d.
         stride: Lag stride s (should equal patch_size P).
@@ -55,6 +61,12 @@ class PreconditioningChannel(nn.Module):
         patch_size: int = 16,
     ):
         super().__init__()
+        if degree < 1:
+            raise ValueError("degree must be >= 1")
+        if stride < 1:
+            raise ValueError("stride must be >= 1")
+        if not (0.0 <= dropout <= 1.0):
+            raise ValueError("dropout must be in [0, 1]")
         if poly_type not in _COEFF_FN:
             raise ValueError(f"Unknown poly_type: {poly_type}. Choose from {list(_COEFF_FN)}")
         coeffs = _COEFF_FN[poly_type](degree)
@@ -70,7 +82,7 @@ class PreconditioningChannel(nn.Module):
         sample_id: torch.Tensor,
         variate_id: torch.Tensor,
         time_id: torch.Tensor,
-        training: bool = False,
+        training: bool | None = None,
     ) -> torch.Tensor:
         """Compute the hint channel tensor.
 
@@ -80,12 +92,29 @@ class PreconditioningChannel(nn.Module):
             sample_id: Sample indices for packed sequences, shape (B, T).
             variate_id: Variate indices, shape (B, T).
             time_id: Time-step indices (patch-level), shape (B, T).
-            training: If True, apply hint dropout.
+            training: If True, apply hint dropout. If None (default),
+                uses the module's training mode (self.training).
 
         Returns:
             Hint channel of shape (B, T, P), ready to concatenate with
             [target, observed_mask] along the last dimension.
         """
+        if training is None:
+            training = self.training
+
+        # Shape validation
+        if target.ndim != 3:
+            raise ValueError(f"target must have shape (B, T, P), got {tuple(target.shape)}")
+        if observed_mask.shape != target.shape:
+            raise ValueError("observed_mask must have same shape as target")
+        if sample_id.shape != target.shape[:2]:
+            raise ValueError("sample_id must have shape (B, T)")
+        if target.shape[-1] != self.patch_size:
+            raise ValueError(f"target patch dim {target.shape[-1]} != patch_size {self.patch_size}")
+
+        # Ensure bool mask
+        observed_mask = observed_mask.bool()
+
         P = self.patch_size
         coeffs = self.coeffs.to(device=target.device, dtype=target.dtype)
         d = coeffs.numel()

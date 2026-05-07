@@ -50,7 +50,9 @@ def differencing_coefficients(degree: int) -> list[float]:
     return [(-1) ** k * comb(degree, k) for k in range(1, degree + 1)]
 
 
-def compute_residual(x: np.ndarray, coeffs: list[float], stride: int) -> np.ndarray:
+def compute_residual(
+    x: np.ndarray, coeffs: list[float], stride: int, *, full_lag_only: bool = True
+) -> np.ndarray:
     """Compute the preconditioning residual r_t = sum_{k=1}^{d} c_k * x_{t-ks}.
 
     This is the cross-patch information that the preconditioning channel
@@ -60,16 +62,22 @@ def compute_residual(x: np.ndarray, coeffs: list[float], stride: int) -> np.ndar
         x: Input time series of shape (..., T).
         coeffs: Polynomial coefficients [c_1, ..., c_d].
         stride: Lag stride s (= patch size P in the paper).
+        full_lag_only: If True (default), the residual is only computed for
+            t >= d*s, matching the PyTorch module behavior where the first
+            d patches are zeroed out. If False, partial lags are included
+            (residual is computed wherever any shifted term is available).
 
     Returns:
-        Residual array of same shape as x, zero-padded for t < d*s.
+        Residual array of same shape as x, zero-padded for t < start.
     """
     d = len(coeffs)
     T = x.shape[-1]
     r = np.zeros_like(x)
+    start = d * stride if full_lag_only else 0
     for k in range(d):
         shift = (k + 1) * stride
         if shift >= T:
             break
-        r[..., shift:] += coeffs[k] * x[..., : T - shift]
+        lo = max(start, shift)
+        r[..., lo:] += coeffs[k] * x[..., lo - shift : T - shift]
     return r
